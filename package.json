@@ -1,0 +1,15 @@
+{
+  "name": "food-wars",
+  "type": "module",
+  "version": "0.1.0",
+  "description": "FOSS kitchen inventory app with Japanese diner aesthetic.",
+  "scripts": {
+    "version:bump": "node scripts/bump-version.mjs",
+    "prepare": "husky"
+  },
+  "dependencies": {
+  	"husky": "^9.1.7"
+  },
+  "author": "Muhammad-Hazimi-Yusri",
+  "license": "MIT"
+}

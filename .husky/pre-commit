@@ -1,0 +1,24 @@
+#!/bin/sh
+
+# Check if app/ or components/ files are staged (feature work)
+FEATURE_FILES=$(git diff --cached --name-only | grep -E '^(app/|components/|lib/)' | head -1)
+
+if [ -n "$FEATURE_FILES" ]; then
+  # Check if package.json is also staged (version bumped)
+  PKG_STAGED=$(git diff --cached --name-only | grep '^package.json$')
+  
+  if [ -z "$PKG_STAGED" ]; then
+    echo ""
+    echo "⚠️  Feature files changed but version not bumped!"
+    echo "   Run: pnpm version:bump"
+    echo ""
+  fi
+fi
+
+# Run linting
+echo "🔍 Running lint..."
+pnpm lint || exit 1
+
+echo ""
+echo "✅ Pre-commit checks passed"
+echo "💡 Run 'pnpm build' manually before pushing"

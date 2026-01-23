@@ -1,7 +1,24 @@
-echo '#!/bin/sh
+#!/bin/sh
 
+# Check if feature files are staged (under src/)
+FEATURE_FILES=$(git diff --cached --name-only | grep -E '^src/(app|components|lib)/' | head -1)
+
+if [ -n "$FEATURE_FILES" ]; then
+  PKG_STAGED=$(git diff --cached --name-only | grep '^package.json$')
+  README_STAGED=$(git diff --cached --name-only | grep '^README.md$')
+  
+  if [ -z "$PKG_STAGED" ] || [ -z "$README_STAGED" ]; then
+    echo ""
+    echo "⚠️  Feature files changed but version not bumped!"
+    echo "   Run: pnpm version:bump"
+    echo "   Then: git add package.json README.md"
+    echo ""
+  fi
+fi
+
+# Run linting
 echo "🔍 Running lint..."
 pnpm lint || exit 1
 
 echo ""
-echo "✅ Pre-commit checks passed"' > .husky/pre-commit
+echo "✅ Pre-commit checks passed"

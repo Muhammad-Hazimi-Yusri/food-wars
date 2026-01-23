@@ -42,6 +42,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Guest mode storage utilities (`src/lib/storage.ts`)
 - `useGuestStorage` hook for localStorage persistence
 - Supabase client setup (browser, server, middleware)
+- Google OAuth authentication via Supabase
+- Login page (`/login`)
+- Auth callback handler
+- AuthStatus component for signed-in user display
 
 ### Changed
 - Pre-commit hook now checks for version bump in both package.json and README.md

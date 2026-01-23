@@ -37,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Zen Kaku Gothic New — body text
 - CSS test page at `/test` for visual verification
 - ESLint configuration
+- Noren (暖簾) header component with curtain fringe effect
+- Lucide icons for UI elements
 
 ### Changed
 - Pre-commit hook now checks for version bump in both package.json and README.md

@@ -1,26 +1,29 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
 
 @theme {
   --color-soma: #C41E3A;
   --color-soma-light: #E63950;
   --color-soma-dark: #8B1528;
-  
+
   --color-megumi: #1E3A5F;
   --color-megumi-light: #2C5282;
   --color-megumi-dark: #1A202C;
-  
+
   --color-hayama: #E8E8E8;
   --color-hayama-light: #F7F7F7;
   --color-hayama-dark: #C0C0C0;
-  
+
   --color-hisako: #E6B8D4;
   --color-hisako-light: #F5D5E8;
   --color-hisako-dark: #D4A5C2;
-  
+
   --color-takumi: #D4AF37;
   --color-takumi-light: #F0D060;
   --color-takumi-dark: #B8960C;
-  
+
   --color-kurokiba: #722F37;
   --color-kurokiba-light: #8B4049;
   --color-kurokiba-dark: #5C2630;
@@ -32,4 +35,114 @@
 body {
   background: var(--color-hayama-light);
   color: var(--color-megumi-dark);
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: var(--color-hayama-light);
+  --foreground: var(--color-megumi-dark);
+  --card: #FFFFFF;
+  --card-foreground: var(--color-megumi-dark);
+  --popover: #FFFFFF;
+  --popover-foreground: var(--color-megumi-dark);
+  --primary: var(--color-soma);
+  --primary-foreground: #FFFFFF;
+  --secondary: var(--color-megumi);
+  --secondary-foreground: #FFFFFF;
+  --muted: var(--color-hayama);
+  --muted-foreground: var(--color-megumi-light);
+  --accent: var(--color-hisako);
+  --accent-foreground: var(--color-megumi-dark);
+  --destructive: var(--color-kurokiba);
+  --border: var(--color-hayama-dark);
+  --input: var(--color-hayama);
+  --ring: var(--color-soma);
+  --chart-1: var(--color-soma);
+  --chart-2: var(--color-megumi);
+  --chart-3: var(--color-takumi);
+  --chart-4: var(--color-kurokiba);
+  --chart-5: var(--color-hisako);
+  --sidebar: var(--color-megumi);
+  --sidebar-foreground: var(--color-hayama-light);
+  --sidebar-primary: var(--color-soma);
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: var(--color-megumi-light);
+  --sidebar-accent-foreground: var(--color-hayama-light);
+  --sidebar-border: var(--color-megumi-light);
+  --sidebar-ring: var(--color-soma);
+}
+
+.dark {
+  --background: var(--color-megumi-dark);
+  --foreground: var(--color-hayama-light);
+  --card: var(--color-megumi);
+  --card-foreground: var(--color-hayama-light);
+  --popover: var(--color-megumi);
+  --popover-foreground: var(--color-hayama-light);
+  --primary: var(--color-soma-light);
+  --primary-foreground: #FFFFFF;
+  --secondary: var(--color-megumi-light);
+  --secondary-foreground: var(--color-hayama-light);
+  --muted: var(--color-megumi);
+  --muted-foreground: var(--color-hayama-dark);
+  --accent: var(--color-hisako-dark);
+  --accent-foreground: var(--color-hayama-light);
+  --destructive: var(--color-kurokiba-light);
+  --border: var(--color-megumi-light);
+  --input: var(--color-megumi);
+  --ring: var(--color-soma-light);
+  --chart-1: var(--color-soma-light);
+  --chart-2: var(--color-megumi-light);
+  --chart-3: var(--color-takumi-light);
+  --chart-4: var(--color-kurokiba-light);
+  --chart-5: var(--color-hisako-light);
+  --sidebar: var(--color-megumi-dark);
+  --sidebar-foreground: var(--color-hayama-light);
+  --sidebar-primary: var(--color-soma-light);
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: var(--color-megumi);
+  --sidebar-accent-foreground: var(--color-hayama-light);
+  --sidebar-border: var(--color-megumi);
+  --sidebar-ring: var(--color-soma-light);
 }

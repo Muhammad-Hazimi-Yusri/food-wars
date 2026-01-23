@@ -70,6 +70,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Version bump script (`scripts/bump-version.mjs`)
   - Pre-commit hook (`.husky/pre-commit`)
   - Claude Project setup instructions
+- shadcn/ui component library with custom theme mapping
+  - Primary → Soma Red
+  - Secondary → Megumi Navy
+  - Destructive → Kurokiba Maroon
+  - Accent → Hisako Pink
+  - Dark mode variables configured
 
 ### Technical Decisions
 - **Next.js 14 App Router** — Modern React patterns, server components

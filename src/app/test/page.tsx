@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+
 export default function TestPage() {
   return (
     <main className="min-h-screen p-8">
@@ -81,6 +83,16 @@ export default function TestPage() {
           <button className="bg-soma hover:bg-soma-light text-white px-4 py-2 rounded">Primary</button>
           <button className="bg-takumi hover:bg-takumi-light text-megumi-dark px-4 py-2 rounded">Warning</button>
           <button className="bg-kurokiba hover:bg-kurokiba-light text-white px-4 py-2 rounded">Danger</button>
+        </div>
+      </section>
+
+      {/* shadcn/ui */}
+      <section className="mb-6">
+        <h2 className="text-lg font-semibold mb-2">shadcn/ui Components</h2>
+        <div className="flex gap-4">
+          <Button>Default</Button>
+          <Button variant="outline">Outline</Button>
+          <Button variant="destructive">Destructive</Button>
         </div>
       </section>
     </main>

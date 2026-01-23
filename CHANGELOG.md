@@ -39,6 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ESLint configuration
 - Noren (暖簾) header component with curtain fringe effect
 - Lucide icons for UI elements
+- Guest mode storage utilities (`src/lib/storage.ts`)
+- `useGuestStorage` hook for localStorage persistence
 
 ### Changed
 - Pre-commit hook now checks for version bump in both package.json and README.md

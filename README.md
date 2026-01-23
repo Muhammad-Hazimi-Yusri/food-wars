@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.2.2-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.2.3-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -29,7 +29,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.2.2
+Current version is v0.2.3
 
 ### For Users
 - 🚧 *In development* — see [Roadmap](#roadmap) for planned features
@@ -86,9 +86,9 @@ Existing FOSS options (Grocy, Mealie, Tandoor) are excellent but require self-ho
 - [x] CSS test page for visual verification
 - [x] shadcn/ui component library
 - [x] Basic layout with Noren header component
+- [x] Guest mode with localStorage
 - [ ] Supabase project setup
 - [ ] Google OAuth authentication
-- [ ] Guest mode with localStorage
 
 ---
 

@@ -41,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Lucide icons for UI elements
 - Guest mode storage utilities (`src/lib/storage.ts`)
 - `useGuestStorage` hook for localStorage persistence
+- Supabase client setup (browser, server, middleware)
 
 ### Changed
 - Pre-commit hook now checks for version bump in both package.json and README.md

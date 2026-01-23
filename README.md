@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -29,7 +29,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.1.0
+Current version is v0.2.0
 
 ### For Users
 - 🚧 *In development* — see [Roadmap](#roadmap) for planned features
@@ -79,9 +79,12 @@ Existing FOSS options (Grocy, Mealie, Tandoor) are excellent but require self-ho
 
 **Goal:** Scaffolding and basic auth
 
-- [ ] Next.js 14 project setup with TypeScript
-- [ ] Tailwind CSS + shadcn/ui configuration
-- [ ] Custom color palette (Soma Red, Megumi Navy, etc.)
+- [x] Next.js 14 project setup with TypeScript
+- [x] Tailwind CSS configuration
+- [x] Custom color palette (Soma Red, Megumi Navy, etc.)
+- [x] Custom fonts (Dela Gothic One, Zen Kaku Gothic)
+- [x] CSS test page for visual verification
+- [ ] shadcn/ui component library
 - [ ] Supabase project setup
 - [ ] Google OAuth authentication
 - [ ] Guest mode with localStorage
@@ -279,8 +282,8 @@ Get these from [Supabase Dashboard](https://supabase.com) → Project Settings �
 |---------|-------------|
 | `pnpm dev` | Start dev server |
 | `pnpm build` | Build for production |
+| `pnpm start` | Run production build |
 | `pnpm lint` | Run ESLint |
-| `pnpm db:migrate` | Run Supabase migrations |
 | `pnpm version:bump` | Interactive version updater |
 
 ---

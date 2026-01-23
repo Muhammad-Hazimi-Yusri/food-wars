@@ -3,22 +3,20 @@
 Thanks for your interest in contributing! This project is open source under the MIT license.
 
 ## Getting Started
-
 ```bash
 # Clone the repo
-git clone https://github.com/YOUR_USERNAME/food-wars.git
+git clone https://github.com/Muhammad-Hazimi-Yusri/food-wars.git
 cd food-wars
 
 # Install dependencies
 pnpm install
 
-# Set up environment
-cp .env.example .env.local
-# Add your Supabase credentials
-
 # Start dev server
 pnpm dev
 ```
+
+Visit `http://localhost:3000` to see the app.
+Visit `http://localhost:3000/test` to see the color palette test page.
 
 ## Project Structure
 

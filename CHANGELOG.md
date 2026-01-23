@@ -12,7 +12,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.1.0] - 2025-01-19
+## [Unreleased]
+
+### Added
+- *Nothing yet*
+
+---
+
+## [0.2.X] - 2025-01-23
+
+### Added
+- Next.js 14 project scaffolding with App Router
+- TypeScript strict mode configuration
+- Tailwind CSS 4 with custom theme
+- Custom color palette from BRANDING.md
+  - Soma Red (#C41E3A) — primary actions
+  - Megumi Navy (#1E3A5F) — headers/backgrounds
+  - Hayama Silver (#E8E8E8) — light backgrounds
+  - Hisako Pink (#E6B8D4) — highlights
+  - Takumi Gold (#D4AF37) — warnings
+  - Kurokiba Maroon (#722F37) — danger/expired
+- Custom fonts via next/font
+  - Dela Gothic One — display/headers
+  - Zen Kaku Gothic New — body text
+- CSS test page at `/test` for visual verification
+- ESLint configuration
+
+### Changed
+- Pre-commit hook now checks for version bump in both package.json and README.md
+- Moved husky to devDependencies
+
+### Technical
+- React 19 + Next.js 16
+- Tailwind CSS 4 with `@theme` syntax
+- pnpm as package manager
+
+
+## [0.1.X] - 2025-01-19
 
 ### Added
 - Project documentation
@@ -43,6 +79,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Cost-free AI** — Context export to Claude/ChatGPT instead of API calls
 
 ---
-
-[Unreleased]: https://github.com/YOUR_USERNAME/food-wars/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/YOUR_USERNAME/food-wars/releases/tag/v0.1.0

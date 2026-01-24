@@ -50,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Playwright E2E testing (Chromium)
 - Example tests for storage utilities and home page
 - Test scripts: `test`, `test:run`, `test:e2e`, `test:e2e:ui`
+- GitHub Actions CI pipeline (lint, test, e2e)
 
 ### Changed
 - Pre-commit hook now checks for version bump in both package.json and README.md

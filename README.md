@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.2.5-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.2.6-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -29,7 +29,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.2.5
+Current version is v0.2.6
 
 ### For Users
 - 🚧 *In development* — see [Roadmap](#roadmap) for planned features
@@ -89,7 +89,7 @@ Existing FOSS options (Grocy, Mealie, Tandoor) are excellent but require self-ho
 - [x] Guest mode with localStorage
 - [x] Supabase project setup
 - [x] Google OAuth authentication
-- [ ] Testing framework (Vitest + Playwright)
+- [x] Testing framework (Vitest + Playwright)
 - [ ] GitHub Actions CI pipeline
 - [ ] Custom domain setup (food-wars.muhammadhazimiyusri.uk)
 

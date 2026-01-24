@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - AddItemForm with category and expiry date
 - InventoryList with responsive grid layout
 - Dual storage: Supabase (signed in) and localStorage (guest)
+- EditItemForm component for updating items
 
 ### Changed
 - Noren header now uses UserMenu dropdown instead of menu icon

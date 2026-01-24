@@ -12,13 +12,15 @@ import {
 } from "@/components/ui/dialog";
 import { WoodCard } from "@/components/diner/WoodCard";
 import { AddItemForm } from "@/components/inventory/AdditemForm";
+import { EditItemForm } from "@/components/inventory/EditItemForm";
 import { getInventoryItems, deleteInventoryItem } from "@/lib/inventory";
 import type { InventoryItem } from "@/types/database";
 
 export function InventoryList() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
 
   const fetchItems = async () => {
     try {
@@ -45,7 +47,12 @@ export function InventoryList() {
   };
 
   const handleAddSuccess = () => {
-    setDialogOpen(false);
+    setAddDialogOpen(false);
+    fetchItems();
+  };
+
+  const handleEditSuccess = () => {
+    setEditingItem(null);
     fetchItems();
   };
 
@@ -59,7 +66,7 @@ export function InventoryList() {
         <h2 className="font-[family-name:var(--font-display)] text-xl text-megumi">
           Your Kitchen 台所
         </h2>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
           <DialogTrigger asChild>
             <Button size="sm">
               <Plus className="w-4 h-4 mr-1" />
@@ -85,11 +92,28 @@ export function InventoryList() {
             <WoodCard
               key={item.id}
               item={item}
+              onEdit={setEditingItem}
               onDelete={handleDelete}
             />
           ))}
         </div>
       )}
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingItem} onOpenChange={(open) => !open && setEditingItem(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Item</DialogTitle>
+          </DialogHeader>
+          {editingItem && (
+            <EditItemForm
+              item={editingItem}
+              onSuccess={handleEditSuccess}
+              onCancel={() => setEditingItem(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

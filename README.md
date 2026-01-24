@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.3.4-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -29,7 +29,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.3.4
+Current version is v0.4.0
 
 ### For Users
 - 🚧 *In development* — see [Roadmap](#roadmap) for planned features
@@ -135,20 +135,21 @@ Food Wars targets a different audience: people who want Grocy-like features with
 
 ---
 
-### Planned
+### In Progress
 
-#### v0.4 - Schema Expansion
+#### v0.4 - Schema Expansion (In Progress)
 
 **Goal:** Align database with Grocy's data model for full feature support
 
-> ⚠️ Breaking change: Existing inventory data will need migration
+> ⚠️ Breaking change: Guest mode temporarily disabled
 
 **New master data tables:**
-- [ ] `locations` — storage locations (Fridge, Freezer, Pantry, Cupboard)
-- [ ] `shopping_locations` — stores (Tesco, Costco, Local Shop)
-- [ ] `product_groups` — item categories (Dairy, Produce, Meat, Bakery, Snacks)
-- [ ] `quantity_units` — units (pc, kg, g, L, mL, pack, bottle)
-- [ ] `quantity_unit_conversions` — e.g., 1 pack = 6 pieces
+- [x] `locations` — storage locations (Fridge, Freezer, Pantry, Cupboard)
+- [x] `shopping_locations` — stores (Tesco, Costco, Local Shop)
+- [x] `product_groups` — item categories (Dairy, Produce, Meat, Bakery, Snacks)
+- [x] `quantity_units` — units (pc, kg, g, L, mL, pack, bottle)
+- [x] `quantity_unit_conversions` — e.g., 1 pack = 6 pieces
+- [x] Auto-seed default data on user signup
 
 **Products table (replaces inventory_items):**
 
@@ -192,6 +193,11 @@ Food Wars targets a different audience: people who want Grocy-like features with
 | `opened_date` | date | When opened |
 | `note` | text | Per-entry notes |
 
+**Components:**
+- [x] `StockCard` component for new schema
+- [x] `StockList` component with filtering
+- [x] Updated `InventoryStats` and `InventoryWarnings`
+
 **UI for master data:**
 - [ ] Manage locations page
 - [ ] Manage stores page
@@ -200,8 +206,9 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [ ] Product form with full fields (tabbed/sectioned)
 
 **Migration:**
-- [ ] Migrate v0.3 `inventory_items` to new schema
-- [ ] Map old `category` → `location` + `product_group`
+- ~~Migrate v0.3 `inventory_items` to new schema~~ (clean slate instead)
+
+### Planned
 
 #### v0.5 - Demo Mode & Filtering
 

@@ -5,7 +5,44 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.X] - In Progress
+## [0.4.0] - In Progress
+
+### Added
+- New Grocy-inspired database schema (`supabase/migrations/001_schema.sql`)
+  - `locations` table with `is_freezer` flag
+  - `shopping_locations` table (stores)
+  - `product_groups` table (categories)
+  - `quantity_units` table with plural names
+  - `quantity_unit_conversions` table
+  - `products` table (30+ fields, replaces inventory_items)
+  - `stock_entries` table (individual batches)
+- Auto-seed default master data on user signup
+- `StockCard` component for new schema
+- `StockList` component with filtering and sorting
+- Supabase query helpers (`src/lib/supabase/inventory.ts`)
+- Full RLS policies for all new tables
+
+### Changed
+- `inventory-utils.ts` updated for `StockEntryWithProduct` type
+- `InventoryStats` redesigned with grid layout
+- `InventoryWarnings` updated for new expiry statuses
+- Home page uses server component data fetching
+- README roadmap rewritten with Grocy feature audit
+- README project structure updated
+
+### Removed
+- `inventory_items` table (replaced by products + stock_entries)
+- `WoodCard` component (replaced by StockCard)
+- `InventoryList` component (replaced by StockList)
+- `AddItemForm` component (to be rebuilt)
+- `EditItemForm` component (to be rebuilt)
+- `src/lib/inventory.ts` (replaced by `src/lib/supabase/inventory.ts`)
+
+### Breaking Changes
+- Database schema completely restructured
+- Guest mode temporarily non-functional
+
+## [0.3.X] - 2025-01-24
 
 ### Added
 - Database tables: households, inventory_items

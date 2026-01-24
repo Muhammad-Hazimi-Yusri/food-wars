@@ -1,37 +1,45 @@
-import { AlertTriangle, Clock, XCircle } from "lucide-react";
-import type { InventoryStats } from "@/lib/inventory-utils";
+'use client';
 
-type Props = {
+import { AlertTriangle, Clock} from 'lucide-react';
+import { InventoryStats } from '@/lib/inventory-utils';
+import { cn } from '@/lib/utils';
+
+type InventoryWarningsProps = {
   stats: InventoryStats;
+  onFilterClick?: (filter: 'expired' | 'expiring') => void;
 };
 
-export function InventoryWarnings({ stats }: Props) {
-  const { expired, urgent, warning } = stats.byStatus;
-  
-  // Don't render if no warnings
-  if (expired === 0 && urgent === 0 && warning === 0) {
+export function InventoryWarnings({ stats, onFilterClick }: InventoryWarningsProps) {
+  if (stats.expired === 0 && stats.expiring === 0) {
     return null;
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
-      {expired > 0 && (
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-kurokiba/10 text-kurokiba text-sm">
-          <XCircle className="w-4 h-4" />
-          <span>{expired} expired</span>
-        </div>
+    <div className="mb-4 flex flex-wrap gap-2">
+      {stats.expired > 0 && (
+        <button
+          onClick={() => onFilterClick?.('expired')}
+          className={cn(
+            'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+            'bg-red-100 text-red-800 hover:bg-red-200'
+          )}
+        >
+          <AlertTriangle className="h-4 w-4" />
+          <span>{stats.expired} expired</span>
+        </button>
       )}
-      {urgent > 0 && (
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-soma/10 text-soma text-sm">
-          <AlertTriangle className="w-4 h-4" />
-          <span>{urgent} expiring soon</span>
-        </div>
-      )}
-      {warning > 0 && (
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-takumi/10 text-takumi-dark text-sm">
-          <Clock className="w-4 h-4" />
-          <span>{warning} use this week</span>
-        </div>
+
+      {stats.expiring > 0 && (
+        <button
+          onClick={() => onFilterClick?.('expiring')}
+          className={cn(
+            'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+            'bg-amber-100 text-amber-800 hover:bg-amber-200'
+          )}
+        >
+          <Clock className="h-4 w-4" />
+          <span>{stats.expiring} expiring soon</span>
+        </button>
       )}
     </div>
   );

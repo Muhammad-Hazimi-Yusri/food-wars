@@ -1,4 +1,4 @@
-import { Menu } from "lucide-react";
+import { UserMenu } from "@/components/diner/UserMenu";
 
 export function Noren() {
   return (
@@ -12,12 +12,10 @@ export function Noren() {
       
       {/* Main header */}
       <div className="flex items-center justify-between px-4 py-3">
-        <h1 className="font-[family-name:var(--font-display)] text-xl">
+        <h1 className="font-display text-xl">
           🏮 Food Wars <span className="text-soma-light">食戟</span>
         </h1>
-        <button className="p-2 hover:bg-megumi-light rounded">
-          <Menu className="w-5 h-5" />
-        </button>
+        <UserMenu />
       </div>
     </header>
   );

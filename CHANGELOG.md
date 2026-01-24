@@ -12,6 +12,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Row Level Security policies for multi-user data isolation
 - TypeScript types for database entities
 - SQL migration files for reference
+- Auto-create household on user signup
+- Auth error page (`/auth/error`) with reason handling
+- UserMenu dropdown component with Google avatar
+- WelcomeModal for first-time visitors (いらっしゃいませ!)
+- Next.js image config for Google profile pictures
+
+### Changed
+- Noren header now uses UserMenu dropdown instead of menu icon
+- Auth flow moved from dedicated `/login` page to modal
+
+### Removed
+- `/login` page (replaced by WelcomeModal)
+- AuthStatus component (replaced by UserMenu)
 
 
 ## [0.2.X] - 2025-01-23

@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.3.1-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -29,7 +29,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.3.0
+Current version is v0.3.1
 
 ### For Users
 - 🚧 *In development* — see [Roadmap](#roadmap) for planned features
@@ -103,6 +103,7 @@ Existing FOSS options (Grocy, Mealie, Tandoor) are excellent but require self-ho
 
 - [x] Database migrations (households, inventory_items)
 - [x] Row Level Security policies
+- [x] Welcome modal with sign-in/guest options 
 - [ ] Add/edit/delete inventory items
 - [ ] Categories (fridge, freezer, pantry, spices)
 - [ ] Expiry date tracking

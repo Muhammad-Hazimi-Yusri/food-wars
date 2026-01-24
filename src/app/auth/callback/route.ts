@@ -8,8 +8,30 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
+    const { error: authError } = await supabase.auth.exchangeCodeForSession(code);
+    
+    if (!authError) {
+      // Check if user already has a household
+      const { data: existing } = await supabase
+        .from("households")
+        .select("id")
+        .limit(1)
+        .single();
+
+      // Create household for new users
+      if (!existing) {
+        const { data: { user } } = await supabase.auth.getUser();
+        const { error: householdError } = await supabase.from("households").insert({
+          name: `${user?.user_metadata?.name ?? "My"}'s Kitchen`,
+          owner_id: user?.id,
+        });
+
+        if (householdError) {
+          console.error("Failed to create household:", householdError);
+          return NextResponse.redirect(`${origin}/auth/error?reason=household`);
+        }
+      }
+
       return NextResponse.redirect(`${origin}${next}`);
     }
   }

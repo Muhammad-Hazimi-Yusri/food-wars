@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.3.1-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.3.2-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -29,7 +29,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.3.1
+Current version is v0.3.2
 
 ### For Users
 - 🚧 *In development* — see [Roadmap](#roadmap) for planned features
@@ -97,76 +97,105 @@ Existing FOSS options (Grocy, Mealie, Tandoor) are excellent but require self-ho
 
 ### In Progress
 
-#### v0.3 - Inventory MVP
+#### v0.3 - Basic Inventory
 
-**Goal:** Core pantry tracking functionality
+**Goal:** Core inventory CRUD
 
 - [x] Database migrations (households, inventory_items)
 - [x] Row Level Security policies
-- [x] Welcome modal with sign-in/guest options 
-- [ ] Add/edit/delete inventory items
-- [ ] Categories (fridge, freezer, pantry, spices)
-- [ ] Expiry date tracking
-- [ ] Urgency badges (fresh → warning → urgent → expired)
-- [ ] WoodCard component with diner styling
-- [ ] Mobile-responsive grid layout
+- [x] Auto-create household on signup
+- [x] Welcome modal with sign-in/guest options
+- [x] UserMenu dropdown with Google avatar
+- [x] Add/delete inventory items
+- [x] WoodCard component with diner styling
+- [x] Expiry status badges (fresh → warning → urgent → expired)
+- [x] Responsive grid layout
+- [x] Guest mode (localStorage) and signed-in mode (Supabase)
+- [ ] Edit inventory items
 
 ---
 
 ### Planned
 
-#### v0.4 - Shopping Lists
+#### v0.4 - Inventory Polish
+
+**Goal:** Views, filters, and warnings like Grocy
+
+- [ ] Edit item modal
+- [ ] List view / Card view toggle
+- [ ] Category tabs (fridge, freezer, pantry, spices)
+- [ ] Warning banners (X expired, X expiring soon, X low stock)
+- [ ] Filter by status (all, fresh, expiring, expired)
+- [ ] Search items
+- [ ] Sort options (name, expiry date, category)
+- [ ] Item count and stats display
+
+#### v0.5 - Smart Input
+
+**Goal:** Fast, error-free input like Grocy
+
+- [ ] Common items quick-add (searchable list)
+- [ ] Recently added items suggestions
+- [ ] Barcode scanning (html5-qrcode)
+- [ ] Barcode lookup via Open Food Facts API
+- [ ] Quick quantity adjustment (+/- buttons)
+- [ ] Duplicate item detection
+
+#### v0.6 - Stock Management
+
+**Goal:** Minimum stock levels and consumption tracking
+
+- [ ] Minimum stock amount per item
+- [ ] Low stock warnings
+- [ ] "Consume" action (reduce quantity)
+- [ ] "Open" status for items (e.g., opened milk)
+- [ ] Purchase history (when added, quantity)
+- [ ] Expiry date presets (common durations)
+
+#### v0.7 - Shopping Lists
 
 **Goal:** Auto-generate shopping lists from inventory
 
 - [ ] Shopping list CRUD
 - [ ] Auto-generate from low-stock items
+- [ ] Manual add items
 - [ ] Checkbox items with swipe to delete
-- [ ] Share list (copy to clipboard)
+- [ ] Group by store section/category
+- [ ] Share list (copy to clipboard, share link)
+- [ ] Mark as purchased → auto-add to inventory
 
-#### v0.5 - Recipes & AI
+#### v0.8 - Recipes & Meal Planning
 
-**Goal:** Recipe database with AI-powered suggestions
+**Goal:** Recipe database with ingredient matching
 
 - [ ] Recipe CRUD with ingredients (JSONB)
 - [ ] "Can I make this?" ingredient matching
-- [ ] Chalkboard component for suggestions
-- [ ] AI context export (one-click copy pantry)
-- [ ] Import recipe from AI response (optional)
+- [ ] Missing ingredients → add to shopping list
+- [ ] "Due Score" — recipes using expiring items
+- [ ] Meal planning calendar (daily/weekly)
+- [ ] One-click: meal plan → shopping list
 
-#### v0.6 - Smart Features
+#### v0.9 - PWA & Mobile
 
-**Goal:** Advanced input methods
+**Goal:** Native-like mobile experience
 
-- [ ] Receipt OCR (Tesseract.js or Google Vision)
-- [ ] Barcode scanning (html5-qrcode)
-- [ ] Image recognition for pantry items (experimental)
+- [ ] PWA manifest and service worker
+- [ ] Offline mode with sync queue
+- [ ] Install prompt
+- [ ] Mobile-optimized touch interactions
+- [ ] Camera access for barcode scanning
+- [ ] Dark mode (auto + manual toggle)
 
-#### v0.7 - Polish
+#### v1.0 - AI Features
 
-**Goal:** Production-ready experience
+**Goal:** Smart suggestions and automation
 
-- [ ] PWA support
-- [ ] Offline mode with sync
-- [ ] Meal planning calendar
-- [ ] Performance optimization
-
----
-
-### Known Issues & Polish
-
-- [ ] *None yet — project just started!*
-
----
-
-### v1.0.0 - Official Release
-
-**Goal:** Production-ready, polished pantry app
-
-- [ ] All core features complete
-- [ ] Comprehensive test coverage
-- [ ] Accessibility audit passed
-- [ ] Documentation complete
+- [ ] Chalkboard component for AI suggestions
+- [ ] AI context export (one-click copy pantry state)
+- [ ] Recipe suggestions based on inventory
+- [ ] Smart expiry predictions
+- [ ] Natural language item input
+- [ ] Import recipe from AI response
 
 ---
 
@@ -174,14 +203,28 @@ Existing FOSS options (Grocy, Mealie, Tandoor) are excellent but require self-ho
 
 > Post-launch features, no timeline commitment.
 
+- Custom fields for items (brand, price, notes)
+- Price tracking and budget insights
 - Grocery delivery integration (Tesco, Asda APIs)
 - Nutrition tracking
-- Cost tracking & budgeting
-- Household sharing invites
+- Household sharing invites (multi-user)
 - Recipe sharing community
-- Multi-language support
+- Multi-language support (i18n)
+- Voice input for hands-free use
+- Receipt OCR (Tesseract.js or Google Vision)
 
 ---
+
+### Design Philosophy
+
+> Inspired by [Grocy](https://grocy.info) — ported for modern cloud deployment.
+
+Food Wars aims to bring Grocy's excellent feature set to a modern tech stack (Next.js, Supabase, Vercel) that's:
+
+- **Zero-config deployment** — No Docker, no self-hosting required
+- **Cloud-first** — Works across devices, auto-backup
+- **Forkable** — MIT license, easy to customize
+- **Cozy UX** — Japanese diner aesthetic instead of utilitarian
 
 ## Tech Stack
 

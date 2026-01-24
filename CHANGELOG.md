@@ -17,15 +17,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - UserMenu dropdown component with Google avatar
 - WelcomeModal for first-time visitors (いらっしゃいませ!)
 - Next.js image config for Google profile pictures
+- Inventory CRUD data layer (`src/lib/inventory.ts`)
+- WoodCard component with expiry status badges
+- AddItemForm with category and expiry date
+- InventoryList with responsive grid layout
+- Dual storage: Supabase (signed in) and localStorage (guest)
 
 ### Changed
 - Noren header now uses UserMenu dropdown instead of menu icon
 - Auth flow moved from dedicated `/login` page to modal
+- Home page now shows inventory list
 
 ### Removed
 - `/login` page (replaced by WelcomeModal)
 - AuthStatus component (replaced by UserMenu)
-
+- GuestStorageTest component (replaced by InventoryList)
 
 ## [0.2.X] - 2025-01-23
 

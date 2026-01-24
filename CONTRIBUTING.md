@@ -75,6 +75,12 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
 The `NEXT_PUBLIC_` prefix makes variables available client-side. These keys are safe to expose (security comes from Supabase Row Level Security).
 
+### Production URLs
+
+When deploying, update these in Supabase Dashboard (Authentication → URL Configuration):
+- Site URL: `https://food-wars.muhammadhazimiyusri.uk`
+- Redirect URLs: `https://food-wars.muhammadhazimiyusri.uk/**`
+
 ## Pull Request Process
 
 1. Fork the repository

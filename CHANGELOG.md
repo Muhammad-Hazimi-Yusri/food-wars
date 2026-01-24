@@ -5,19 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.X] - In Progress
 
 ### Added
-- Next.js 14 project scaffolding (in progress)
+- Database tables: households, inventory_items
+- Row Level Security policies for multi-user data isolation
+- TypeScript types for database entities
+- SQL migration files for reference
 
----
-
-## [Unreleased]
-
-### Added
-- *Nothing yet*
-
----
 
 ## [0.2.X] - 2025-01-23
 
@@ -51,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Example tests for storage utilities and home page
 - Test scripts: `test`, `test:run`, `test:e2e`, `test:e2e:ui`
 - GitHub Actions CI pipeline (lint, test, e2e)
+- Custom domain (food-wars.muhammadhazimiyusri.uk) via Vercel + Cloudflare
 
 ### Changed
 - Pre-commit hook now checks for version bump in both package.json and README.md

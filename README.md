@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.2.7-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -29,7 +29,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.2.7
+Current version is v0.3.0
 
 ### For Users
 - 🚧 *In development* — see [Roadmap](#roadmap) for planned features
@@ -73,9 +73,10 @@ Existing FOSS options (Grocy, Mealie, Tandoor) are excellent but require self-ho
 
 > See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
 
-### In Progress
+### Completed
 
-#### v0.2 - Project Foundation
+<details>
+<summary><strong>v0.2 - Project Foundation ✓</strong></summary>
 
 **Goal:** Scaffolding and basic auth
 
@@ -91,24 +92,27 @@ Existing FOSS options (Grocy, Mealie, Tandoor) are excellent but require self-ho
 - [x] Google OAuth authentication
 - [x] Testing framework (Vitest + Playwright)
 - [x] GitHub Actions CI pipeline
-- [ ] Custom domain setup (food-wars.muhammadhazimiyusri.uk)
+- [x] Custom domain setup (food-wars.muhammadhazimiyusri.uk)
+</details>
 
----
-
-### Planned
+### In Progress
 
 #### v0.3 - Inventory MVP
 
 **Goal:** Core pantry tracking functionality
 
-- [ ] Database migrations (households, inventory_items)
-- [ ] Row Level Security policies
+- [x] Database migrations (households, inventory_items)
+- [x] Row Level Security policies
 - [ ] Add/edit/delete inventory items
 - [ ] Categories (fridge, freezer, pantry, spices)
 - [ ] Expiry date tracking
 - [ ] Urgency badges (fresh → warning → urgent → expired)
 - [ ] WoodCard component with diner styling
 - [ ] Mobile-responsive grid layout
+
+---
+
+### Planned
 
 #### v0.4 - Shopping Lists
 

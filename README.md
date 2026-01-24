@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.3.3-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.3.4-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -29,7 +29,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.3.3
+Current version is v0.3.4
 
 ### For Users
 - 🚧 *In development* — see [Roadmap](#roadmap) for planned features
@@ -52,26 +52,51 @@ Current version is v0.3.3
 
 ## Why Food Wars?
 
-Existing FOSS options (Grocy, Mealie, Tandoor) are excellent but require self-hosting. Food Wars targets a different niche:
+> **Acknowledgment:** This project adapts [Grocy's](https://grocy.info) database schema and feature set. Grocy is the gold standard for self-hosted household management — Food Wars is my learning project to understand its architecture while building something accessible for less technical users.
+
+### Background
+
+Grocy is excellent but requires technical setup:
+- Self-hosted PHP/SQLite server
+- Docker knowledge for easy deployment  
+- [grocy-desktop](https://github.com/grocy/grocy-desktop) exists but still needs a webserver for mobile sync
+
+Food Wars targets a different audience: people who want Grocy-like features without managing infrastructure.
+
+### Comparison
 
 | | Grocy | Mealie | Tandoor | **Food Wars** |
 |--|-------|--------|---------|---------------|
 | **Focus** | Full household ERP | Recipe management | Recipe management | Pantry + waste reduction |
-| **Hosting** | Self-host (PHP/SQLite) | Self-host (Python) | Self-host (Django) | Vercel free tier |
-| **Setup** | Docker required | Docker required | Docker required | Just sign in |
+| **Hosting** | Self-host (PHP/SQLite) | Self-host (Python) | Self-host (Django) | Hosted or self-host |
+| **Setup** | Docker required | Docker required | Docker required | Sign in (hosted) or Vercel + Supabase (self-host) |
+| **Maturity** | Battle-tested since 2017 | Established | Established | Early development |
 | **Barcode scanning** | ✅ | ❌ | ❌ | 🔜 Planned |
-| **AI features** | ❌ | ✅ Recipe import (API key) | ✅ Recipe import (API key) | ✅ Context export (free) |
-| **Receipt → Pantry** | ⚠️ Third-party addon | ❌ | ❌ | 🔜 Planned |
+| **Offline support** | ✅ Full | ✅ Full | ✅ Full | ❌ Online only |
+| **Multi-user** | ✅ | ✅ | ✅ | 🔜 Planned |
+| **Chores/Tasks** | ✅ | ❌ | ❌ | ❌ Not planned |
+| **Mobile app** | PWA requiring webserver | Via webserver | Via webserver | Responsive web (PWA) via Vercel hosting |
 
-**Our niche:** Zero-config cloud hosting, expiry-focused workflow, and a cozy Japanese diner aesthetic.
+### Our Niche
 
-> Already happy with Grocy/Mealie/Tandoor? Stick with them — they're battle-tested. Food Wars is for those who want something simpler to deploy.
+- **For less technical users** — No homelab, Docker, or server management required
+- **Mobile-first** — Responsive design as primary target (you're in the kitchen, not at a desk)
+- **Hosted option** — Just sign in at [food-wars.muhammadhazimiyusri.uk](https://food-wars.muhammadhazimiyusri.uk)
+- **Self-host option** — Fork and deploy to Vercel + Supabase free tiers (see [Self-Hosting](#self-hosting))
+- **Learning in public** — Built with Claude AI to learn from Grocy's architecture
+
+### Privacy Notice
+
+**Hosted version:** Your data is stored in the developer's Supabase database. While secured with Row Level Security (you can only access your own household's data), if you prefer full data ownership, please use the self-hosting option.
+
+**Self-hosted:** Your data stays in your own Supabase project. See [Self-Hosting](#self-hosting) for setup instructions.
 
 ---
 
 ## Roadmap
 
 > See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
+> Feature set adapted from [Grocy](https://grocy.info) — ported for zero-config cloud deployment.
 
 ### Completed
 
@@ -80,138 +105,478 @@ Existing FOSS options (Grocy, Mealie, Tandoor) are excellent but require self-ho
 
 **Goal:** Scaffolding and basic auth
 
-- [x] Next.js 14 project setup with TypeScript
-- [x] Tailwind CSS configuration
-- [x] Custom color palette (Soma Red, Megumi Navy, etc.)
-- [x] Custom fonts (Dela Gothic One, Zen Kaku Gothic)
-- [x] CSS test page for visual verification
+- [x] Next.js 14 App Router with TypeScript
+- [x] Tailwind CSS 4 with custom theme
+- [x] Shokugeki color palette & Japanese fonts
 - [x] shadcn/ui component library
-- [x] Basic layout with Noren header component
+- [x] Noren header component
 - [x] Guest mode with localStorage
-- [x] Supabase project setup
-- [x] Google OAuth authentication
-- [x] Testing framework (Vitest + Playwright)
+- [x] Supabase setup with Google OAuth
+- [x] Testing (Vitest + Playwright)
 - [x] GitHub Actions CI pipeline
-- [x] Custom domain setup (food-wars.muhammadhazimiyusri.uk)
+- [x] Custom domain deployment
 </details>
 
-### In Progress
+<details>
+<summary><strong>v0.3 - Basic Inventory ✓</strong></summary>
 
-#### v0.3 - Basic Inventory
+**Goal:** Simple CRUD to validate the stack
 
-**Goal:** Core inventory CRUD
-
-- [x] Database migrations (households, inventory_items)
+- [x] Database: `households`, `inventory_items` tables
 - [x] Row Level Security policies
 - [x] Auto-create household on signup
 - [x] Welcome modal with sign-in/guest options
 - [x] UserMenu dropdown with Google avatar
-- [x] Add/delete inventory items
-- [x] WoodCard component with diner styling
-- [x] Expiry status badges (fresh → warning → urgent → expired)
+- [x] Add/edit/delete items (name, quantity, unit, category, expiry)
+- [x] WoodCard component with expiry badges
 - [x] Responsive grid layout
-- [x] Guest mode (localStorage) and signed-in mode (Supabase)
-- [x] Edit inventory items
+- [x] Dual storage: Supabase (auth) + localStorage (guest)
+</details>
 
 ---
 
 ### Planned
 
-#### v0.4 - Inventory Polish
+#### v0.4 - Schema Expansion
 
-**Goal:** Views, filters, and warnings like Grocy
+**Goal:** Align database with Grocy's data model for full feature support
 
-- [ ] Edit item modal
+> ⚠️ Breaking change: Existing inventory data will need migration
+
+**New master data tables:**
+- [ ] `locations` — storage locations (Fridge, Freezer, Pantry, Cupboard)
+- [ ] `shopping_locations` — stores (Tesco, Costco, Local Shop)
+- [ ] `product_groups` — item categories (Dairy, Produce, Meat, Bakery, Snacks)
+- [ ] `quantity_units` — units (pc, kg, g, L, mL, pack, bottle)
+- [ ] `quantity_unit_conversions` — e.g., 1 pack = 6 pieces
+
+**Products table (replaces inventory_items):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Required |
+| `description` | text | Optional notes |
+| `active` | boolean | Soft delete |
+| `picture_file_name` | string | Product image |
+| `location_id` | FK | Default storage location |
+| `shopping_location_id` | FK | Default store |
+| `product_group_id` | FK | Category |
+| `qu_id_stock` | FK | Stock unit (immutable after first entry) |
+| `qu_id_purchase` | FK | Purchase unit |
+| `qu_factor_purchase_to_stock` | decimal | Conversion factor |
+| `min_stock_amount` | decimal | Low stock threshold |
+| `due_type` | enum | 1=best_before, 2=expiration |
+| `default_due_days` | int | Pre-fill expiry (-1 = never) |
+| `default_due_days_after_open` | int | New expiry when opened |
+| `default_due_days_after_freezing` | int | Expiry when frozen |
+| `default_due_days_after_thawing` | int | Expiry when thawed |
+| `quick_consume_amount` | decimal | One-click consume qty |
+| `quick_open_amount` | decimal | One-click open qty |
+| `calories` | int | kcal per stock unit |
+| `treat_opened_as_out_of_stock` | boolean | Opened = missing for min stock |
+| `should_not_be_frozen` | boolean | Warn if moved to freezer |
+
+**Stock entries table (tracks individual batches):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `product_id` | FK | Parent product |
+| `amount` | decimal | Quantity remaining |
+| `best_before_date` | date | Due date for this batch |
+| `purchased_date` | date | When added |
+| `price` | decimal | Unit price paid |
+| `location_id` | FK | Current storage location |
+| `shopping_location_id` | FK | Where purchased |
+| `stock_id` | uuid | Unique ID for Grocycode |
+| `open` | boolean | Has been opened |
+| `opened_date` | date | When opened |
+| `note` | text | Per-entry notes |
+
+**UI for master data:**
+- [ ] Manage locations page
+- [ ] Manage stores page
+- [ ] Manage product groups page
+- [ ] Manage quantity units page
+- [ ] Product form with full fields (tabbed/sectioned)
+
+**Migration:**
+- [ ] Migrate v0.3 `inventory_items` to new schema
+- [ ] Map old `category` → `location` + `product_group`
+
+#### v0.5 - Demo Mode & Filtering
+
+**Goal:** Demo data for testing + filtering UI
+
+**Demo mode (guest):**
+- [ ] Seed data generator with varied test scenarios
+- [ ] Products with different locations, groups, statuses
+- [ ] Stock entries with varied expiry dates
+- [ ] Reset demo button
+- [ ] **Disclaimer banner:** "Guest mode is for demo only — data may reset on app updates. Sign in or self-host for persistent storage."
+
+**Filtering & display:**
+- [ ] Warning banners (clickable to apply filter)
+- [ ] Stats display (total items, by status, by location)
+- [ ] Filter by expiry status (all, fresh, due soon, overdue, expired)
+- [ ] Filter by location
+- [ ] Filter by product group
+- [ ] Search by name
+- [ ] Sort options (name, expiry, location, date added)
 - [ ] List view / Card view toggle
-- [ ] Category tabs (fridge, freezer, pantry, spices)
-- [ ] Warning banners (X expired, X expiring soon, X low stock)
-- [ ] Filter by status (all, fresh, expiring, expired)
-- [ ] Search items
-- [ ] Sort options (name, expiry date, category)
-- [ ] Item count and stats display
 
-#### v0.5 - Smart Input
+#### v0.6 - Stock Actions & Journal
 
-**Goal:** Fast, error-free input like Grocy
+**Goal:** Consume vs Open distinction + transaction logging
 
-- [ ] Common items quick-add (searchable list)
-- [ ] Recently added items suggestions
-- [ ] Barcode scanning (html5-qrcode)
-- [ ] Barcode lookup via Open Food Facts API
-- [ ] Quick quantity adjustment (+/- buttons)
-- [ ] Duplicate item detection
+**Stock journal table:**
 
-#### v0.6 - Stock Management
+| Field | Type | Description |
+|-------|------|-------------|
+| `product_id` | FK | Product affected |
+| `stock_entry_id` | FK | Specific batch |
+| `amount` | decimal | Quantity changed |
+| `transaction_type` | enum | purchase, consume, spoiled, open, transfer, correction |
+| `location_id` | FK | Location involved |
+| `price` | decimal | Price at transaction |
+| `spoiled` | boolean | Wasted (not consumed) |
+| `note` | text | Optional note |
+| `undone` | boolean | Was this reversed |
+| `undone_timestamp` | datetime | When reversed |
+| `correlation_id` | uuid | Links related transactions |
 
-**Goal:** Minimum stock levels and consumption tracking
+**Consume action:**
+- [ ] Partial consume (reduce quantity)
+- [ ] Mark as spoiled option (waste tracking)
+- [ ] Consume rule: opened first → due soonest → FIFO
+- [ ] Consume from specific location
+- [ ] Quick consume button (uses `quick_consume_amount`)
 
-- [ ] Minimum stock amount per item
-- [ ] Low stock warnings
-- [ ] "Consume" action (reduce quantity)
-- [ ] "Open" status for items (e.g., opened milk)
-- [ ] Purchase history (when added, quantity)
-- [ ] Expiry date presets (common durations)
+**Open action:**
+- [ ] Mark stock entry as opened
+- [ ] Set `opened_date`
+- [ ] Recalculate due date using `default_due_days_after_open`
+- [ ] New due date never extends original
+- [ ] Quick open button (uses `quick_open_amount`)
+- [ ] Visual indicator for opened items
+
+**Transfer action:**
+- [ ] Move stock between locations
+- [ ] Freezer detection: apply `default_due_days_after_freezing`
+- [ ] Thaw detection: apply `default_due_days_after_thawing`
+- [ ] Warn if `should_not_be_frozen` product moved to freezer
+
+**Journal UI:**
+- [ ] Stock journal page with filters (product, type, date range)
+- [ ] Undo recent transactions (within time limit)
+- [ ] Journal summary view (aggregated by product/type)
 
 #### v0.7 - Shopping Lists
 
-**Goal:** Auto-generate shopping lists from inventory
+**Goal:** Manual and auto-generated shopping lists
 
-- [ ] Shopping list CRUD
-- [ ] Auto-generate from low-stock items
-- [ ] Manual add items
-- [ ] Checkbox items with swipe to delete
-- [ ] Group by store section/category
-- [ ] Share list (copy to clipboard, share link)
-- [ ] Mark as purchased → auto-add to inventory
+**Shopping lists table:**
 
-#### v0.8 - Recipes & Meal Planning
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | List name |
+| `description` | text | Optional |
 
-**Goal:** Recipe database with ingredient matching
+**Shopping list items table:**
 
-- [ ] Recipe CRUD with ingredients (JSONB)
-- [ ] "Can I make this?" ingredient matching
-- [ ] Missing ingredients → add to shopping list
-- [ ] "Due Score" — recipes using expiring items
-- [ ] Meal planning calendar (daily/weekly)
-- [ ] One-click: meal plan → shopping list
+| Field | Type | Description |
+|-------|------|-------------|
+| `shopping_list_id` | FK | Parent list |
+| `product_id` | FK | Nullable (can be freeform) |
+| `note` | text | Item description if no product |
+| `amount` | decimal | Quantity needed |
+| `qu_id` | FK | Quantity unit |
+| `done` | boolean | Checked off |
 
-#### v0.9 - PWA & Mobile
+**Core features:**
+- [ ] Multiple shopping lists
+- [ ] Add product-linked items (inherit name, unit)
+- [ ] Add freeform items (just text + amount)
+- [ ] Checkbox to mark done
+- [ ] Group by product group (aisle optimization)
+- [ ] Group by store
 
-**Goal:** Native-like mobile experience
+**Inventory integration:**
+- [ ] "Add to stock" from shopping list item
+- [ ] Pre-fills purchase form with product, amount, unit
+- [ ] Auto-remove from list when added to stock
+- [ ] Amount increments if product already on list
 
-- [ ] PWA manifest and service worker
-- [ ] Offline mode with sync queue
+**Auto-generation:**
+- [ ] "Add all below min stock" button
+- [ ] "Add all expired" button
+- [ ] "Add all overdue" button
+- [ ] Setting: auto-add products below min stock
+- [ ] Calculates missing amount: `min_stock - current_stock`
+
+#### v0.8 - Barcodes & Smart Input
+
+**Goal:** Fast, error-free product entry
+
+**Product barcodes table:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `barcode` | string | Barcode value |
+| `product_id` | FK | Linked product |
+| `amount` | decimal | Pre-fill purchase amount |
+| `qu_id` | FK | Pre-fill quantity unit |
+| `shopping_location_id` | FK | Pre-fill store |
+| `note` | text | Pre-fill note |
+| `last_price` | decimal | Auto-tracked |
+
+**Barcode scanning:**
+- [ ] Camera barcode scanning (html5-qrcode)
+- [ ] Supports 1D (Code128, EAN) and 2D (QR, DataMatrix)
+- [ ] Multiple barcodes per product
+- [ ] Barcode appears on product picker fields
+
+**Open Food Facts integration:**
+- [ ] Lookup unknown barcode via OFF API
+- [ ] Auto-fill: product name, image, barcode
+- [ ] Opens product form to complete setup
+- [ ] Configurable: enable/disable lookup
+
+**Grocycode (internal barcodes):**
+- [ ] Format: `grcy:p:{product_id}` or `grcy:s:{stock_id}`
+- [ ] Generate printable codes
+- [ ] Scan to quick-consume or quick-open
+
+**Input productivity:**
+- [ ] Date field shorthands (e.g., `0517` → `2025-05-17`, `+1m` → next month, `x` → never expires)
+- [ ] Recently used products list
+- [ ] Default values from product settings
+- [ ] Keyboard shortcuts for common actions
+
+#### v0.9 - Recipes
+
+**Goal:** Recipe database with inventory integration
+
+**Recipes table:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Recipe name |
+| `description` | text | Instructions (rich text) |
+| `picture_file_name` | string | Recipe image |
+| `base_servings` | int | Default serving size |
+| `desired_servings` | int | Current scaled servings |
+| `product_id` | FK | "Produces product" (optional) |
+
+**Recipe ingredients table:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `recipe_id` | FK | Parent recipe |
+| `product_id` | FK | Ingredient product |
+| `amount` | decimal | Quantity needed |
+| `qu_id` | FK | Quantity unit |
+| `note` | text | Prep notes (e.g., "diced", "room temp") |
+| `ingredient_group` | string | Section header (e.g., "For the sauce") |
+| `variable_amount` | string | Text instead of number (e.g., "to taste") |
+| `only_check_single_unit_in_stock` | boolean | Just verify any amount exists |
+| `not_check_stock_fulfillment` | boolean | Always show as fulfilled |
+| `price_factor` | decimal | Cost calculation multiplier |
+
+**Recipe nestings table:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `recipe_id` | FK | Parent recipe |
+| `includes_recipe_id` | FK | Nested recipe |
+| `servings` | int | How many servings to include |
+
+**Core features:**
+- [ ] Recipe CRUD with rich text instructions
+- [ ] Ingredient groups (collapsible sections)
+- [ ] Serving size scaling (auto-calculates amounts)
+- [ ] Recipe images
+- [ ] Recipe nesting (recipe as ingredient)
+
+**Inventory integration:**
+- [ ] "Can I make this?" — stock fulfillment check
+- [ ] Green/red indicator per ingredient
+- [ ] Shows: needed amount, in stock, missing
+- [ ] "Add missing to shopping list" button
+- [ ] "Consume recipe" — deducts all ingredients
+
+**Due Score:**
+- [ ] Calculated score based on expiring ingredients
+- [ ] Higher = more ingredients due soon/overdue/expired
+- [ ] Sort recipes by due score
+- [ ] Helps reduce food waste
+
+**Produces product:**
+- [ ] Recipe can output a product (e.g., Bread recipe → Bread product)
+- [ ] On consume, adds produced product to stock
+- [ ] Useful for batch cooking, meal prep
+
+#### v0.10 - Meal Planning
+
+**Goal:** Calendar-based meal organization
+
+**Meal plan sections table:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Section name (Breakfast, Lunch, Dinner) |
+| `sort_number` | int | Display order |
+| `time` | time | Optional time for calendar export |
+
+**Meal plan table:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `day` | date | Planned date |
+| `type` | enum | recipe, product, note |
+| `recipe_id` | FK | If type=recipe |
+| `recipe_servings` | int | Servings for this entry |
+| `product_id` | FK | If type=product |
+| `product_amount` | decimal | Amount for product entry |
+| `product_qu_id` | FK | Unit for product entry |
+| `note` | text | If type=note |
+| `section_id` | FK | Meal section |
+
+**Calendar UI:**
+- [ ] Week view (desktop primary)
+- [ ] Day view (mobile primary)
+- [ ] Configurable week start day
+- [ ] Drag-and-drop to reschedule
+- [ ] Copy single day
+- [ ] Copy entire week
+
+**Entry types:**
+- [ ] Recipe entry (links to recipe, shows servings)
+- [ ] Product entry (single ingredient, e.g., "Yogurt for breakfast")
+- [ ] Note entry (freeform text, e.g., "Eating out")
+
+**Shopping integration:**
+- [ ] "Add week to shopping list" button
+- [ ] Calculates all missing ingredients across recipes
+- [ ] Respects current stock (only adds shortfall)
+- [ ] Groups by product (no duplicates)
+
+**Stats display:**
+- [ ] Cost per day (from ingredient prices)
+- [ ] Cost per week
+- [ ] Calories per day (if product calories defined)
+
+**Calendar export:**
+- [ ] iCal sharing link
+- [ ] Sync with external calendars
+
+#### v0.11 - Product Analytics
+
+**Goal:** Rich insights per product
+
+**Product detail modal:**
+- [ ] Stock amount (total + per location)
+- [ ] Stock value (amount × last price)
+- [ ] Amount opened
+- [ ] Default location display
+
+**Purchase history:**
+- [ ] Last purchased date
+- [ ] Last price paid
+- [ ] Average price (all time)
+- [ ] Price history chart (by store, over time)
+
+**Consumption analytics:**
+- [ ] Last used/consumed date
+- [ ] Average shelf life (calculated from history)
+- [ ] Spoil rate (% marked spoiled vs normal consume)
+
+**Quick links from modal:**
+- [ ] View stock entries (filtered)
+- [ ] View stock journal (filtered)
+- [ ] Purchase this product
+- [ ] Edit product
+
+**Reports pages:**
+- [ ] Waste report (spoiled items over time, by product group)
+- [ ] Spending report (by product group, by store, over time)
+- [ ] Stock value report (total inventory value)
+- [ ] Expiring soon report (printable)
+
+#### v1.0 - PWA & Polish
+
+**Goal:** Production-ready release
+
+**Progressive Web App:**
+- [ ] Web manifest
+- [ ] Service worker (caching, not offline-first)
 - [ ] Install prompt
 - [ ] Mobile-optimized touch interactions
-- [ ] Camera access for barcode scanning
-- [ ] Dark mode (auto + manual toggle)
+- [ ] Home screen icon
 
-#### v1.0 - AI Features
+**Feature flags:**
+- [ ] `FEATURE_FLAG_STOCK` — master toggle
+- [ ] `FEATURE_FLAG_SHOPPINGLIST` — shopping lists
+- [ ] `FEATURE_FLAG_RECIPES` — recipes
+- [ ] `FEATURE_FLAG_RECIPES_MEALPLAN` — meal planning
+- [ ] `FEATURE_FLAG_STOCK_PRICE_TRACKING` — price features
+- [ ] `FEATURE_FLAG_STOCK_LOCATION_TRACKING` — location features
+- [ ] `FEATURE_FLAG_STOCK_BEST_BEFORE_DATE_TRACKING` — due date features
+- [ ] `FEATURE_FLAG_STOCK_PRODUCT_OPENED_TRACKING` — open/close tracking
+- [ ] User settings to hide unused features
 
-**Goal:** Smart suggestions and automation
+**Dark mode:**
+- [ ] Auto-detect system preference
+- [ ] Manual toggle
+- [ ] Persist preference
 
-- [ ] Chalkboard component for AI suggestions
-- [ ] AI context export (one-click copy pantry state)
-- [ ] Recipe suggestions based on inventory
-- [ ] Smart expiry predictions
-- [ ] Natural language item input
-- [ ] Import recipe from AI response
+**Accessibility:**
+- [ ] Keyboard navigation
+- [ ] Screen reader support
+- [ ] Focus indicators
+- [ ] ARIA labels
+
+**Performance:**
+- [ ] Lazy loading for images
+- [ ] Pagination for large lists
+- [ ] Optimistic UI updates
 
 ---
 
 ### Future Ideas
 
-> Post-launch features, no timeline commitment.
+> Post-v1.0 features, no timeline commitment.
 
-- Custom fields for items (brand, price, notes)
-- Price tracking and budget insights
-- Grocery delivery integration (Tesco, Asda APIs)
-- Nutrition tracking
-- Household sharing invites (multi-user)
-- Recipe sharing community
-- Multi-language support (i18n)
-- Voice input for hands-free use
-- Receipt OCR (Tesseract.js or Google Vision)
+**Advanced product features:**
+- [ ] Parent/child products (product hierarchies)
+- [ ] `no_own_stock` — parent products as summary views
+- [ ] `cumulate_min_stock_amount_of_sub_products`
+- [ ] Tare weight handling (for containers)
+- [ ] Custom fields (userfields) per entity
+
+**Household sharing:**
+- [ ] Invite links for household members
+- [ ] Role-based permissions
+- [ ] Activity feed
+
+**Integrations:**
+- [ ] Grocery delivery APIs (Tesco, Instacart)
+- [ ] Receipt OCR (Tesseract.js or Google Vision)
+- [ ] Label printer support (Grocycode printing)
+- [ ] Calendar sync (Google Calendar, Apple Calendar)
+
+**AI features:**
+- [ ] Natural language item input ("2 bottles of milk expiring next week")
+- [ ] Smart expiry predictions based on history
+- [ ] Recipe suggestions from current stock
+- [ ] Chalkboard component for AI suggestions
+
+**Other:**
+- [ ] Multi-language support (i18n)
+- [ ] Voice input for hands-free use
+- [ ] Nutrition tracking & reports
+- [ ] Budget tracking & alerts
+- [ ] Import/export data (JSON, CSV)
+- [ ] Grocy migration tool
 
 ---
 
@@ -219,12 +584,12 @@ Existing FOSS options (Grocy, Mealie, Tandoor) are excellent but require self-ho
 
 > Inspired by [Grocy](https://grocy.info) — ported for modern cloud deployment.
 
-Food Wars aims to bring Grocy's excellent feature set to a modern tech stack (Next.js, Supabase, Vercel) that's:
+1. **Cloud-first** — No Docker, no server management. Sign in and go.
+2. **Progressive complexity** — Start simple, enable features as needed.
+3. **Waste reduction focus** — Expiry tracking is core, not an afterthought.
+4. **Cozy aesthetic** — Software you enjoy using, not just tolerate.
 
-- **Zero-config deployment** — No Docker, no self-hosting required
-- **Cloud-first** — Works across devices, auto-backup
-- **Forkable** — MIT license, easy to customize
-- **Cozy UX** — Japanese diner aesthetic instead of utilitarian
+Already happy with Grocy/Mealie/Tandoor? Stick with them — they're battle-tested and feature-complete. Food Wars is for those who want something simpler to deploy.
 
 ## Tech Stack
 

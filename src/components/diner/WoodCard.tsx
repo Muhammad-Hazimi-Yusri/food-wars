@@ -1,20 +1,6 @@
 import { Pencil, Trash2 } from "lucide-react";
 import type { InventoryItem } from "@/types/database";
-
-type ExpiryStatus = "fresh" | "warning" | "urgent" | "expired";
-
-function getExpiryStatus(expiryDate: string | null): ExpiryStatus {
-  if (!expiryDate) return "fresh";
-  
-  const today = new Date();
-  const expiry = new Date(expiryDate);
-  const daysUntil = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-
-  if (daysUntil < 0) return "expired";
-  if (daysUntil <= 2) return "urgent";
-  if (daysUntil <= 7) return "warning";
-  return "fresh";
-}
+import { getExpiryStatus, type ExpiryStatus } from "@/lib/inventory-utils";
 
 const badgeStyles: Record<ExpiryStatus, string> = {
   fresh: "bg-green-600 text-white",

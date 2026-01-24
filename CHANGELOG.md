@@ -23,6 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - InventoryList with responsive grid layout
 - Dual storage: Supabase (signed in) and localStorage (guest)
 - EditItemForm component for updating items
+- Inventory utility functions (`src/lib/inventory-utils.ts`)
+- `InventoryWarnings` component (warning banners by status)
+- `InventoryStatsDisplay` component (item counts)
 
 ### Changed
 - Noren header now uses UserMenu dropdown instead of menu icon

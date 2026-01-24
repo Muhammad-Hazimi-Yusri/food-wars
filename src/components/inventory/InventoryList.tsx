@@ -15,6 +15,9 @@ import { AddItemForm } from "@/components/inventory/AdditemForm";
 import { EditItemForm } from "@/components/inventory/EditItemForm";
 import { getInventoryItems, deleteInventoryItem } from "@/lib/inventory";
 import type { InventoryItem } from "@/types/database";
+import { getInventoryStats } from "@/lib/inventory-utils";
+import { InventoryWarnings } from "@/components/inventory/InventoryWarning";
+import { InventoryStatsDisplay } from "@/components/inventory/InventoryStats";
 
 export function InventoryList() {
   const [items, setItems] = useState<InventoryItem[]>([]);
@@ -56,6 +59,8 @@ export function InventoryList() {
     fetchItems();
   };
 
+  const stats = getInventoryStats(items);
+
   if (loading) {
     return <p className="text-muted-foreground">Loading inventory...</p>;
   }
@@ -63,7 +68,7 @@ export function InventoryList() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="font-[family-name:var(--font-display)] text-xl text-megumi">
+        <h2 className="font-display text-xl text-megumi">
           Your Kitchen 台所
         </h2>
         <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
@@ -81,6 +86,9 @@ export function InventoryList() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <InventoryWarnings stats={stats} />
+      <InventoryStatsDisplay stats={stats} />
 
       {items.length === 0 ? (
         <p className="text-muted-foreground text-center py-8">

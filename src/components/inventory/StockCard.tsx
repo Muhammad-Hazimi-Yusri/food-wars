@@ -13,7 +13,7 @@ type StockCardProps = {
 
 export function StockCard({ entry, onEdit, onDelete }: StockCardProps) {
   const { product } = entry;
-  const expiryStatus = getExpiryStatus(entry.best_before_date, product.due_type);
+  const expiryStatus = getExpiryStatus(entry.best_before_date);
   const expiryLabel = getExpiryLabel(entry.best_before_date, product.due_type);
 
   const statusStyles = {

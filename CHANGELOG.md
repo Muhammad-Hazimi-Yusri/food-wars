@@ -16,8 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `quantity_unit_conversions` table
   - `products` table (30+ fields, replaces inventory_items)
   - `stock_entries` table (individual batches)
-- Auto-seed default master data on user signup
-- `StockCard` component for new schema
+- Auto-seed default master data on user signup (trigger with `search_path` fix)
+- `ProductForm` component with 5 tabs (Basic, Locations, Units, Stock, Expiry)
+- `AddStockEntryModal` for quick stock entry with product defaults
+- `StockCard` component for displaying stock entries
 - `StockList` component with filtering and sorting
 - Supabase query helpers (`src/lib/supabase/inventory.ts`)
 - Full RLS policies for all new tables
@@ -27,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `InventoryStats` redesigned with grid layout
 - `InventoryWarnings` updated for new expiry statuses
 - Home page uses server component data fetching
+- Noren logo now clickable (returns to home)
 - README roadmap rewritten with Grocy feature audit
 - README project structure updated
 
@@ -34,7 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `inventory_items` table (replaced by products + stock_entries)
 - `WoodCard` component (replaced by StockCard)
 - `InventoryList` component (replaced by StockList)
-- `AddItemForm` component (to be rebuilt)
+- `AddItemForm` component (replaced by ProductForm)
 - `EditItemForm` component (to be rebuilt)
 - `src/lib/inventory.ts` (replaced by `src/lib/supabase/inventory.ts`)
 

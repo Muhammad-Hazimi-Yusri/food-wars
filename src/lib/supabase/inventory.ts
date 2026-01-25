@@ -138,7 +138,8 @@ export async function getStockEntries(): Promise<StockEntryWithProduct[]> {
       *,
       product:products(
         *,
-        product_group:product_groups(*)
+        product_group:product_groups(*),
+        qu_stock:quantity_units!products_qu_id_stock_fkey(*)
       ),
       location:locations(*)
     `)

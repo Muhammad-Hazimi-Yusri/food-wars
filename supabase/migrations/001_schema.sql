@@ -323,8 +323,16 @@ CREATE INDEX idx_stock_entries_open ON stock_entries(product_id, open);
 -- AUTO-CREATE HOUSEHOLD + SEED DATA ON SIGNUP
 -- ============================================
 
+-- ============================================
+-- AUTO-CREATE HOUSEHOLD + SEED DATA ON SIGNUP
+-- ============================================
+
 CREATE OR REPLACE FUNCTION handle_new_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE plpgsql
+AS $$
 DECLARE
   new_household_id UUID;
 BEGIN
@@ -368,9 +376,9 @@ BEGIN
   
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 -- Trigger on user signup
-CREATE OR REPLACE TRIGGER on_auth_user_created
+CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION handle_new_user();

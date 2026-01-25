@@ -10,7 +10,6 @@ export type ExpiryStatus = 'expired' | 'expiring' | 'fresh' | 'none';
  */
 export function getExpiryStatus(
   bestBeforeDate: string | null,
-  _dueType: 1 | 2 = 1,
   warningDays: number = 3
 ): ExpiryStatus {
   if (!bestBeforeDate) return 'none';

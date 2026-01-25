@@ -1,4 +1,5 @@
 import { UserMenu } from "@/components/diner/UserMenu";
+import Link from "next/link";
 
 export function Noren() {
   return (
@@ -12,9 +13,9 @@ export function Noren() {
       
       {/* Main header */}
       <div className="flex items-center justify-between px-4 py-3">
-        <h1 className="font-display text-xl">
+        <Link href="/" className="font-display text-xl hover:opacity-80 transition-opacity">
           🏮 Food Wars <span className="text-soma-light">食戟</span>
-        </h1>
+        </Link>
         <UserMenu />
       </div>
     </header>

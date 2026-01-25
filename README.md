@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.4.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.4.1-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -29,7 +29,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.4.0
+Current version is v0.4.1
 
 ### For Users
 - 🚧 *In development* — see [Roadmap](#roadmap) for planned features
@@ -151,51 +151,15 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] `quantity_unit_conversions` — e.g., 1 pack = 6 pieces
 - [x] Auto-seed default data on user signup
 
-**Products table (replaces inventory_items):**
+**Products table (replaces inventory_items):** ✓ Implemented
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | string | Required |
-| `description` | text | Optional notes |
-| `active` | boolean | Soft delete |
-| `picture_file_name` | string | Product image |
-| `location_id` | FK | Default storage location |
-| `shopping_location_id` | FK | Default store |
-| `product_group_id` | FK | Category |
-| `qu_id_stock` | FK | Stock unit (immutable after first entry) |
-| `qu_id_purchase` | FK | Purchase unit |
-| `qu_factor_purchase_to_stock` | decimal | Conversion factor |
-| `min_stock_amount` | decimal | Low stock threshold |
-| `due_type` | enum | 1=best_before, 2=expiration |
-| `default_due_days` | int | Pre-fill expiry (-1 = never) |
-| `default_due_days_after_open` | int | New expiry when opened |
-| `default_due_days_after_freezing` | int | Expiry when frozen |
-| `default_due_days_after_thawing` | int | Expiry when thawed |
-| `quick_consume_amount` | decimal | One-click consume qty |
-| `quick_open_amount` | decimal | One-click open qty |
-| `calories` | int | kcal per stock unit |
-| `treat_opened_as_out_of_stock` | boolean | Opened = missing for min stock |
-| `should_not_be_frozen` | boolean | Warn if moved to freezer |
-
-**Stock entries table (tracks individual batches):**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `product_id` | FK | Parent product |
-| `amount` | decimal | Quantity remaining |
-| `best_before_date` | date | Due date for this batch |
-| `purchased_date` | date | When added |
-| `price` | decimal | Unit price paid |
-| `location_id` | FK | Current storage location |
-| `shopping_location_id` | FK | Where purchased |
-| `stock_id` | uuid | Unique ID for Grocycode |
-| `open` | boolean | Has been opened |
-| `opened_date` | date | When opened |
-| `note` | text | Per-entry notes |
+**Stock entries table (tracks individual batches):** ✓ Implemented
 
 **Components:**
 - [x] `StockCard` component for new schema
 - [x] `StockList` component with filtering
+- [x] `ProductForm` with tabbed layout (5 tabs)
+- [x] `AddStockEntryModal` for quick stock entry
 - [x] Updated `InventoryStats` and `InventoryWarnings`
 
 **UI for master data:**
@@ -203,7 +167,8 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [ ] Manage stores page
 - [ ] Manage product groups page
 - [ ] Manage quantity units page
-- [ ] Product form with full fields (tabbed/sectioned)
+- [ ] Products list page (view/edit/delete)
+- [ ] Edit/delete stock entries
 
 **Migration:**
 - ~~Migrate v0.3 `inventory_items` to new schema~~ (clean slate instead)

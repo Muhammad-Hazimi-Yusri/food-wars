@@ -2,7 +2,10 @@ import { createClient } from "@/lib/supabase/server";
 import { Noren } from "@/components/diner/Noren";
 import { StockList } from "@/components/inventory/StockList";
 import { WelcomeModal } from "@/components/diner/WelcomeModal";
+import { AddStockEntryModal } from "@/components/inventory/AddStockEntryModal";
 import { StockEntryWithProduct } from "@/types/database";
+import Link from "next/link";
+import { Plus } from "lucide-react";
 
 async function getStockEntries(): Promise<StockEntryWithProduct[]> {
   const supabase = await createClient();
@@ -21,7 +24,7 @@ async function getStockEntries(): Promise<StockEntryWithProduct[]> {
       product:products(
         *,
         product_group:product_groups(*),
-        qu_stock:quantity_units(*)
+        qu_stock:quantity_units!products_qu_id_stock_fkey(*)
       ),
       location:locations(*)
     `)
@@ -43,6 +46,19 @@ export default async function Home() {
     <div className="min-h-screen">
       <Noren />
       <main className="p-4 sm:p-8 max-w-5xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-megumi">Inventory</h2>
+          <div className="flex gap-2">
+            <AddStockEntryModal />
+            <Link
+              href="/products/new"
+              className="inline-flex items-center gap-2 bg-soma text-white px-4 py-2 rounded-lg hover:bg-soma-light transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Add Product
+            </Link>
+          </div>
+        </div>
         <StockList entries={entries} />
       </main>
       <WelcomeModal />

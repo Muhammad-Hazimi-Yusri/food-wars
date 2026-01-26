@@ -20,8 +20,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus } from "lucide-react";
-import { Product, Location } from "@/types/database";
+import { Plus, Minus } from "lucide-react";
+import { Product, Location, QuantityUnit } from "@/types/database";
+
+type ProductWithUnits = Product & {
+  qu_stock?: QuantityUnit | null;
+  qu_purchase?: QuantityUnit | null;
+};
 
 export function AddStockEntryModal() {
   const router = useRouter();
@@ -30,7 +35,7 @@ export function AddStockEntryModal() {
   const [error, setError] = useState<string | null>(null);
 
   // Master data
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductWithUnits[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
 
   // Form state
@@ -52,29 +57,56 @@ export function AddStockEntryModal() {
     const supabase = createClient();
 
     const [productsRes, locationsRes] = await Promise.all([
-      supabase.from("products").select("*").eq("active", true).order("name"),
-      supabase.from("locations").select("*").order("sort_order"),
+      supabase
+        .from("products")
+        .select(`
+          *,
+          qu_stock:quantity_units!products_qu_id_stock_fkey(*),
+          qu_purchase:quantity_units!products_qu_id_purchase_fkey(*)
+        `)
+        .eq("active", true)
+        .order("name"),
+      supabase.from("locations").select("*").eq("active", true).order("sort_order"),
     ]);
 
     setProducts(productsRes.data ?? []);
     setLocations(locationsRes.data ?? []);
   };
 
-  // When product selected, pre-fill location
+  // When product selected, pre-fill location and expiry
   useEffect(() => {
     if (productId) {
       const product = products.find((p) => p.id === productId);
       if (product?.location_id) {
         setLocationId(product.location_id);
       }
-      // Pre-fill expiry date if default_due_days is set
       if (product && product.default_due_days > 0) {
         const date = new Date();
         date.setDate(date.getDate() + product.default_due_days);
         setBestBeforeDate(date.toISOString().split("T")[0]);
+      } else if (product && product.default_due_days === -1) {
+        // Never expires
+        setBestBeforeDate("");
       }
     }
   }, [productId, products]);
+
+  const selectedProduct = products.find((p) => p.id === productId);
+  
+  // Determine if we're using purchase units
+  const hasPurchaseConversion = selectedProduct && 
+    selectedProduct.qu_id_purchase && 
+    selectedProduct.qu_id_purchase !== selectedProduct.qu_id_stock &&
+    selectedProduct.qu_factor_purchase_to_stock > 1;
+
+  const purchaseUnitName = selectedProduct?.qu_purchase?.name ?? "unit";
+  const stockUnitName = selectedProduct?.qu_stock?.name ?? "unit";
+  const stockUnitNamePlural = selectedProduct?.qu_stock?.name_plural ?? stockUnitName + "s";
+  const factor = selectedProduct?.qu_factor_purchase_to_stock ?? 1;
+
+  // Calculate what will be stored
+  const purchaseAmount = parseFloat(amount) || 0;
+  const stockAmount = purchaseAmount * factor;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,7 +116,6 @@ export function AddStockEntryModal() {
     try {
       const supabase = createClient();
 
-      // Get household
       const { data: household } = await supabase
         .from("households")
         .select("id")
@@ -94,10 +125,11 @@ export function AddStockEntryModal() {
         throw new Error("No household found");
       }
 
+      // Store the converted stock amount (pieces), not purchase amount (packs)
       const { error: insertError } = await supabase.from("stock_entries").insert({
         household_id: household.id,
         product_id: productId,
-        amount: parseFloat(amount),
+        amount: stockAmount, // Converted to stock units
         location_id: locationId || null,
         best_before_date: bestBeforeDate || null,
         price: price ? parseFloat(price) : null,
@@ -124,17 +156,21 @@ export function AddStockEntryModal() {
     }
   };
 
-  const selectedProduct = products.find((p) => p.id === productId);
+  const adjustAmount = (delta: number) => {
+    const current = parseFloat(amount) || 0;
+    const newAmount = Math.max(0.1, current + delta);
+    setAmount(newAmount.toString());
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-megumi hover:bg-megumi-light">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Stock
-        </Button>
+        <button className="inline-flex items-center justify-center gap-2 bg-megumi text-white px-4 py-3 sm:py-2 rounded-lg hover:bg-megumi/90 transition-colors font-medium">
+          <Plus className="h-5 w-5 sm:h-4 sm:w-4" />
+          <span>Add Stock</span>
+        </button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add Stock Entry</DialogTitle>
         </DialogHeader>
@@ -160,7 +196,7 @@ export function AddStockEntryModal() {
             <div>
               <Label htmlFor="product">Product *</Label>
               <Select value={productId} onValueChange={setProductId}>
-                <SelectTrigger>
+                <SelectTrigger className="h-12">
                   <SelectValue placeholder="Select product" />
                 </SelectTrigger>
                 <SelectContent>
@@ -173,10 +209,21 @@ export function AddStockEntryModal() {
               </Select>
             </div>
 
-            {/* Amount */}
+            {/* Amount with +/- buttons */}
             <div>
-              <Label htmlFor="amount">Amount *</Label>
-              <div className="flex gap-2 items-center">
+              <Label htmlFor="amount">
+                Amount {hasPurchaseConversion ? `(${purchaseUnitName}s)` : ""}*
+              </Label>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-12 w-12 flex-shrink-0"
+                  onClick={() => adjustAmount(-1)}
+                >
+                  <Minus className="h-5 w-5" />
+                </Button>
                 <Input
                   id="amount"
                   type="number"
@@ -185,21 +232,31 @@ export function AddStockEntryModal() {
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   required
-                  className="flex-1"
+                  className="h-12 text-center text-lg font-medium"
                 />
-                {selectedProduct && (
-                  <span className="text-sm text-muted-foreground">
-                    {selectedProduct.qu_id_stock ? "units" : ""}
-                  </span>
-                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-12 w-12 flex-shrink-0"
+                  onClick={() => adjustAmount(1)}
+                >
+                  <Plus className="h-5 w-5" />
+                </Button>
               </div>
+              {/* Show conversion info */}
+              {hasPurchaseConversion && stockAmount > 0 && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  = {stockAmount} {stockAmount === 1 ? stockUnitName : stockUnitNamePlural} in stock
+                </p>
+              )}
             </div>
 
             {/* Location */}
             <div>
               <Label htmlFor="location">Location</Label>
               <Select value={locationId} onValueChange={setLocationId}>
-                <SelectTrigger>
+                <SelectTrigger className="h-12">
                   <SelectValue placeholder="Select location" />
                 </SelectTrigger>
                 <SelectContent>
@@ -220,6 +277,7 @@ export function AddStockEntryModal() {
                 type="date"
                 value={bestBeforeDate}
                 onChange={(e) => setBestBeforeDate(e.target.value)}
+                className="h-12"
               />
             </div>
 
@@ -234,6 +292,7 @@ export function AddStockEntryModal() {
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="0.00"
+                className="h-12"
               />
             </div>
 
@@ -245,15 +304,25 @@ export function AddStockEntryModal() {
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="e.g., Buy 1 get 1 free"
+                className="h-12"
               />
             </div>
 
             {/* Submit */}
             <div className="flex gap-3 pt-2">
-              <Button type="submit" disabled={loading || !productId}>
+              <Button 
+                type="submit" 
+                disabled={loading || !productId}
+                className="flex-1 h-12"
+              >
                 {loading ? "Adding..." : "Add Stock"}
               </Button>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setOpen(false)}
+                className="h-12"
+              >
                 Cancel
               </Button>
             </div>

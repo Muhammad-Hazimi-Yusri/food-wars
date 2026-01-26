@@ -29,6 +29,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `StockCard` and `StockList` components
 - Storage helper functions (`src/lib/supabase/storage.ts`)
 - Full RLS policies for all tables and storage
+- Product picture upload with camera support (mobile)
+- `ImageUpload` component with Take Photo / Choose Photo buttons
+- Supabase Storage buckets for product and recipe pictures
+- Storage helper functions (`src/lib/supabase/storage.ts`)
+- Responsive stock views:
+  - `MobileStockList` — card-based layout for mobile
+  - `DesktopStockTable` — table layout for desktop
+- Stock aggregation by product (shows total across batches)
+- Expandable batch details in stock table
+- `InventoryStats` with clickable status filter badges
+- Purchase-to-stock unit conversion in AddStockEntryModal
 
 ### Changed
 - `inventory-utils.ts` updated for `StockEntryWithProduct` type

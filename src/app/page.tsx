@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { Noren } from "@/components/diner/Noren";
-import { StockList } from "@/components/inventory/StockList";
+import { MobileStockList } from "@/components/inventory/MobileStockList";
+import { DesktopStockTable } from "@/components/inventory/DesktopStockTable";
+import { InventoryStats } from "@/components/inventory/InventoryStats";
 import { WelcomeModal } from "@/components/diner/WelcomeModal";
 import { AddStockEntryModal } from "@/components/inventory/AddStockEntryModal";
 import { StockEntryWithProduct } from "@/types/database";
@@ -12,7 +14,6 @@ async function getStockEntries(): Promise<StockEntryWithProduct[]> {
   
   const { data: { user } } = await supabase.auth.getUser();
   
-  // If not signed in, return empty (guest mode handled client-side)
   if (!user) {
     return [];
   }
@@ -43,23 +44,36 @@ export default async function Home() {
   const entries = await getStockEntries();
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-hayama">
       <Noren />
-      <main className="p-4 sm:p-8 max-w-5xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-megumi">Inventory</h2>
-          <div className="flex gap-2">
-            <AddStockEntryModal />
-            <Link
-              href="/products/new"
-              className="inline-flex items-center gap-2 bg-soma text-white px-4 py-2 rounded-lg hover:bg-soma-light transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              Add Product
-            </Link>
-          </div>
+      <main className="p-4 sm:p-6 max-w-5xl mx-auto">
+        {/* Header */}
+        <h1 className="text-2xl font-bold text-megumi mb-1">Stock Overview</h1>
+
+        {/* Stats */}
+        <InventoryStats entries={entries} />
+
+        {/* Action Buttons */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <AddStockEntryModal />
+          <Link
+            href="/products/new"
+            className="inline-flex items-center justify-center gap-2 bg-soma text-white px-4 py-3 rounded-lg hover:bg-soma/90 transition-colors font-medium"
+          >
+            <Plus className="h-5 w-5" />
+            <span>Add Product</span>
+          </Link>
         </div>
-        <StockList entries={entries} />
+
+        {/* Mobile view */}
+        <div className="sm:hidden">
+          <MobileStockList entries={entries} />
+        </div>
+
+        {/* Desktop view */}
+        <div className="hidden sm:block">
+          <DesktopStockTable entries={entries} />
+        </div>
       </main>
       <WelcomeModal />
     </div>

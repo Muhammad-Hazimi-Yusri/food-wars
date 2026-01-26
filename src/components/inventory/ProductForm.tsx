@@ -14,6 +14,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ImageUpload } from "@/components/ui/image-upload";
+import {
+  uploadProductPicture,
+  deleteProductPicture,
+} from "@/lib/supabase/storage";
 import {
   Location,
   ShoppingLocation,
@@ -38,15 +43,22 @@ export function ProductForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Image state
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [removeImage, setRemoveImage] = useState(false);
+
   // Form state
   const [formData, setFormData] = useState({
     // Basic
     name: "",
     description: "",
+    picture_file_name: null as string | null,
     product_group_id: "",
     // Locations
     location_id: "",
+    default_consume_location_id: "",
     shopping_location_id: "",
+    move_on_open: false,
     // Quantity Units
     qu_id_stock: "",
     qu_id_purchase: "",
@@ -55,16 +67,17 @@ export function ProductForm({
     min_stock_amount: 0,
     quick_consume_amount: 1,
     quick_open_amount: 1,
+    treat_opened_as_out_of_stock: false,
     // Due Dates
     due_type: 1 as 1 | 2,
     default_due_days: 0,
     default_due_days_after_open: 0,
     default_due_days_after_freezing: 0,
     default_due_days_after_thawing: 0,
-    // Additional
-    calories: "",
-    treat_opened_as_out_of_stock: false,
+    // Freezing
     should_not_be_frozen: false,
+    // Nutrition
+    calories: "",
   });
 
   const updateField = <K extends keyof typeof formData>(
@@ -81,7 +94,7 @@ export function ProductForm({
 
     try {
       const supabase = createClient();
-      
+
       // Get household
       const { data: household } = await supabase
         .from("households")
@@ -92,27 +105,48 @@ export function ProductForm({
         throw new Error("No household found");
       }
 
+      // Handle image upload
+      let pictureFileName: string | null = null;
+
+      if (imageFile) {
+        const uploadedFileName = await uploadProductPicture(
+          imageFile,
+          household.id
+        );
+        if (uploadedFileName) {
+          pictureFileName = uploadedFileName;
+        } else {
+          throw new Error("Failed to upload image");
+        }
+      }
+
+      // Insert product
       const { error: insertError } = await supabase.from("products").insert({
         household_id: household.id,
         name: formData.name,
         description: formData.description || null,
+        picture_file_name: pictureFileName,
         product_group_id: formData.product_group_id || null,
         location_id: formData.location_id || null,
+        default_consume_location_id:
+          formData.default_consume_location_id || null,
         shopping_location_id: formData.shopping_location_id || null,
+        move_on_open: formData.move_on_open,
         qu_id_stock: formData.qu_id_stock || null,
         qu_id_purchase: formData.qu_id_purchase || null,
         qu_factor_purchase_to_stock: formData.qu_factor_purchase_to_stock,
         min_stock_amount: formData.min_stock_amount,
         quick_consume_amount: formData.quick_consume_amount,
         quick_open_amount: formData.quick_open_amount,
+        treat_opened_as_out_of_stock: formData.treat_opened_as_out_of_stock,
         due_type: formData.due_type,
         default_due_days: formData.default_due_days,
         default_due_days_after_open: formData.default_due_days_after_open,
-        default_due_days_after_freezing: formData.default_due_days_after_freezing,
+        default_due_days_after_freezing:
+          formData.default_due_days_after_freezing,
         default_due_days_after_thawing: formData.default_due_days_after_thawing,
-        calories: formData.calories ? parseInt(formData.calories) : null,
-        treat_opened_as_out_of_stock: formData.treat_opened_as_out_of_stock,
         should_not_be_frozen: formData.should_not_be_frozen,
+        calories: formData.calories ? parseInt(formData.calories) : null,
       });
 
       if (insertError) throw insertError;
@@ -120,6 +154,7 @@ export function ProductForm({
       router.push("/");
       router.refresh();
     } catch (err) {
+      // If product creation failed but image was uploaded, clean it up
       setError(err instanceof Error ? err.message : "Failed to create product");
     } finally {
       setLoading(false);
@@ -157,6 +192,23 @@ export function ProductForm({
           </div>
 
           <div>
+            <Label>Picture</Label>
+            <ImageUpload
+              value={formData.picture_file_name}
+              onChange={(file) => {
+                setImageFile(file);
+                setRemoveImage(false);
+              }}
+              onRemove={() => {
+                setImageFile(null);
+                setRemoveImage(true);
+              }}
+              previewUrl={null}
+              disabled={loading}
+            />
+          </div>
+
+          <div>
             <Label htmlFor="description">Description</Label>
             <Input
               id="description"
@@ -175,7 +227,7 @@ export function ProductForm({
               <SelectTrigger>
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
-              <SelectContent position="popper">
+              <SelectContent>
                 {productGroups.map((pg) => (
                   <SelectItem key={pg.id} value={pg.id}>
                     {pg.name}
@@ -208,7 +260,7 @@ export function ProductForm({
               <SelectTrigger>
                 <SelectValue placeholder="Where is this stored?" />
               </SelectTrigger>
-              <SelectContent position="popper">
+              <SelectContent>
                 {locations.map((loc) => (
                   <SelectItem key={loc.id} value={loc.id}>
                     {loc.name} {loc.is_freezer && "❄️"}
@@ -216,6 +268,32 @@ export function ProductForm({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="default_consume_location">
+              Default Consume Location
+            </Label>
+            <Select
+              value={formData.default_consume_location_id}
+              onValueChange={(v) =>
+                updateField("default_consume_location_id", v)
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Consume from here first" />
+              </SelectTrigger>
+              <SelectContent>
+                {locations.map((loc) => (
+                  <SelectItem key={loc.id} value={loc.id}>
+                    {loc.name} {loc.is_freezer && "❄️"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground mt-1">
+              When consuming, prefer stock from this location
+            </p>
           </div>
 
           <div>
@@ -227,7 +305,7 @@ export function ProductForm({
               <SelectTrigger>
                 <SelectValue placeholder="Where do you buy this?" />
               </SelectTrigger>
-              <SelectContent position="popper">
+              <SelectContent>
                 {shoppingLocations.map((sl) => (
                   <SelectItem key={sl.id} value={sl.id}>
                     {sl.name}
@@ -243,6 +321,19 @@ export function ProductForm({
           </div>
 
           <div className="flex items-center gap-2 pt-2">
+            <input
+              type="checkbox"
+              id="move_on_open"
+              checked={formData.move_on_open}
+              onChange={(e) => updateField("move_on_open", e.target.checked)}
+              className="h-4 w-4"
+            />
+            <Label htmlFor="move_on_open" className="font-normal">
+              Move to consume location when opened
+            </Label>
+          </div>
+
+          <div className="flex items-center gap-2">
             <input
               type="checkbox"
               id="should_not_be_frozen"
@@ -269,7 +360,7 @@ export function ProductForm({
               <SelectTrigger>
                 <SelectValue placeholder="How do you count this?" />
               </SelectTrigger>
-              <SelectContent position="popper">
+              <SelectContent>
                 {quantityUnits.map((qu) => (
                   <SelectItem key={qu.id} value={qu.id}>
                     {qu.name} {qu.name_plural && `(${qu.name_plural})`}
@@ -291,7 +382,7 @@ export function ProductForm({
               <SelectTrigger>
                 <SelectValue placeholder="Same as stock unit" />
               </SelectTrigger>
-              <SelectContent position="popper">
+              <SelectContent>
                 {quantityUnits.map((qu) => (
                   <SelectItem key={qu.id} value={qu.id}>
                     {qu.name}
@@ -378,7 +469,10 @@ export function ProductForm({
               }
               className="h-4 w-4"
             />
-            <Label htmlFor="treat_opened_as_out_of_stock" className="font-normal">
+            <Label
+              htmlFor="treat_opened_as_out_of_stock"
+              className="font-normal"
+            >
               Treat opened as out of stock (for min stock calculation)
             </Label>
           </div>
@@ -428,7 +522,9 @@ export function ProductForm({
           </div>
 
           <div>
-            <Label htmlFor="default_due_days_after_open">Days After Opening</Label>
+            <Label htmlFor="default_due_days_after_open">
+              Days After Opening
+            </Label>
             <Input
               id="default_due_days_after_open"
               type="number"

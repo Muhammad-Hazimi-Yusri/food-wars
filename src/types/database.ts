@@ -1,4 +1,9 @@
 // ============================================
+// FOOD WARS DATABASE TYPES v0.4.1
+// Complete types matching Grocy schema
+// ============================================
+
+// ============================================
 // HOUSEHOLD
 // ============================================
 
@@ -19,6 +24,7 @@ export type Location = {
   name: string;
   description: string | null;
   is_freezer: boolean;
+  active: boolean;
   sort_order: number;
   created_at: string;
 };
@@ -28,6 +34,7 @@ export type ShoppingLocation = {
   household_id: string;
   name: string;
   description: string | null;
+  active: boolean;
   sort_order: number;
   created_at: string;
 };
@@ -37,6 +44,7 @@ export type ProductGroup = {
   household_id: string;
   name: string;
   description: string | null;
+  active: boolean;
   sort_order: number;
   created_at: string;
 };
@@ -47,6 +55,7 @@ export type QuantityUnit = {
   name: string;
   name_plural: string | null;
   description: string | null;
+  active: boolean;
   sort_order: number;
   created_at: string;
 };
@@ -57,7 +66,7 @@ export type QuantityUnitConversion = {
   from_qu_id: string;
   to_qu_id: string;
   factor: number;
-  product_id: string | null;
+  product_id: string | null; // NULL = global, set = product-specific
   created_at: string;
 };
 
@@ -66,6 +75,8 @@ export type QuantityUnitConversion = {
 // ============================================
 
 export type DueType = 1 | 2; // 1=best_before, 2=expiration
+
+export type StockLabelType = 0 | 1 | 2; // 0=per purchase, 1=per stock entry, 2=none
 
 export type Product = {
   id: string;
@@ -79,7 +90,9 @@ export type Product = {
   
   // Locations
   location_id: string | null;
+  default_consume_location_id: string | null;
   shopping_location_id: string | null;
+  move_on_open: boolean;
   
   // Categorization
   product_group_id: string | null;
@@ -93,22 +106,60 @@ export type Product = {
   min_stock_amount: number;
   quick_consume_amount: number;
   quick_open_amount: number;
+  treat_opened_as_out_of_stock: boolean;
   
-  // Due dates
+  // Due dates / Expiry
   due_type: DueType;
   default_due_days: number;
   default_due_days_after_open: number;
   default_due_days_after_freezing: number;
   default_due_days_after_thawing: number;
   
-  // Additional
-  calories: number | null;
-  treat_opened_as_out_of_stock: boolean;
+  // Freezing
   should_not_be_frozen: boolean;
+  
+  // Nutrition
+  calories: number | null;
+  
+  // Tare weight handling (for containers)
+  enable_tare_weight_handling: boolean;
+  tare_weight: number;
+  
+  // Product hierarchy (parent/child products)
+  parent_product_id: string | null;
+  no_own_stock: boolean;
+  cumulate_min_stock_amount_of_sub_products: boolean;
+  
+  // Recipe integration
+  not_check_stock_fulfillment_for_recipes: boolean;
+  
+  // Label printing
+  default_stock_label_type: StockLabelType;
+  auto_reprint_stock_label: boolean;
+  
+  // Display
+  hide_on_stock_overview: boolean;
   
   // Timestamps
   created_at: string;
   updated_at: string;
+};
+
+// ============================================
+// PRODUCT BARCODES
+// ============================================
+
+export type ProductBarcode = {
+  id: string;
+  household_id: string;
+  product_id: string;
+  barcode: string;
+  qu_id: string | null;
+  amount: number | null;
+  shopping_location_id: string | null;
+  last_price: number | null;
+  note: string | null;
+  created_at: string;
 };
 
 // ============================================
@@ -130,7 +181,7 @@ export type StockEntry = {
   // Price
   price: number | null;
   
-  // Location
+  // Location tracking
   location_id: string | null;
   shopping_location_id: string | null;
   
@@ -138,8 +189,10 @@ export type StockEntry = {
   open: boolean;
   opened_date: string | null;
   
-  // Additional
+  // Unique identifier for Grocycode
   stock_id: string;
+  
+  // Additional
   note: string | null;
   
   // Timestamps
@@ -148,20 +201,108 @@ export type StockEntry = {
 };
 
 // ============================================
+// STOCK LOG (transaction history)
+// ============================================
+
+export type StockTransactionType =
+  | 'purchase'
+  | 'consume'
+  | 'spoiled'
+  | 'inventory-correction'
+  | 'product-opened'
+  | 'transfer-from'
+  | 'transfer-to'
+  | 'stock-edit-old'
+  | 'stock-edit-new';
+
+export type StockLog = {
+  id: string;
+  household_id: string;
+  product_id: string;
+  
+  // Transaction details
+  amount: number;
+  transaction_type: StockTransactionType;
+  
+  // Dates
+  best_before_date: string | null;
+  purchased_date: string | null;
+  used_date: string | null;
+  
+  // Opened tracking
+  opened_date: string | null;
+  
+  // Price
+  price: number | null;
+  
+  // Location tracking
+  location_id: string | null;
+  shopping_location_id: string | null;
+  
+  // Spoilage tracking
+  spoiled: boolean;
+  
+  // References
+  stock_id: string | null;
+  stock_entry_id: string | null;
+  recipe_id: string | null;
+  
+  // Undo functionality
+  undone: boolean;
+  undone_timestamp: string | null;
+  
+  // Transaction grouping
+  correlation_id: string | null;
+  transaction_id: string;
+  
+  // User tracking
+  user_id: string | null;
+  
+  // Note
+  note: string | null;
+  
+  // Timestamp
+  created_at: string;
+};
+
+// ============================================
 // JOINED TYPES (for UI display)
 // ============================================
 
 export type ProductWithRelations = Product & {
   location?: Location | null;
+  default_consume_location?: Location | null;
   shopping_location?: ShoppingLocation | null;
   product_group?: ProductGroup | null;
   qu_stock?: QuantityUnit | null;
   qu_purchase?: QuantityUnit | null;
+  parent_product?: Product | null;
 };
 
 export type StockEntryWithProduct = StockEntry & {
   product: ProductWithRelations;
   location?: Location | null;
+};
+
+export type StockLogWithRelations = StockLog & {
+  product: Product;
+  location?: Location | null;
+};
+
+// ============================================
+// INVENTORY STATS (computed)
+// ============================================
+
+export type InventoryStats = {
+  total: number;
+  fresh: number;
+  expiringSoon: number;
+  expired: number;
+  opened: number;
+  belowMinStock: number;
+  byLocation: Record<string, number>;
+  byProductGroup: Record<string, number>;
+  totalValue: number;
 };
 
 // ============================================

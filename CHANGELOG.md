@@ -8,37 +8,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.4.0] - In Progress
 
 ### Added
-- New Grocy-inspired database schema (`supabase/migrations/001_schema.sql`)
-  - `locations` table with `is_freezer` flag
-  - `shopping_locations` table (stores)
-  - `product_groups` table (categories)
-  - `quantity_units` table with plural names
+- Complete Grocy-compatible database schema (`supabase/migrations/001_core_schema.sql`)
+  - `locations` table with `is_freezer` and `active` flags
+  - `shopping_locations` table with `active` flag
+  - `product_groups` table with `active` flag
+  - `quantity_units` table with `active` flag
   - `quantity_unit_conversions` table
-  - `products` table (30+ fields, replaces inventory_items)
-  - `stock_entries` table (individual batches)
-- Auto-seed default master data on user signup (trigger with `search_path` fix)
-- `ProductForm` component with 5 tabs (Basic, Locations, Units, Stock, Expiry)
-- `AddStockEntryModal` for quick stock entry with product defaults
-- `StockCard` component for displaying stock entries
-- `StockList` component with filtering and sorting
-- Supabase query helpers (`src/lib/supabase/inventory.ts`)
-- Full RLS policies for all new tables
+  - `products` table (40+ fields matching Grocy)
+  - `product_barcodes` table (UI in v0.8)
+  - `stock_entries` table with Grocycode support
+  - `stock_log` table for transaction history (UI in v0.6)
+- Supabase Storage buckets (`supabase/migrations/002_storage.sql`)
+  - `product-pictures` bucket with RLS policies
+  - `recipe-pictures` bucket (for v0.9)
+  - Support for JPEG, PNG, WebP, GIF, HEIC/HEIF
+- Auto-seed default master data on user signup
+- `ImageUpload` component with camera/gallery support
+- `ProductForm` with picture upload and 5-tab layout
+- `AddStockEntryModal` for quick stock entry
+- `StockCard` and `StockList` components
+- Storage helper functions (`src/lib/supabase/storage.ts`)
+- Full RLS policies for all tables and storage
 
 ### Changed
 - `inventory-utils.ts` updated for `StockEntryWithProduct` type
 - `InventoryStats` redesigned with grid layout
 - `InventoryWarnings` updated for new expiry statuses
 - Home page uses server component data fetching
-- Noren logo now clickable (returns to home)
-- README roadmap rewritten with Grocy feature audit
-- README project structure updated
+- README roadmap rewritten with complete Grocy feature audit
 
 ### Removed
 - `inventory_items` table (replaced by products + stock_entries)
-- `WoodCard` component (replaced by StockCard)
-- `InventoryList` component (replaced by StockList)
-- `AddItemForm` component (replaced by ProductForm)
-- `EditItemForm` component (to be rebuilt)
+- Legacy components (WoodCard, InventoryList, AddItemForm, EditItemForm)
 - `src/lib/inventory.ts` (replaced by `src/lib/supabase/inventory.ts`)
 
 ### Breaking Changes

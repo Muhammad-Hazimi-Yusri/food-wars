@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.4.1-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.4.2-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -20,6 +20,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 - [Roadmap](#roadmap)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
+- [Database Schema](#database-schema)
 - [Run Locally](#run-locally)
 - [Self-Hosting](#self-hosting)
 - [Contributing](#contributing)
@@ -29,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.4.1
+Current version is v0.4.2
 
 ### For Users
 - 🚧 *In development* — see [Roadmap](#roadmap) for planned features
@@ -137,32 +138,33 @@ Food Wars targets a different audience: people who want Grocy-like features with
 
 ### In Progress
 
-#### v0.4 - Schema Expansion (In Progress)
+#### v0.4 - Schema Expansion 
 
-**Goal:** Align database with Grocy's data model for full feature support
+**Goal:** Complete Grocy-compatible database schema
 
 > ⚠️ Breaking change: Guest mode temporarily disabled
 
-**New master data tables:**
-- [x] `locations` — storage locations (Fridge, Freezer, Pantry, Cupboard)
-- [x] `shopping_locations` — stores (Tesco, Costco, Local Shop)
-- [x] `product_groups` — item categories (Dairy, Produce, Meat, Bakery, Snacks)
-- [x] `quantity_units` — units (pc, kg, g, L, mL, pack, bottle)
-- [x] `quantity_unit_conversions` — e.g., 1 pack = 6 pieces
+**Database schema:** (`supabase/migrations/001_core_schema.sql`)
+- [x] `households` — multi-tenant container
+- [x] `locations` — storage locations with `is_freezer` and `active` flags
+- [x] `shopping_locations` — stores with `active` flag
+- [x] `product_groups` — categories with `active` flag
+- [x] `quantity_units` — units with plural names and `active` flag
+- [x] `quantity_unit_conversions` — global and product-specific conversions
+- [x] `products` — complete Grocy fields (40+ columns)
+- [x] `product_barcodes` — multiple barcodes per product (UI in v0.8)
+- [x] `stock_entries` — individual batches with Grocycode support
+- [x] `stock_log` — transaction history for undo functionality (UI in v0.6)
 - [x] Auto-seed default data on user signup
 
-**Products table (replaces inventory_items):** ✓ Implemented
-
-**Stock entries table (tracks individual batches):** ✓ Implemented
-
 **Components:**
-- [x] `StockCard` component for new schema
-- [x] `StockList` component with filtering
+- [x] `StockCard` component for displaying stock entries
+- [x] `StockList` component with filtering and sorting
 - [x] `ProductForm` with tabbed layout (5 tabs)
 - [x] `AddStockEntryModal` for quick stock entry
 - [x] Updated `InventoryStats` and `InventoryWarnings`
 
-**UI for master data:**
+**UI for master data:** (deferred to v0.5)
 - [ ] Manage locations page
 - [ ] Manage stores page
 - [ ] Manage product groups page
@@ -177,7 +179,7 @@ Food Wars targets a different audience: people who want Grocy-like features with
 
 #### v0.5 - Demo Mode & Filtering
 
-**Goal:** Demo data for testing + filtering UI
+**Goal:** Demo data for testing + filtering UI + master data management
 
 **Demo mode (guest):**
 - [ ] Seed data generator with varied test scenarios
@@ -186,12 +188,22 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [ ] Reset demo button
 - [ ] **Disclaimer banner:** "Guest mode is for demo only — data may reset on app updates. Sign in or self-host for persistent storage."
 
+**Master data management:** (moved from v0.4)
+- [ ] Manage locations page (CRUD)
+- [ ] Manage stores page (CRUD)
+- [ ] Manage product groups page (CRUD)
+- [ ] Manage quantity units page (CRUD)
+- [ ] Products list page (view/edit/delete)
+- [ ] Edit/delete stock entries from StockCard
+- [ ] Soft delete support (`active` flag)
+
 **Filtering & display:**
 - [ ] Warning banners (clickable to apply filter)
 - [ ] Stats display (total items, by status, by location)
 - [ ] Filter by expiry status (all, fresh, due soon, overdue, expired)
 - [ ] Filter by location
 - [ ] Filter by product group
+- [ ] Filter by `hide_on_stock_overview` flag
 - [ ] Search by name
 - [ ] Sort options (name, expiry, location, date added)
 - [ ] List view / Card view toggle
@@ -200,21 +212,7 @@ Food Wars targets a different audience: people who want Grocy-like features with
 
 **Goal:** Consume vs Open distinction + transaction logging
 
-**Stock journal table:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `product_id` | FK | Product affected |
-| `stock_entry_id` | FK | Specific batch |
-| `amount` | decimal | Quantity changed |
-| `transaction_type` | enum | purchase, consume, spoiled, open, transfer, correction |
-| `location_id` | FK | Location involved |
-| `price` | decimal | Price at transaction |
-| `spoiled` | boolean | Wasted (not consumed) |
-| `note` | text | Optional note |
-| `undone` | boolean | Was this reversed |
-| `undone_timestamp` | datetime | When reversed |
-| `correlation_id` | uuid | Links related transactions |
+> Schema ready: `stock_log` table with `stock_transaction_type` enum already in place
 
 **Consume action:**
 - [ ] Partial consume (reduce quantity)
@@ -222,6 +220,7 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [ ] Consume rule: opened first → due soonest → FIFO
 - [ ] Consume from specific location
 - [ ] Quick consume button (uses `quick_consume_amount`)
+- [ ] Log to `stock_log` with `transaction_type = 'consume'`
 
 **Open action:**
 - [ ] Mark stock entry as opened
@@ -229,40 +228,55 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [ ] Recalculate due date using `default_due_days_after_open`
 - [ ] New due date never extends original
 - [ ] Quick open button (uses `quick_open_amount`)
-- [ ] Visual indicator for opened items
+- [ ] Optional: auto-move to `default_consume_location_id` if `move_on_open` is true
+- [ ] Log to `stock_log` with `transaction_type = 'product-opened'`
 
 **Transfer action:**
 - [ ] Move stock between locations
 - [ ] Freezer detection: apply `default_due_days_after_freezing`
 - [ ] Thaw detection: apply `default_due_days_after_thawing`
 - [ ] Warn if `should_not_be_frozen` product moved to freezer
+- [ ] Log to `stock_log` with `transaction_type = 'transfer-from'` and `'transfer-to'`
+
+**Inventory correction:**
+- [ ] Adjust stock amount directly
+- [ ] Log to `stock_log` with `transaction_type = 'inventory-correction'`
 
 **Journal UI:**
 - [ ] Stock journal page with filters (product, type, date range)
-- [ ] Undo recent transactions (within time limit)
+- [ ] Undo recent transactions (sets `undone = true`, `undone_timestamp`)
 - [ ] Journal summary view (aggregated by product/type)
+- [ ] Uses `correlation_id` to group related transactions
 
 #### v0.7 - Shopping Lists
 
 **Goal:** Manual and auto-generated shopping lists
 
-**Shopping lists table:**
+**Schema to add:**
+```sql
+-- Shopping lists
+CREATE TABLE shopping_lists (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  household_id UUID NOT NULL REFERENCES households(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | string | List name |
-| `description` | text | Optional |
-
-**Shopping list items table:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `shopping_list_id` | FK | Parent list |
-| `product_id` | FK | Nullable (can be freeform) |
-| `note` | text | Item description if no product |
-| `amount` | decimal | Quantity needed |
-| `qu_id` | FK | Quantity unit |
-| `done` | boolean | Checked off |
+-- Shopping list items
+CREATE TABLE shopping_list_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  household_id UUID NOT NULL REFERENCES households(id) ON DELETE CASCADE,
+  shopping_list_id UUID NOT NULL REFERENCES shopping_lists(id) ON DELETE CASCADE,
+  product_id UUID REFERENCES products(id) ON DELETE SET NULL,
+  note TEXT,
+  amount DECIMAL NOT NULL DEFAULT 1,
+  qu_id UUID REFERENCES quantity_units(id) ON DELETE SET NULL,
+  done BOOLEAN NOT NULL DEFAULT FALSE,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
 
 **Core features:**
 - [ ] Multiple shopping lists
@@ -270,7 +284,7 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [ ] Add freeform items (just text + amount)
 - [ ] Checkbox to mark done
 - [ ] Group by product group (aisle optimization)
-- [ ] Group by store
+- [ ] Group by store (`shopping_location_id`)
 
 **Inventory integration:**
 - [ ] "Add to stock" from shopping list item
@@ -289,23 +303,14 @@ Food Wars targets a different audience: people who want Grocy-like features with
 
 **Goal:** Fast, error-free product entry
 
-**Product barcodes table:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `barcode` | string | Barcode value |
-| `product_id` | FK | Linked product |
-| `amount` | decimal | Pre-fill purchase amount |
-| `qu_id` | FK | Pre-fill quantity unit |
-| `shopping_location_id` | FK | Pre-fill store |
-| `note` | text | Pre-fill note |
-| `last_price` | decimal | Auto-tracked |
+> Schema ready: `product_barcodes` table already in place
 
 **Barcode scanning:**
-- [ ] Camera barcode scanning (html5-qrcode)
-- [ ] Supports 1D (Code128, EAN) and 2D (QR, DataMatrix)
-- [ ] Multiple barcodes per product
-- [ ] Barcode appears on product picker fields
+- [ ] Camera barcode scanning (html5-qrcode or ZXing)
+- [ ] Supports 1D (Code128, EAN-8, EAN-13) and 2D (QR, DataMatrix)
+- [ ] Multiple barcodes per product (via `product_barcodes` table)
+- [ ] Barcode icon on product picker fields
+- [ ] Scan auto-fills: product, amount (`product_barcodes.amount`), unit (`product_barcodes.qu_id`), store (`product_barcodes.shopping_location_id`)
 
 **Open Food Facts integration:**
 - [ ] Lookup unknown barcode via OFF API
@@ -315,8 +320,14 @@ Food Wars targets a different audience: people who want Grocy-like features with
 
 **Grocycode (internal barcodes):**
 - [ ] Format: `grcy:p:{product_id}` or `grcy:s:{stock_id}`
-- [ ] Generate printable codes
+- [ ] Generate printable DataMatrix/Code128 codes
 - [ ] Scan to quick-consume or quick-open
+- [ ] Print labels (webhook or browser print)
+
+**Label printing:** (uses `default_stock_label_type` and `auto_reprint_stock_label` fields)
+- [ ] Print Grocycode labels for products
+- [ ] Print Grocycode labels for stock entries
+- [ ] Auto-print on purchase if enabled
 
 **Input productivity:**
 - [ ] Date field shorthands (e.g., `0517` → `2025-05-17`, `+1m` → next month, `x` → never expires)
@@ -328,45 +339,56 @@ Food Wars targets a different audience: people who want Grocy-like features with
 
 **Goal:** Recipe database with inventory integration
 
-**Recipes table:**
+**Schema to add:**
+```sql
+-- Recipes
+CREATE TABLE recipes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  household_id UUID NOT NULL REFERENCES households(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT, -- Rich text instructions
+  picture_file_name TEXT,
+  base_servings DECIMAL NOT NULL DEFAULT 1,
+  desired_servings DECIMAL NOT NULL DEFAULT 1,
+  not_check_shoppinglist BOOLEAN NOT NULL DEFAULT FALSE,
+  product_id UUID REFERENCES products(id) ON DELETE SET NULL, -- "Produces product"
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | string | Recipe name |
-| `description` | text | Instructions (rich text) |
-| `picture_file_name` | string | Recipe image |
-| `base_servings` | int | Default serving size |
-| `desired_servings` | int | Current scaled servings |
-| `product_id` | FK | "Produces product" (optional) |
+-- Recipe ingredients
+CREATE TABLE recipe_ingredients (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  household_id UUID NOT NULL REFERENCES households(id) ON DELETE CASCADE,
+  recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+  product_id UUID REFERENCES products(id) ON DELETE SET NULL,
+  amount DECIMAL NOT NULL DEFAULT 1,
+  qu_id UUID REFERENCES quantity_units(id) ON DELETE SET NULL,
+  note TEXT, -- Prep notes (e.g., "diced", "room temp")
+  ingredient_group TEXT, -- Section header (e.g., "For the sauce")
+  variable_amount TEXT, -- Text instead of number (e.g., "to taste")
+  only_check_single_unit_in_stock BOOLEAN NOT NULL DEFAULT FALSE,
+  not_check_stock_fulfillment BOOLEAN NOT NULL DEFAULT FALSE,
+  price_factor DECIMAL NOT NULL DEFAULT 1,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-**Recipe ingredients table:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `recipe_id` | FK | Parent recipe |
-| `product_id` | FK | Ingredient product |
-| `amount` | decimal | Quantity needed |
-| `qu_id` | FK | Quantity unit |
-| `note` | text | Prep notes (e.g., "diced", "room temp") |
-| `ingredient_group` | string | Section header (e.g., "For the sauce") |
-| `variable_amount` | string | Text instead of number (e.g., "to taste") |
-| `only_check_single_unit_in_stock` | boolean | Just verify any amount exists |
-| `not_check_stock_fulfillment` | boolean | Always show as fulfilled |
-| `price_factor` | decimal | Cost calculation multiplier |
-
-**Recipe nestings table:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `recipe_id` | FK | Parent recipe |
-| `includes_recipe_id` | FK | Nested recipe |
-| `servings` | int | How many servings to include |
+-- Recipe nestings (recipe as ingredient)
+CREATE TABLE recipe_nestings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  household_id UUID NOT NULL REFERENCES households(id) ON DELETE CASCADE,
+  recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+  includes_recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+  servings DECIMAL NOT NULL DEFAULT 1,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
 
 **Core features:**
 - [ ] Recipe CRUD with rich text instructions
 - [ ] Ingredient groups (collapsible sections)
 - [ ] Serving size scaling (auto-calculates amounts)
-- [ ] Recipe images
+- [ ] Recipe images (Supabase Storage: `recipe-pictures` bucket)
 - [ ] Recipe nesting (recipe as ingredient)
 
 **Inventory integration:**
@@ -375,6 +397,7 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [ ] Shows: needed amount, in stock, missing
 - [ ] "Add missing to shopping list" button
 - [ ] "Consume recipe" — deducts all ingredients
+- [ ] Respects `not_check_stock_fulfillment_for_recipes` product flag
 
 **Due Score:**
 - [ ] Calculated score based on expiring ingredients
@@ -391,55 +414,58 @@ Food Wars targets a different audience: people who want Grocy-like features with
 
 **Goal:** Calendar-based meal organization
 
-**Meal plan sections table:**
+**Schema to add:**
+```sql
+-- Meal plan sections
+CREATE TABLE meal_plan_sections (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  household_id UUID NOT NULL REFERENCES households(id) ON DELETE CASCADE,
+  name TEXT NOT NULL, -- Breakfast, Lunch, Dinner
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  time TIME, -- Optional time for calendar export
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | string | Section name (Breakfast, Lunch, Dinner) |
-| `sort_number` | int | Display order |
-| `time` | time | Optional time for calendar export |
-
-**Meal plan table:**
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `day` | date | Planned date |
-| `type` | enum | recipe, product, note |
-| `recipe_id` | FK | If type=recipe |
-| `recipe_servings` | int | Servings for this entry |
-| `product_id` | FK | If type=product |
-| `product_amount` | decimal | Amount for product entry |
-| `product_qu_id` | FK | Unit for product entry |
-| `note` | text | If type=note |
-| `section_id` | FK | Meal section |
+-- Meal plan entries
+CREATE TABLE meal_plan (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  household_id UUID NOT NULL REFERENCES households(id) ON DELETE CASCADE,
+  day DATE NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('recipe', 'product', 'note')),
+  recipe_id UUID REFERENCES recipes(id) ON DELETE CASCADE,
+  recipe_servings DECIMAL,
+  product_id UUID REFERENCES products(id) ON DELETE CASCADE,
+  product_amount DECIMAL,
+  product_qu_id UUID REFERENCES quantity_units(id) ON DELETE SET NULL,
+  note TEXT,
+  section_id UUID REFERENCES meal_plan_sections(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
 
 **Calendar UI:**
 - [ ] Week view (desktop primary)
 - [ ] Day view (mobile primary)
-- [ ] Configurable week start day
-- [ ] Drag-and-drop to reschedule
-- [ ] Copy single day
-- [ ] Copy entire week
+- [ ] Drag-and-drop meal assignment
+- [ ] Copy day / copy week
+- [ ] Meal plan sections (Breakfast, Lunch, Dinner)
 
-**Entry types:**
-- [ ] Recipe entry (links to recipe, shows servings)
-- [ ] Product entry (single ingredient, e.g., "Yogurt for breakfast")
-- [ ] Note entry (freeform text, e.g., "Eating out")
+**Recipe integration:**
+- [ ] Add recipe to meal plan
+- [ ] Adjust servings per meal
+- [ ] Show recipe fulfillment status on calendar
+- [ ] "What's for dinner?" — today's meals view
 
 **Shopping integration:**
-- [ ] "Add week to shopping list" button
-- [ ] Calculates all missing ingredients across recipes
-- [ ] Respects current stock (only adds shortfall)
-- [ ] Groups by product (no duplicates)
+- [ ] "Generate shopping list for week"
+- [ ] Aggregates all recipe ingredients
+- [ ] Subtracts current stock
+- [ ] Groups by store preference
 
-**Stats display:**
-- [ ] Cost per day (from ingredient prices)
-- [ ] Cost per week
-- [ ] Calories per day (if product calories defined)
-
-**Calendar export:**
-- [ ] iCal sharing link
-- [ ] Sync with external calendars
+**Nutritional overview:**
+- [ ] Daily/weekly calorie totals
+- [ ] Based on product `calories` field
+- [ ] Visual charts
 
 #### v0.11 - Product Analytics
 
@@ -622,6 +648,108 @@ food-wars/
 ```
 
 ---
+
+## Database Schema
+
+Food Wars uses a Grocy-compatible database schema designed for comprehensive kitchen inventory management. All tables include Row Level Security (RLS) for multi-tenant data isolation.
+
+### Tables Overview
+
+| Table | Description | Status |
+|-------|-------------|--------|
+| `households` | Multi-tenant container | ✅ v0.4 |
+| `locations` | Storage locations (Fridge, Freezer, Pantry) | ✅ v0.4 |
+| `shopping_locations` | Stores (Tesco, Costco, Local Shop) | ✅ v0.4 |
+| `product_groups` | Categories (Dairy, Produce, Meat) | ✅ v0.4 |
+| `quantity_units` | Units (pc, kg, g, L, mL, pack) | ✅ v0.4 |
+| `quantity_unit_conversions` | Unit conversions (1 pack = 6 pieces) | ✅ v0.4 |
+| `products` | Product definitions (40+ fields) | ✅ v0.4 |
+| `product_barcodes` | Multiple barcodes per product | ✅ v0.4 (UI in v0.8) |
+| `stock_entries` | Individual batches in stock | ✅ v0.4 |
+| `stock_log` | Transaction history for undo | ✅ v0.4 (UI in v0.6) |
+| `recipes` | Recipe definitions | 🔮 v0.9 |
+| `recipe_ingredients` | Recipe ingredients | 🔮 v0.9 |
+| `meal_plan` | Meal planning calendar | 🔮 v0.10 |
+| `shopping_lists` | Shopping list management | 🔮 v0.7 |
+
+### Products Table (complete Grocy fields)
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `name` | string | required | Product name |
+| `description` | text | null | Optional notes |
+| `active` | boolean | true | Soft delete flag |
+| `picture_file_name` | string | null | Product image filename |
+| `location_id` | FK | null | Default storage location |
+| `default_consume_location_id` | FK | null | Consume from here first |
+| `shopping_location_id` | FK | null | Default store |
+| `move_on_open` | boolean | false | Auto-move to consume location when opened |
+| `product_group_id` | FK | null | Category |
+| `qu_id_stock` | FK | null | Stock unit (immutable after first entry) |
+| `qu_id_purchase` | FK | null | Purchase unit |
+| `qu_factor_purchase_to_stock` | decimal | 1.0 | Conversion factor |
+| `min_stock_amount` | decimal | 0 | Low stock threshold |
+| `quick_consume_amount` | decimal | 1 | One-click consume quantity |
+| `quick_open_amount` | decimal | 1 | One-click open quantity |
+| `treat_opened_as_out_of_stock` | boolean | false | Opened items count as missing for min stock |
+| `due_type` | int | 1 | 1=best before (ok after), 2=expiration (discard) |
+| `default_due_days` | int | 0 | Pre-fill expiry days (-1 = never expires) |
+| `default_due_days_after_open` | int | 0 | New expiry when opened |
+| `default_due_days_after_freezing` | int | 0 | New expiry when frozen |
+| `default_due_days_after_thawing` | int | 0 | New expiry when thawed |
+| `should_not_be_frozen` | boolean | false | Warn if moved to freezer |
+| `calories` | int | null | kcal per stock unit |
+| `enable_tare_weight_handling` | boolean | false | For weighing containers |
+| `tare_weight` | decimal | 0 | Weight of empty container |
+| `parent_product_id` | FK | null | Parent product for hierarchies |
+| `no_own_stock` | boolean | false | Parent product as summary only |
+| `cumulate_min_stock_amount_of_sub_products` | boolean | false | Sum child min stock amounts |
+| `not_check_stock_fulfillment_for_recipes` | boolean | false | Skip recipe availability check |
+| `default_stock_label_type` | int | 0 | Label printing: 0=per purchase, 1=per entry, 2=none |
+| `auto_reprint_stock_label` | boolean | false | Auto-print label on purchase |
+| `hide_on_stock_overview` | boolean | false | Hide from main inventory list |
+
+### Stock Entries Table
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `product_id` | FK | required | Parent product |
+| `amount` | decimal | 0 | Quantity remaining |
+| `best_before_date` | date | null | Due date for this batch |
+| `purchased_date` | date | today | When added to stock |
+| `price` | decimal | null | Unit price paid |
+| `location_id` | FK | null | Current storage location |
+| `shopping_location_id` | FK | null | Where purchased |
+| `open` | boolean | false | Has been opened |
+| `opened_date` | date | null | When opened |
+| `stock_id` | uuid | auto | Unique ID for Grocycode |
+| `note` | text | null | Per-entry notes |
+
+### Stock Log Table (transaction history)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `product_id` | FK | Product affected |
+| `amount` | decimal | Quantity changed |
+| `transaction_type` | enum | purchase, consume, spoiled, inventory-correction, product-opened, transfer-from, transfer-to, stock-edit-old, stock-edit-new |
+| `stock_id` | uuid | References stock entry |
+| `undone` | boolean | Was this transaction undone? |
+| `undone_timestamp` | timestamp | When undone |
+| `spoiled` | boolean | Was item spoiled? |
+| `correlation_id` | uuid | Groups related transactions |
+| `transaction_id` | uuid | Unique per transaction |
+
+### Product Barcodes Table
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `product_id` | FK | Linked product |
+| `barcode` | string | Barcode value (EAN, UPC, etc.) |
+| `qu_id` | FK | Pre-fill quantity unit on scan |
+| `amount` | decimal | Pre-fill amount on scan |
+| `shopping_location_id` | FK | Pre-fill store on scan |
+| `last_price` | decimal | Auto-tracked from purchases |
+| `note` | text | Per-barcode notes |
 
 ## Run Locally
 

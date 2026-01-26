@@ -7,6 +7,7 @@ import { StockEntryWithProduct } from "@/types/database";
 import { getExpiryStatus, getExpiryLabel } from "@/lib/inventory-utils";
 import { getProductPictureSignedUrl } from "@/lib/supabase/storage";
 import { cn } from "@/lib/utils";
+import { ProductDetailModal } from "./ProductDetailModal";
 
 type MobileStockListProps = {
   entries: StockEntryWithProduct[];
@@ -121,9 +122,12 @@ function formatDueDate(date: string | null, days: number | null): string {
 
 export function MobileStockList({ entries }: MobileStockListProps) {
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalEntries, setModalEntries] = useState<StockEntryWithProduct[]>([]);
+  
   const aggregated = useMemo(() => aggregateByProduct(entries), [entries]);
   
-  const toggleExpanded = (productId: string) => {
+  const handleExpand = (productId: string) => {
     setExpandedProducts((prev) => {
       const next = new Set(prev);
       if (next.has(productId)) {
@@ -133,6 +137,16 @@ export function MobileStockList({ entries }: MobileStockListProps) {
       }
       return next;
     });
+  };
+  
+  const handleOpenModal = (product: AggregatedProduct) => {
+    setModalEntries(product.entries);
+    setModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setModalOpen(false);
+    setModalEntries([]);
   };
   
   const statusColors = {
@@ -151,99 +165,121 @@ export function MobileStockList({ entries }: MobileStockListProps) {
   }
 
   return (
-    <div className="space-y-2">
-      {aggregated.map((product) => {
-        const isExpanded = expandedProducts.has(product.productId);
-        const hasMultipleBatches = product.entries.length > 1;
-        
-        return (
-          <div
-            key={product.productId}
-            className={cn(
-              "rounded-lg border border-l-4 overflow-hidden",
-              statusColors[product.worstStatus]
-            )}
-          >
-            {/* Main row */}
+    <>
+      <div className="space-y-2">
+        {aggregated.map((product) => {
+          const isExpanded = expandedProducts.has(product.productId);
+          const hasMultipleBatches = product.entries.length > 1;
+          
+          return (
             <div
-              className="p-3 flex items-center gap-3"
-              onClick={() => hasMultipleBatches && toggleExpanded(product.productId)}
+              key={product.productId}
+              className={cn(
+                "rounded-lg border border-l-4 overflow-hidden",
+                statusColors[product.worstStatus]
+              )}
             >
-              {/* Image */}
-              <ProductImage fileName={product.pictureFileName} name={product.productName} />
-              
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-gray-900 truncate">
-                  {product.productName}
-                </div>
-                <div className="text-sm text-gray-600">
-                  {product.totalAmount} {product.totalAmount === 1 ? product.unitName : product.unitNamePlural}
-                  {product.openedAmount > 0 && (
-                    <span className="text-blue-600 ml-1">
-                      ({product.openedAmount} opened)
-                    </span>
-                  )}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {formatDueDate(product.nextDueDate, product.nextDueDays)}
-                </div>
+              {/* Main row */}
+              <div className="p-3 flex items-center gap-3">
+                {/* Expand button */}
+                {hasMultipleBatches ? (
+                  <button
+                    type="button"
+                    onClick={() => handleExpand(product.productId)}
+                    className="p-1 -ml-1 rounded hover:bg-black/5 touch-manipulation"
+                  >
+                    {isExpanded ? (
+                      <ChevronDown className="h-5 w-5 text-gray-400" />
+                    ) : (
+                      <ChevronRight className="h-5 w-5 text-gray-400" />
+                    )}
+                  </button>
+                ) : (
+                  <div className="w-7" />
+                )}
+
+                {/* Clickable product info */}
+                <button
+                  type="button"
+                  onClick={() => handleOpenModal(product)}
+                  className="flex items-center gap-3 flex-1 min-w-0 text-left touch-manipulation"
+                >
+                  <ProductImage fileName={product.pictureFileName} name={product.productName} />
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-gray-900 truncate">
+                      {product.productName}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {product.totalAmount} {product.totalAmount === 1 ? product.unitName : product.unitNamePlural}
+                      {product.openedAmount > 0 && (
+                        <span className="text-blue-600 ml-1">
+                          ({product.openedAmount} opened)
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {formatDueDate(product.nextDueDate, product.nextDueDays)}
+                    </div>
+                  </div>
+                </button>
+
+                {/* Batch count */}
+                {hasMultipleBatches && (
+                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">
+                    {product.entries.length}
+                  </span>
+                )}
               </div>
               
-              {/* Expand indicator */}
-              {hasMultipleBatches && (
-                <div className="flex items-center gap-1 text-gray-400">
-                  <span className="text-xs">{product.entries.length}</span>
-                  {isExpanded ? (
-                    <ChevronDown className="h-4 w-4" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4" />
-                  )}
+              {/* Expanded batches */}
+              {isExpanded && (
+                <div className="border-t bg-gray-50 divide-y divide-gray-100">
+                  {product.entries.map((entry) => {
+                    const entryStatus = getExpiryStatus(entry.best_before_date);
+                    const entryLabel = getExpiryLabel(entry.best_before_date, entry.product.due_type);
+                    
+                    return (
+                      <div key={entry.id} className="px-3 py-2 pl-12 flex items-center justify-between text-sm">
+                        <div>
+                          <span className="text-gray-700">
+                            {entry.amount} {entry.amount === 1 ? product.unitName : product.unitNamePlural}
+                          </span>
+                          {entry.open && (
+                            <span className="ml-1.5 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                              opened
+                            </span>
+                          )}
+                          {entry.location && (
+                            <span className="ml-1.5 text-gray-400 text-xs">
+                              @ {entry.location.name}
+                            </span>
+                          )}
+                        </div>
+                        <span className={cn(
+                          "text-xs px-2 py-0.5 rounded",
+                          entryStatus === "expired" && "bg-red-100 text-red-700",
+                          entryStatus === "expiring" && "bg-amber-100 text-amber-700",
+                          entryStatus === "fresh" && "bg-green-100 text-green-700",
+                          entryStatus === "none" && "bg-gray-100 text-gray-600"
+                        )}>
+                          {entryLabel}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
-            
-            {/* Expanded batches */}
-            {isExpanded && (
-              <div className="border-t bg-gray-50 divide-y divide-gray-100">
-                {product.entries.map((entry) => {
-                  const entryStatus = getExpiryStatus(entry.best_before_date);
-                  const entryLabel = getExpiryLabel(entry.best_before_date, entry.product.due_type);
-                  
-                  return (
-                    <div key={entry.id} className="px-3 py-2 pl-6 flex items-center justify-between text-sm">
-                      <div>
-                        <span className="text-gray-700">
-                          {entry.amount} {entry.amount === 1 ? product.unitName : product.unitNamePlural}
-                        </span>
-                        {entry.open && (
-                          <span className="ml-1.5 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
-                            opened
-                          </span>
-                        )}
-                        {entry.location && (
-                          <span className="ml-1.5 text-gray-400 text-xs">
-                            @ {entry.location.name}
-                          </span>
-                        )}
-                      </div>
-                      <span className={cn(
-                        "text-xs px-2 py-0.5 rounded",
-                        entryStatus === "expired" && "bg-red-100 text-red-700",
-                        entryStatus === "expiring" && "bg-amber-100 text-amber-700",
-                        entryStatus === "fresh" && "bg-green-100 text-green-700",
-                        entryStatus === "none" && "bg-gray-100 text-gray-600"
-                      )}>
-                        {entryLabel}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
+          );
+        })}
+      </div>
+
+      <ProductDetailModal
+        entries={modalEntries}
+        open={modalOpen}
+        onClose={handleCloseModal}
+      />
+    </>
   );
 }

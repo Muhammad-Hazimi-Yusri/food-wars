@@ -40,6 +40,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Expandable batch details in stock table
 - `InventoryStats` with clickable status filter badges
 - Purchase-to-stock unit conversion in AddStockEntryModal
+- Product detail modal with stock entries view
+- Delete stock entries from modal
+- Separate mobile/desktop stock views with consistent modal behavior
+- Expand/collapse batches inline (arrow) vs view details (click row)
 
 ### Changed
 - `inventory-utils.ts` updated for `StockEntryWithProduct` type

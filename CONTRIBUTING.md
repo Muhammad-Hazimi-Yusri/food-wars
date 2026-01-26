@@ -27,7 +27,7 @@ Key areas:
 - `components/ui/` — shadcn components
 - `components/diner/` — Themed components (Noren, Chalkboard, WoodCard)
 - `lib/supabase/` — Database client and utilities
-- `styles/diner-theme.css` — Japanese diner custom styles
+- `src/app/globals.css` — Tailwind + theme CSS variables (see BRANDING.md)
 
 ## Ways to Contribute
 

@@ -33,15 +33,22 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 Current version is v0.4.4
 
 ### For Users
-- 🚧 *In development* — see [Roadmap](#roadmap) for planned features
+- **Stock Overview** — View all inventory with expiry status badges
+- **Responsive Views** — Mobile card layout, desktop table with expandable batches
+- **Add Products** — 5-tab form (basic, stock defaults, locations, QU conversions, barcodes)
+- **Product Pictures** — Upload from camera or gallery (mobile-optimized)
+- **Add Stock** — Quick-add entries with location, expiry, price
+- **Stock Details** — View and delete individual batches per product
+- **Status Warnings** — Expired, overdue, due soon, below minimum alerts
+- **Google Sign-in** — OAuth authentication with household isolation
 
 ### For Contributors
-- **Project Documentation** — README, BRANDING.md, CONTRIBUTING.md
-- **Database Schema** — Households, inventory items, recipes, shopping lists
-- **Design System** — Shokugeki-inspired color palette with Japanese diner aesthetic
-- **Developer Tooling:**
-  - `pnpm version:bump` — Interactive version updater
-  - Pre-commit hooks for linting
+- **Documentation** — README, BRANDING.md, CONTRIBUTING.md, CHANGELOG.md
+- **Database Schema** — Grocy-compatible with 40+ product fields, full RLS
+- **Design System** — Shokugeki color palette, Japanese diner aesthetic
+- **Testing** — Vitest unit tests + Playwright E2E
+- **CI/CD** — GitHub Actions, Vercel deployment
+- **Tooling:** `pnpm version:bump`, pre-commit hooks
 
 ### Technical Highlights
 - **Stack:** Next.js 14, TypeScript, Tailwind CSS, Supabase
@@ -134,79 +141,89 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Dual storage: Supabase (auth) + localStorage (guest)
 </details>
 
+<details>
+<summary><strong>v0.4 - Schema & Stock Views ✓</strong></summary>
+
+**Goal:** Complete Grocy-compatible database schema + stock UI
+
+**Database schema:** (`supabase/migrations/001_core_schema.sql`)
+- [x] `households` — multi-tenant container
+- [x] `locations` — storage locations with `is_freezer` flag
+- [x] `shopping_locations` — stores
+- [x] `product_groups` — categories
+- [x] `quantity_units` — units with plural names
+- [x] `quantity_unit_conversions` — global and product-specific
+- [x] `products` — complete Grocy fields (40+ columns)
+- [x] `product_barcodes` — multiple barcodes per product
+- [x] `stock_entries` — individual batches with Grocycode support
+- [x] `stock_log` — transaction history (UI in v0.6)
+- [x] Auto-seed default data on user signup
+
+**Stock UI:**
+- [x] `ProductForm` with 5-tab layout + picture upload
+- [x] `AddStockEntryModal` for quick stock entry
+- [x] `MobileStockList` — card layout for mobile
+- [x] `DesktopStockTable` — table with expandable batches
+- [x] `ProductDetailModal` — view/delete stock entries
+- [x] `InventoryStats` + `InventoryWarnings` components
+- [x] Stock aggregation by product
+- [x] Supabase Storage for product pictures
+
+**Breaking changes:**
+- Database schema restructured (clean slate from v0.3)
+- Guest mode temporarily disabled
+</details>
+
 ---
 
 ### In Progress
 
-#### v0.4 - Schema Expansion 
+#### v0.5 - Guest Mode & Filtering
 
-**Goal:** Complete Grocy-compatible database schema
+**Goal:** Demo-friendly guest mode + filtering UI + master data CRUD
 
-> ⚠️ Breaking change: Guest mode temporarily disabled
+**Guest mode (Supabase anonymous auth):**
+- [ ] Shared guest household (single anon account for all guests)
+- [ ] Auto sign-in as guest when "Try as Guest" clicked
+- [ ] Banner: "Guest mode — data shared and may reset anytime"
+- [ ] Admin endpoint `/api/admin/reset-guest` to wipe and re-seed
+- [ ] Seed data with varied test scenarios (edge cases for expiry, locations, etc.)
 
-**Database schema:** (`supabase/migrations/001_core_schema.sql`)
-- [x] `households` — multi-tenant container
-- [x] `locations` — storage locations with `is_freezer` and `active` flags
-- [x] `shopping_locations` — stores with `active` flag
-- [x] `product_groups` — categories with `active` flag
-- [x] `quantity_units` — units with plural names and `active` flag
-- [x] `quantity_unit_conversions` — global and product-specific conversions
-- [x] `products` — complete Grocy fields (40+ columns)
-- [x] `product_barcodes` — multiple barcodes per product (UI in v0.8)
-- [x] `stock_entries` — individual batches with Grocycode support
-- [x] `stock_log` — transaction history for undo functionality (UI in v0.6)
-- [x] Auto-seed default data on user signup
+**Master data management:** (`/master-data/*`)
+- [ ] Locations page — CRUD (name, is_freezer, sort_order)
+- [ ] Quantity units page — CRUD (name, name_plural, sort_order)
+- [ ] Product groups page — CRUD (name, sort_order)
+- [ ] Shopping locations page — CRUD (name, sort_order)
+- [ ] Soft delete support (`active` flag toggle)
 
-**Components:**
-- [x] `StockCard` component for displaying stock entries
-- [x] `StockList` component with filtering and sorting
-- [x] `ProductForm` with tabbed layout (5 tabs)
-- [x] `AddStockEntryModal` for quick stock entry
-- [x] Updated `InventoryStats` and `InventoryWarnings`
+**Stock overview filters (desktop):**
+- [ ] Search input (filter by product name)
+- [ ] Location dropdown filter
+- [ ] Product group dropdown filter
+- [ ] Status dropdown filter (All, Due soon, Overdue, Expired, Below min stock, In stock)
+- [ ] Clear all filters button
 
-**UI for master data:** (deferred to v0.5)
-- [ ] Manage locations page
-- [ ] Manage stores page
-- [ ] Manage product groups page
-- [ ] Manage quantity units page
-- [ ] Products list page (view/edit/delete)
-- [ ] Edit/delete stock entries
+**Clickable warning banners:**
+- [ ] Red (expired) → filters to expired
+- [ ] Gray (overdue) → filters to overdue
+- [ ] Amber (due soon) → filters to due soon
+- [ ] Teal (below min) → filters to below min stock
 
-**Migration:**
-- ~~Migrate v0.3 `inventory_items` to new schema~~ (clean slate instead)
+**Summary stats:**
+- [ ] Total products count
+- [ ] Total stock value (sum of price × amount)
+
+**Edit stock entries:**
+- [ ] Edit button in ProductDetailModal
+- [ ] Edit amount, location, expiry, price, note, opened status
+
+**Testing:**
+- [ ] Unit tests for `inventory-utils.ts`
+- [ ] Unit tests for stock aggregation logic
+- [ ] Unit tests for expiry status calculations
+- [ ] E2E tests for guest mode flow
 
 ### Planned
-
-#### v0.5 - Demo Mode & Filtering
-
-**Goal:** Demo data for testing + filtering UI + master data management
-
-**Demo mode (guest):**
-- [ ] Seed data generator with varied test scenarios
-- [ ] Products with different locations, groups, statuses
-- [ ] Stock entries with varied expiry dates
-- [ ] Reset demo button
-- [ ] **Disclaimer banner:** "Guest mode is for demo only — data may reset on app updates. Sign in or self-host for persistent storage."
-
-**Master data management:** (moved from v0.4)
-- [ ] Manage locations page (CRUD)
-- [ ] Manage stores page (CRUD)
-- [ ] Manage product groups page (CRUD)
-- [ ] Manage quantity units page (CRUD)
-- [ ] Products list page (view/edit/delete)
-- [ ] Edit/delete stock entries from StockCard
-- [ ] Soft delete support (`active` flag)
-
-**Filtering & display:**
-- [ ] Warning banners (clickable to apply filter)
-- [ ] Stats display (total items, by status, by location)
-- [ ] Filter by expiry status (all, fresh, due soon, overdue, expired)
-- [ ] Filter by location
-- [ ] Filter by product group
-- [ ] Filter by `hide_on_stock_overview` flag
-- [ ] Search by name
-- [ ] Sort options (name, expiry, location, date added)
-- [ ] List view / Card view toggle
 
 #### v0.6 - Stock Actions & Journal
 
@@ -602,51 +619,88 @@ Already happy with Grocy/Mealie/Tandoor? Stick with them — they're battle-test
 ---
 
 ## Project Structure
-
 ```
 food-wars/
-├── app/
-│   ├── (auth)/                 # Login, signup pages
-│   │   ├── login/
-│   │   └── signup/
-│   ├── (dashboard)/            # Protected routes
-│   │   ├── inventory/
-│   │   ├── recipes/
-│   │   ├── shopping/
-│   │   └── suggestions/
-│   ├── api/                    # API routes
-│   └── layout.tsx
-├── components/
-│   ├── ui/                     # shadcn components
-│   ├── diner/                  # Themed components
-│   │   ├── Noren.tsx           # Curtain header
-│   │   ├── Chalkboard.tsx      # AI suggestions section
-│   │   ├── WoodCard.tsx        # Inventory item card
-│   │   └── LanternButton.tsx   # Primary button
-│   └── inventory/              # Feature components
-├── lib/
-│   ├── supabase/
-│   │   ├── client.ts           # Browser client
-│   │   ├── server.ts           # Server client
-│   │   └── middleware.ts       # Auth middleware
-│   └── utils/
-├── styles/
-│   ├── globals.css
-│   └── diner-theme.css         # Japanese diner styles
-├── types/
-│   └── database.ts             # Supabase types
-├── supabase/
-│   └── migrations/             # SQL migrations
-├── scripts/
-│   └── bump-version.mjs        # Version updater
+├── .github/
+│   └── workflows/
+│       └── ci.yml                 # GitHub Actions CI pipeline
 ├── .husky/
-│   └── pre-commit              # Pre-commit hooks
-├── BRANDING.md                 # Design system
-├── CHANGELOG.md
-├── CONTRIBUTING.md
-└── README.md
+│   └── pre-commit                 # Pre-commit hooks (lint, version check)
+├── e2e/
+│   └── home.spec.ts               # Playwright E2E tests
+├── public/                        # Static assets
+├── scripts/
+│   └── bump-version.mjs           # Interactive version updater
+├── src/
+│   ├── app/
+│   │   ├── api/
+│   │   │   └── test-supabase/
+│   │   │       └── route.ts       # Supabase connection test endpoint
+│   │   ├── auth/
+│   │   │   ├── callback/
+│   │   │   │   └── route.ts       # OAuth callback handler
+│   │   │   └── error/
+│   │   │       └── page.tsx       # Auth error page
+│   │   ├── products/
+│   │   │   └── new/
+│   │   │       └── page.tsx       # Add new product page
+│   │   ├── test/
+│   │   │   └── page.tsx           # Color palette test page
+│   │   ├── globals.css            # Tailwind + theme CSS variables
+│   │   ├── layout.tsx             # Root layout with fonts
+│   │   └── page.tsx               # Home/Stock overview page
+│   ├── components/
+│   │   ├── diner/                 # Themed components
+│   │   │   ├── Noren.tsx          # Header with lantern decorations
+│   │   │   ├── UserMenu.tsx       # Auth dropdown menu
+│   │   │   └── WelcomeModal.tsx   # First-visit onboarding modal
+│   │   ├── inventory/             # Stock management components
+│   │   │   ├── AddStockEntryModal.tsx
+│   │   │   ├── DesktopStockTable.tsx
+│   │   │   ├── InventoryStats.tsx
+│   │   │   ├── InventoryWarning.tsx
+│   │   │   ├── MobileStockList.tsx
+│   │   │   ├── ProductDetailModal.tsx
+│   │   │   └── ProductForm.tsx
+│   │   └── ui/                    # shadcn/ui components
+│   │       ├── button.tsx
+│   │       ├── dialog.tsx
+│   │       ├── dropdown-menu.tsx
+│   │       ├── image-upload.tsx
+│   │       ├── input.tsx
+│   │       ├── label.tsx
+│   │       ├── select.tsx
+│   │       └── tabs.tsx
+│   ├── hooks/
+│   │   └── useGuestStorage.ts     # localStorage hook (legacy)
+│   ├── lib/
+│   │   ├── supabase/
+│   │   │   ├── client.ts          # Browser Supabase client
+│   │   │   ├── inventory.ts       # Stock CRUD operations
+│   │   │   ├── middleware.ts      # Auth middleware helpers
+│   │   │   ├── server.ts          # Server-side Supabase client
+│   │   │   └── storage.ts         # File upload utilities
+│   │   ├── __tests__/
+│   │   │   └── storage.test.ts    # Unit tests
+│   │   ├── inventory-utils.ts     # Stock aggregation helpers
+│   │   ├── storage.ts             # Guest mode localStorage (legacy)
+│   │   └── utils.ts               # cn() and general utilities
+│   └── types/
+│       └── database.ts            # Supabase generated types
+├── supabase/
+│   └── migrations/
+│       ├── 001_core_schema.sql    # Main tables + RLS policies
+│       └── 002_storage.sql        # Product pictures bucket
+├── BRANDING.md                    # Design system & color palette
+├── CHANGELOG.md                   # Version history
+├── CONTRIBUTING.md                # Development guidelines
+├── README.md                      # This file
+├── components.json                # shadcn/ui config
+├── next.config.ts                 # Next.js configuration
+├── playwright.config.ts           # E2E test config
+├── vitest.config.js               # Unit test config
+└── vitest.setup.ts                # Test setup
 ```
-
 ---
 
 ## Database Schema

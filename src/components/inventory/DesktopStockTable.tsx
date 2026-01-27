@@ -21,7 +21,7 @@ type AggregatedProduct = {
   openedAmount: number;
   unitName: string;
   unitNamePlural: string;
-  worstStatus: "expired" | "expiring" | "fresh" | "none";
+  worstStatus: "expired" | "overdue" | "due_soon" | "fresh" | "none";
   nextDueDate: string | null;
   nextDueDays: number | null;
   entries: StockEntryWithProduct[];
@@ -50,8 +50,8 @@ function aggregateByProduct(entries: StockEntryWithProduct[]): AggregatedProduct
     if (entry.open) acc[pid].openedAmount += entry.amount;
     acc[pid].entries.push(entry);
     
-    const status = getExpiryStatus(entry.best_before_date);
-    const statusPriority = { expired: 0, expiring: 1, fresh: 2, none: 3 };
+    const status = getExpiryStatus(entry.best_before_date, entry.product?.due_type ?? 1);
+    const statusPriority = { expired: 0, overdue: 1, due_soon: 2, fresh: 3, none: 4 };
     if (statusPriority[status] < statusPriority[acc[pid].worstStatus]) {
       acc[pid].worstStatus = status;
     }
@@ -70,7 +70,7 @@ function aggregateByProduct(entries: StockEntryWithProduct[]): AggregatedProduct
   }, {} as Record<string, AggregatedProduct>);
   
   return Object.values(grouped).sort((a, b) => {
-    const statusPriority = { expired: 0, expiring: 1, fresh: 2, none: 3 };
+    const statusPriority = { expired: 0, overdue: 1, due_soon: 2, fresh: 3, none: 4 };
     if (statusPriority[a.worstStatus] !== statusPriority[b.worstStatus]) {
       return statusPriority[a.worstStatus] - statusPriority[b.worstStatus];
     }
@@ -109,19 +109,21 @@ function ProductImage({ fileName, name }: { fileName: string | null; name: strin
   );
 }
 
-function formatDueDate(date: string | null, days: number | null): { date: string; relative: string } {
-  if (!date) return { date: "—", relative: "" };
-  if (days === null) return { date, relative: "" };
+function formatDueDate(date: string | null, days: number | null): string {
+  if (!date) return "—";
+  const formatted = new Date(date).toLocaleDateString("en-CA");
+  if (days === null) return formatted;
   
-  let relative = "";
-  if (days < 0) relative = `${Math.abs(days)}d overdue`;
-  else if (days === 0) relative = "today";
-  else if (days === 1) relative = "tomorrow";
-  else if (days <= 7) relative = `in ${days} days`;
-  else if (days <= 30) relative = `in ${Math.ceil(days / 7)} weeks`;
-  else relative = `in ${Math.ceil(days / 30)} months`;
+  let daysText = "";
+  if (days < 0) {
+    daysText = `${Math.abs(days)}d overdue`;
+  } else if (days === 0) {
+    daysText = "today";
+  } else {
+    daysText = `${days}d`;
+  }
   
-  return { date, relative };
+  return `${formatted}\n${daysText}`;
 }
 
 export function DesktopStockTable({ entries }: DesktopStockTableProps) {
@@ -143,7 +145,7 @@ export function DesktopStockTable({ entries }: DesktopStockTableProps) {
       return next;
     });
   };
-
+  
   const handleOpenModal = (product: AggregatedProduct) => {
     setModalEntries(product.entries);
     setModalOpen(true);
@@ -154,23 +156,17 @@ export function DesktopStockTable({ entries }: DesktopStockTableProps) {
     setModalEntries([]);
   };
   
-  const statusBorderColors = {
-    expired: "border-l-kurokiba",
-    expiring: "border-l-takumi",
-    fresh: "border-l-green-500",
-    none: "border-l-gray-300",
-  };
-  
-  const statusRowColors = {
-    expired: "bg-red-50 hover:bg-red-100/50",
-    expiring: "bg-amber-50 hover:bg-amber-100/50",
-    fresh: "bg-green-50/50 hover:bg-green-100/50",
-    none: "bg-white hover:bg-gray-50",
+  const statusColors = {
+    expired: "border-l-kurokiba bg-red-50",
+    overdue: "border-l-gray-500 bg-gray-50",
+    due_soon: "border-l-takumi bg-amber-50",
+    fresh: "border-l-green-500 bg-green-50/50",
+    none: "border-l-gray-300 bg-white",
   };
 
   if (aggregated.length === 0) {
     return (
-      <div className="text-center py-12 text-muted-foreground border rounded-lg">
+      <div className="text-center py-12 text-muted-foreground">
         No items in stock. Add a product first, then add stock.
       </div>
     );
@@ -178,40 +174,39 @@ export function DesktopStockTable({ entries }: DesktopStockTableProps) {
 
   return (
     <>
-      <div className="overflow-hidden rounded-lg border">
-        {/* Header */}
-        <div className="flex items-center gap-4 px-4 py-3 bg-gray-50 border-b text-sm font-medium text-gray-600">
-          <div className="w-16 flex-shrink-0" />
-          <div className="flex-1">Product</div>
-          <div className="w-36 text-right">Amount</div>
-          <div className="w-48">Next Due Date</div>
-        </div>
-        
-        {/* Rows */}
-        <div className="divide-y">
-          {aggregated.map((product) => {
-            const isExpanded = expandedProducts.has(product.productId);
-            const hasMultipleBatches = product.entries.length > 1;
-            const dueInfo = formatDueDate(product.nextDueDate, product.nextDueDays);
-            
-            return (
-              <div key={product.productId}>
-                {/* Main row */}
-                <div
-                  className={cn(
-                    "flex items-center gap-4 px-4 py-3 border-l-4 cursor-pointer transition-colors",
-                    statusBorderColors[product.worstStatus],
-                    statusRowColors[product.worstStatus]
-                  )}
-                  onClick={() => handleOpenModal(product)}
-                >
-                  {/* Expand button + Image */}
-                  <div className="w-16 flex-shrink-0 flex items-center gap-2">
-                    {hasMultipleBatches ? (
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-gray-50 border-b">
+            <tr>
+              <th className="w-10"></th>
+              <th className="text-left py-3 px-4 font-medium text-gray-700">Product</th>
+              <th className="text-right py-3 px-4 font-medium text-gray-700">Amount</th>
+              <th className="text-right py-3 px-4 font-medium text-gray-700">Next Due Date</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {aggregated.map((product) => {
+              const isExpanded = expandedProducts.has(product.productId);
+              const hasMultipleBatches = product.entries.length > 1;
+              
+              return (
+                <tr key={product.productId} className="group">
+                  <td colSpan={4} className="p-0">
+                    {/* Main row */}
+                    <div
+                      className={cn(
+                        "flex items-center border-l-4 cursor-pointer hover:bg-gray-50 transition-colors",
+                        statusColors[product.worstStatus]
+                      )}
+                      onClick={() => handleOpenModal(product)}
+                    >
+                      {/* Expand button */}
                       <button
-                        type="button"
                         onClick={(e) => handleExpand(e, product.productId)}
-                        className="p-0.5 rounded hover:bg-black/10"
+                        className={cn(
+                          "p-3 hover:bg-gray-100 transition-colors",
+                          !hasMultipleBatches && "invisible"
+                        )}
                       >
                         {isExpanded ? (
                           <ChevronDown className="h-4 w-4 text-gray-400" />
@@ -219,90 +214,76 @@ export function DesktopStockTable({ entries }: DesktopStockTableProps) {
                           <ChevronRight className="h-4 w-4 text-gray-400" />
                         )}
                       </button>
-                    ) : (
-                      <div className="w-5 flex-shrink-0" />
-                    )}
-                    <ProductImage fileName={product.pictureFileName} name={product.productName} />
-                  </div>
-                  
-                  {/* Product name */}
-                  <div className="flex-1 font-medium text-gray-900 truncate">
-                    {product.productName}
-                  </div>
-                  
-                  {/* Amount */}
-                  <div className="w-36 flex-shrink-0 text-right">
-                    <div className="font-medium">
-                      {product.totalAmount} {product.totalAmount === 1 ? product.unitName : product.unitNamePlural}
-                    </div>
-                    {product.openedAmount > 0 && (
-                      <div className="text-xs text-blue-600">
-                        {product.openedAmount} opened
-                      </div>
-                    )}
-                    {hasMultipleBatches && (
-                      <div className="text-xs text-gray-400">
-                        {product.entries.length} batches
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Due date */}
-                  <div className="w-48 flex-shrink-0">
-                    <div className="text-gray-900">{dueInfo.date}</div>
-                    {dueInfo.relative && (
-                      <div className="text-xs text-gray-500">{dueInfo.relative}</div>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Expanded batch details */}
-                {isExpanded && (
-                  <div className="bg-gray-50 border-l-4 border-l-gray-200 divide-y divide-gray-200">
-                    {product.entries.map((entry) => {
-                      const entryStatus = getExpiryStatus(entry.best_before_date);
-                      const entryLabel = getExpiryLabel(entry.best_before_date, entry.product.due_type);
                       
-                      return (
-                        <div
-                          key={entry.id}
-                          className="flex items-center gap-4 px-4 py-2 text-sm"
-                        >
-                          <div className="w-16 flex-shrink-0" />
-                          
-                          <div className="flex-1 text-gray-600">
-                            {entry.location ? `@ ${entry.location.name}` : "—"}
-                          </div>
-                          
-                          <div className="w-36 flex-shrink-0 text-right text-gray-700">
-                            {entry.amount} {entry.amount === 1 ? product.unitName : product.unitNamePlural}
-                            {entry.open && (
-                              <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
-                                opened
-                              </span>
-                            )}
-                          </div>
-                          
-                          <div className="w-48 flex-shrink-0">
-                            <span className={cn(
-                              "text-xs px-2 py-1 rounded",
-                              entryStatus === "expired" && "bg-red-100 text-red-700",
-                              entryStatus === "expiring" && "bg-amber-100 text-amber-700",
-                              entryStatus === "fresh" && "bg-green-100 text-green-700",
-                              entryStatus === "none" && "bg-gray-100 text-gray-600"
-                            )}>
-                              {entryLabel}
-                            </span>
-                          </div>
+                      {/* Product info */}
+                      <div className="flex items-center gap-3 flex-1 py-2">
+                        <ProductImage fileName={product.pictureFileName} name={product.productName} />
+                        <span className="font-medium">{product.productName}</span>
+                      </div>
+                      
+                      {/* Amount */}
+                      <div className="text-right px-4 py-2">
+                        <div>
+                          {product.totalAmount} {product.totalAmount === 1 ? product.unitName : product.unitNamePlural}
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+                        {product.openedAmount > 0 && (
+                          <div className="text-xs text-blue-600">
+                            {product.openedAmount} opened
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Due date */}
+                      <div className="text-right px-4 py-2 whitespace-pre-line text-sm">
+                        {formatDueDate(product.nextDueDate, product.nextDueDays)}
+                      </div>
+                    </div>
+                    
+                    {/* Expanded batches */}
+                    {isExpanded && (
+                      <div className="bg-gray-50 border-t divide-y divide-gray-100">
+                        {product.entries.map((entry) => {
+                          const entryStatus = getExpiryStatus(entry.best_before_date, entry.product?.due_type ?? 1);
+                          const entryLabel = getExpiryLabel(entry.best_before_date, entry.product?.due_type ?? 1);
+                          
+                          return (
+                            <div key={entry.id} className="flex items-center py-2 px-4 pl-14 text-sm">
+                              <div className="flex-1">
+                                <span className="text-gray-700">
+                                  {entry.amount} {entry.amount === 1 ? product.unitName : product.unitNamePlural}
+                                </span>
+                                {entry.open && (
+                                  <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                                    opened
+                                  </span>
+                                )}
+                                {entry.location && (
+                                  <span className="ml-2 text-gray-400 text-xs">
+                                    @ {entry.location.name}
+                                  </span>
+                                )}
+                              </div>
+                              <span className={cn(
+                                "text-xs px-2 py-0.5 rounded",
+                                entryStatus === "expired" && "bg-red-100 text-red-700",
+                                entryStatus === "overdue" && "bg-gray-200 text-gray-700",
+                                entryStatus === "due_soon" && "bg-amber-100 text-amber-700",
+                                entryStatus === "fresh" && "bg-green-100 text-green-700",
+                                entryStatus === "none" && "bg-gray-100 text-gray-600"
+                              )}>
+                                {entryLabel}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
 
       <ProductDetailModal

@@ -33,7 +33,7 @@ export default function AdminPage() {
       } else {
         setResult({ success: false, message: data.error || "Failed to reset" });
       }
-    } catch (error) {
+    } catch {
       setResult({ success: false, message: "Network error" });
     } finally {
       setLoading(false);

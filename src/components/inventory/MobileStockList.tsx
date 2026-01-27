@@ -21,7 +21,7 @@ type AggregatedProduct = {
   openedAmount: number;
   unitName: string;
   unitNamePlural: string;
-  worstStatus: "expired" | "expiring" | "fresh" | "none";
+  worstStatus: "expired" | "overdue" | "due_soon" | "fresh" | "none";
   nextDueDate: string | null;
   nextDueDays: number | null;
   entries: StockEntryWithProduct[];
@@ -50,8 +50,8 @@ function aggregateByProduct(entries: StockEntryWithProduct[]): AggregatedProduct
     if (entry.open) acc[pid].openedAmount += entry.amount;
     acc[pid].entries.push(entry);
     
-    const status = getExpiryStatus(entry.best_before_date);
-    const statusPriority = { expired: 0, expiring: 1, fresh: 2, none: 3 };
+    const status = getExpiryStatus(entry.best_before_date, entry.product?.due_type ?? 1);
+    const statusPriority = { expired: 0, overdue: 1, due_soon: 2, fresh: 3, none: 4 };
     if (statusPriority[status] < statusPriority[acc[pid].worstStatus]) {
       acc[pid].worstStatus = status;
     }
@@ -70,7 +70,7 @@ function aggregateByProduct(entries: StockEntryWithProduct[]): AggregatedProduct
   }, {} as Record<string, AggregatedProduct>);
   
   return Object.values(grouped).sort((a, b) => {
-    const statusPriority = { expired: 0, expiring: 1, fresh: 2, none: 3 };
+    const statusPriority = { expired: 0, overdue: 1, due_soon: 2, fresh: 3, none: 4 };
     if (statusPriority[a.worstStatus] !== statusPriority[b.worstStatus]) {
       return statusPriority[a.worstStatus] - statusPriority[b.worstStatus];
     }
@@ -151,7 +151,8 @@ export function MobileStockList({ entries }: MobileStockListProps) {
   
   const statusColors = {
     expired: "border-l-kurokiba bg-red-50",
-    expiring: "border-l-takumi bg-amber-50",
+    overdue: "border-l-gray-500 bg-gray-50",
+    due_soon: "border-l-takumi bg-amber-50",
     fresh: "border-l-green-500 bg-green-50/50",
     none: "border-l-gray-300 bg-white",
   };
@@ -175,42 +176,36 @@ export function MobileStockList({ entries }: MobileStockListProps) {
             <div
               key={product.productId}
               className={cn(
-                "rounded-lg border border-l-4 overflow-hidden",
+                "bg-white rounded-lg shadow-sm overflow-hidden border-l-4",
                 statusColors[product.worstStatus]
               )}
             >
               {/* Main row */}
-              <div className="p-3 flex items-center gap-3">
+              <div className="flex items-center p-3 gap-3">
                 {/* Expand button */}
-                {hasMultipleBatches ? (
-                  <button
-                    type="button"
-                    onClick={() => handleExpand(product.productId)}
-                    className="p-1 -ml-1 rounded hover:bg-black/5 touch-manipulation"
-                  >
-                    {isExpanded ? (
-                      <ChevronDown className="h-5 w-5 text-gray-400" />
-                    ) : (
-                      <ChevronRight className="h-5 w-5 text-gray-400" />
-                    )}
-                  </button>
-                ) : (
-                  <div className="w-7" />
-                )}
-
-                {/* Clickable product info */}
                 <button
-                  type="button"
+                  onClick={() => handleExpand(product.productId)}
+                  className={cn(
+                    "p-1 -ml-1 hover:bg-gray-100 rounded transition-colors",
+                    !hasMultipleBatches && "invisible"
+                  )}
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-gray-400" />
+                  )}
+                </button>
+
+                {/* Product info (clickable) */}
+                <button
                   onClick={() => handleOpenModal(product)}
-                  className="flex items-center gap-3 flex-1 min-w-0 text-left touch-manipulation"
+                  className="flex items-center gap-3 flex-1 text-left min-w-0"
                 >
                   <ProductImage fileName={product.pictureFileName} name={product.productName} />
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-gray-900 truncate">
-                      {product.productName}
-                    </div>
-                    <div className="text-sm text-gray-600">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium truncate">{product.productName}</div>
+                    <div className="text-sm text-gray-500">
                       {product.totalAmount} {product.totalAmount === 1 ? product.unitName : product.unitNamePlural}
                       {product.openedAmount > 0 && (
                         <span className="text-blue-600 ml-1">
@@ -236,8 +231,8 @@ export function MobileStockList({ entries }: MobileStockListProps) {
               {isExpanded && (
                 <div className="border-t bg-gray-50 divide-y divide-gray-100">
                   {product.entries.map((entry) => {
-                    const entryStatus = getExpiryStatus(entry.best_before_date);
-                    const entryLabel = getExpiryLabel(entry.best_before_date, entry.product.due_type);
+                    const entryStatus = getExpiryStatus(entry.best_before_date, entry.product?.due_type ?? 1);
+                    const entryLabel = getExpiryLabel(entry.best_before_date, entry.product?.due_type ?? 1);
                     
                     return (
                       <div key={entry.id} className="px-3 py-2 pl-12 flex items-center justify-between text-sm">
@@ -259,7 +254,8 @@ export function MobileStockList({ entries }: MobileStockListProps) {
                         <span className={cn(
                           "text-xs px-2 py-0.5 rounded",
                           entryStatus === "expired" && "bg-red-100 text-red-700",
-                          entryStatus === "expiring" && "bg-amber-100 text-amber-700",
+                          entryStatus === "overdue" && "bg-gray-200 text-gray-700",
+                          entryStatus === "due_soon" && "bg-amber-100 text-amber-700",
                           entryStatus === "fresh" && "bg-green-100 text-green-700",
                           entryStatus === "none" && "bg-gray-100 text-gray-600"
                         )}>

@@ -156,14 +156,15 @@ export function ProductDetailModal({
             </h3>
             <div className="space-y-2">
               {entries.map((entry) => {
-                const status = getExpiryStatus(entry.best_before_date);
+                const status = getExpiryStatus(entry.best_before_date, entry.product?.due_type ?? 1);;
                 const label = getExpiryLabel(entry.best_before_date, product.due_type);
 
                 const statusColors = {
-                  expired: "border-l-kurokiba bg-red-50",
-                  expiring: "border-l-takumi bg-amber-50",
-                  fresh: "border-l-green-500 bg-green-50",
-                  none: "border-l-gray-300 bg-gray-50",
+                  expired: "bg-red-100 text-red-700",
+                  overdue: "bg-gray-200 text-gray-700",
+                  due_soon: "bg-amber-100 text-amber-700",
+                  fresh: "bg-green-100 text-green-700",
+                  none: "bg-gray-100 text-gray-600",
                 };
 
                 return (

@@ -14,6 +14,11 @@ type InventoryStatsProps = {
 export function InventoryStats({ entries, onFilterChange, activeFilter }: InventoryStatsProps) {
   const productIds = new Set(entries.map((e) => e.product_id));
   const totalProducts = productIds.size;
+  const totalStockEntries = entries.length;
+  const totalValue = entries.reduce(
+    (sum, e) => sum + (e.price ?? 0) * e.amount,
+    0
+  );
 
   const statusCounts = entries.reduce(
     (acc, entry) => {
@@ -65,9 +70,17 @@ export function InventoryStats({ entries, onFilterChange, activeFilter }: Invent
 
   return (
     <div className="mb-4">
-      <p className="text-lg text-gray-600 mb-3">
-        {totalProducts} {totalProducts === 1 ? "Product" : "Products"}
-      </p>
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600 mb-3">
+        <span>{totalProducts} {totalProducts === 1 ? "product" : "products"}</span>
+        <span>•</span>
+        <span>{totalStockEntries} {totalStockEntries === 1 ? "stock entry" : "stock entries"}</span>
+        {totalValue > 0 && (
+          <>
+            <span>•</span>
+            <span>£{totalValue.toFixed(2)} total value</span>
+          </>
+        )}
+      </div>
 
       {/* Status badges */}
       <div className="flex flex-wrap gap-2">

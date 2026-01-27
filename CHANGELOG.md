@@ -17,18 +17,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 25 products across 10 categories
   - 29 stock entries with edge cases (expired, due soon, below min stock, opened, no expiry)
   - 5 locations, 4 stores, 10 product groups, 12 quantity units
-- Database migrations
-  - `003_guest_mode.sql` — guest household + updated RLS policies
-  - `004_guest_seed_data.sql` — demo data seeding
-- `src/lib/constants.ts` — shared constants (GUEST_HOUSEHOLD_ID)
 - Admin page (`/admin`) to reset guest data
   - `seed_guest_data()` Postgres function for re-seeding
   - Protected by `ADMIN_SECRET` environment variable
+- Stock overview filters
+  - Search by product name (mobile + desktop)
+  - Filter by location, product group, status
+  - Mobile: collapsible filter panel with toggle button
+  - Desktop: inline filter bar
+  - Clear all filters button
+- Summary stats: products count, stock entries count, total value
+- Database migrations
+  - `003_guest_mode.sql` — guest household + updated RLS policies
+  - `004_guest_seed_data.sql` — demo data seeding
+  - `005_seed_guest_function.sql` — re-seed function for admin reset
+  - `006_fix_anon_trigger.sql` — skip household creation for anonymous users
+- `src/lib/constants.ts` — shared constants (GUEST_HOUSEHOLD_ID)
+- `supabase/scripts/cleanup_orphan_households.sql` — manual cleanup script
 
 ### Changed
 - `WelcomeModal` — uses `signInAnonymously()` for guest mode
 - `UserMenu` — clears localStorage on sign-out to show WelcomeModal again
+- `InventoryStats` — shows products, stock entries, and total value
 - RLS policies updated to allow anonymous users access to guest household
+
+### Fixed
+- Anonymous users no longer create orphan households
 
 ## [0.4.X] - 2025-01-26
 

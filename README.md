@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.5.1-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.5.2-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.5.1
+Current version is v0.5.2
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -189,29 +189,28 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Admin endpoint `/api/admin/reset-guest` to wipe and re-seed
 - [x] Seed data with varied test scenarios (edge cases for expiry, locations, etc.)
 
+**Stock overview filters:**
+- [x] Search input (filter by product name)
+- [x] Location dropdown filter
+- [x] Product group dropdown filter
+- [x] Status dropdown filter (All, Due soon, Expired, Fresh, No date, Below min stock)
+- [x] Clear all filters button
+- [x] Mobile: collapsible filter panel
+
+**Summary stats:**
+- [x] Total products count
+- [x] Total stock entries count
+- [x] Total stock value (sum of price × amount)
+
+**Clickable warning banners:**
+- [x] Status badges filter when clicked
+
 **Master data management:** (`/master-data/*`)
 - [ ] Locations page — CRUD (name, is_freezer, sort_order)
 - [ ] Quantity units page — CRUD (name, name_plural, sort_order)
 - [ ] Product groups page — CRUD (name, sort_order)
 - [ ] Shopping locations page — CRUD (name, sort_order)
 - [ ] Soft delete support (`active` flag toggle)
-
-**Stock overview filters (desktop):**
-- [ ] Search input (filter by product name)
-- [ ] Location dropdown filter
-- [ ] Product group dropdown filter
-- [ ] Status dropdown filter (All, Due soon, Overdue, Expired, Below min stock, In stock)
-- [ ] Clear all filters button
-
-**Clickable warning banners:**
-- [ ] Red (expired) → filters to expired
-- [ ] Gray (overdue) → filters to overdue
-- [ ] Amber (due soon) → filters to due soon
-- [ ] Teal (below min) → filters to below min stock
-
-**Summary stats:**
-- [ ] Total products count
-- [ ] Total stock value (sum of price × amount)
 
 **Edit stock entries:**
 - [ ] Edit button in ProductDetailModal

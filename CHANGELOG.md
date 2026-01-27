@@ -40,6 +40,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `006_fix_anon_trigger.sql` — skip household creation for anonymous users
 - `src/lib/constants.ts` — shared constants (GUEST_HOUSEHOLD_ID)
 - `supabase/scripts/cleanup_orphan_households.sql` — manual cleanup script
+- Edit stock entries from ProductDetailModal
+  - `EditStockEntryModal` component for editing amount, location, expiry, price, note, opened status
+  - Edit button (pencil icon) next to delete button for each entry
 
 ### Changed
 - `WelcomeModal` — uses `signInAnonymously()` for guest mode

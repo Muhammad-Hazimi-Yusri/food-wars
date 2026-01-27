@@ -10,18 +10,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import {
-  ImageIcon,
-  MapPin,
-  Package,
-  Calendar,
-  Trash2,
-} from "lucide-react";
-import { StockEntryWithProduct } from "@/types/database";
+import { ImageIcon, Pencil, Trash2 } from "lucide-react";
+import { StockEntryWithProduct, Location } from "@/types/database";
 import { getExpiryStatus, getExpiryLabel } from "@/lib/inventory-utils";
 import { getProductPictureSignedUrl } from "@/lib/supabase/storage";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { EditStockEntryModal } from "./EditStockEntryModal";
 
 type ProductDetailModalProps = {
   entries: StockEntryWithProduct[];
@@ -37,8 +32,9 @@ export function ProductDetailModal({
   const router = useRouter();
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [editingEntry, setEditingEntry] = useState<StockEntryWithProduct | null>(null);
 
-  // Get product from entries prop directly (no local state)
   const product = entries[0]?.product;
 
   // Load product image
@@ -49,6 +45,21 @@ export function ProductDetailModal({
       setImageUrl(null);
     }
   }, [product?.picture_file_name]);
+
+  // Load locations for edit modal
+  useEffect(() => {
+    if (open) {
+      const supabase = createClient();
+      supabase
+        .from("locations")
+        .select("*")
+        .eq("active", true)
+        .order("name")
+        .then(({ data }) => {
+          if (data) setLocations(data);
+        });
+    }
+  }, [open]);
 
   const handleDeleteEntry = async (entryId: string) => {
     if (!confirm("Delete this stock entry?")) return;
@@ -63,7 +74,6 @@ export function ProductDetailModal({
 
       if (error) throw error;
 
-      // Close modal and refresh
       onClose();
       router.refresh();
     } catch (err) {
@@ -74,7 +84,6 @@ export function ProductDetailModal({
     }
   };
 
-  // Don't render if no entries or not open
   if (!open || entries.length === 0 || !product) {
     return null;
   }
@@ -84,163 +93,162 @@ export function ProductDetailModal({
   const totalValue = entries.reduce((sum, e) => sum + (e.price ?? 0) * e.amount, 0);
   const unitName = product.qu_stock?.name ?? "unit";
   const unitNamePlural = product.qu_stock?.name_plural ?? "units";
-  const locations = [...new Set(entries.map((e) => e.location?.name).filter(Boolean))];
+  const productLocations = [...new Set(entries.map((e) => e.location?.name).filter(Boolean))];
   const lastPurchased = entries
     .map((e) => e.purchased_date)
     .filter(Boolean)
     .sort()
     .reverse()[0];
 
+  const statusColors: Record<string, string> = {
+    expired: "bg-red-100 text-red-700",
+    overdue: "bg-gray-200 text-gray-700",
+    due_soon: "bg-amber-100 text-amber-700",
+    fresh: "bg-green-100 text-green-700",
+    none: "bg-gray-100 text-gray-600",
+  };
+
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-xl">{product.name}</DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl">{product.name}</DialogTitle>
+          </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Image */}
-          <div className="flex justify-center">
-            {imageUrl ? (
-              <Image
-                src={imageUrl}
-                alt={product.name}
-                width={200}
-                height={200}
-                className="rounded-lg object-cover max-h-48"
-              />
-            ) : (
-              <div className="h-32 w-32 flex items-center justify-center rounded-lg bg-gray-100">
-                <ImageIcon className="h-12 w-12 text-gray-300" />
-              </div>
-            )}
-          </div>
-
-          {/* Stats */}
-          <div className="text-center space-y-1 text-sm">
-            <p>
-              <span className="text-gray-500">Stock amount:</span>{" "}
-              <span className="font-medium">
-                {totalAmount} {totalAmount === 1 ? unitName : unitNamePlural}
-              </span>
-              {openedAmount > 0 && (
-                <span className="text-blue-600 ml-1">({openedAmount} opened)</span>
+          <div className="space-y-4">
+            {/* Image */}
+            <div className="flex justify-center">
+              {imageUrl ? (
+                <Image
+                  src={imageUrl}
+                  alt={product.name}
+                  width={200}
+                  height={200}
+                  className="rounded-lg object-cover max-h-48"
+                />
+              ) : (
+                <div className="h-32 w-32 flex items-center justify-center rounded-lg bg-gray-100">
+                  <ImageIcon className="h-12 w-12 text-gray-300" />
+                </div>
               )}
-            </p>
-            {totalValue > 0 && (
+            </div>
+
+            {/* Stats */}
+            <div className="text-center space-y-1 text-sm">
               <p>
-                <span className="text-gray-500">Stock value:</span>{" "}
-                <span className="font-medium">£{totalValue.toFixed(2)}</span>
+                <span className="text-gray-500">Stock amount:</span>{" "}
+                <span className="font-medium">
+                  {totalAmount} {totalAmount === 1 ? unitName : unitNamePlural}
+                </span>
+                {openedAmount > 0 && (
+                  <span className="text-blue-600 ml-1">({openedAmount} opened)</span>
+                )}
               </p>
-            )}
-            {locations.length > 0 && (
-              <p>
-                <span className="text-gray-500">Location:</span>{" "}
-                <span className="font-medium">{locations.join(", ")}</span>
-              </p>
-            )}
-            {lastPurchased && (
-              <p>
-                <span className="text-gray-500">Last purchased:</span>{" "}
-                <span className="font-medium">{lastPurchased}</span>
-              </p>
-            )}
-          </div>
+              {totalValue > 0 && (
+                <p>
+                  <span className="text-gray-500">Stock value:</span>{" "}
+                  <span className="font-medium">£{totalValue.toFixed(2)}</span>
+                </p>
+              )}
+              {productLocations.length > 0 && (
+                <p>
+                  <span className="text-gray-500">Location:</span>{" "}
+                  <span className="font-medium">{productLocations.join(", ")}</span>
+                </p>
+              )}
+              {lastPurchased && (
+                <p>
+                  <span className="text-gray-500">Last purchased:</span>{" "}
+                  <span className="font-medium">{lastPurchased}</span>
+                </p>
+              )}
+            </div>
 
-          <hr />
+            <hr />
 
-          {/* Stock Entries */}
-          <div>
-            <h3 className="font-medium text-gray-700 mb-2">
-              Stock Entries ({entries.length})
-            </h3>
-            <div className="space-y-2">
-              {entries.map((entry) => {
-                const status = getExpiryStatus(entry.best_before_date, entry.product?.due_type ?? 1);;
-                const label = getExpiryLabel(entry.best_before_date, product.due_type);
+            {/* Stock Entries */}
+            <div>
+              <h3 className="font-medium text-gray-700 mb-2">
+                Stock Entries ({entries.length})
+              </h3>
+              <div className="space-y-2">
+                {entries.map((entry) => {
+                  const status = getExpiryStatus(
+                    entry.best_before_date,
+                    entry.product?.due_type ?? 1
+                  );
+                  const expiryLabel = getExpiryLabel(
+                    entry.best_before_date,
+                    entry.product?.due_type ?? 1
+                  );
 
-                const statusColors = {
-                  expired: "bg-red-100 text-red-700",
-                  overdue: "bg-gray-200 text-gray-700",
-                  due_soon: "bg-amber-100 text-amber-700",
-                  fresh: "bg-green-100 text-green-700",
-                  none: "bg-gray-100 text-gray-600",
-                };
-
-                return (
-                  <div
-                    key={entry.id}
-                    className={cn(
-                      "border border-l-4 rounded-lg p-3",
-                      statusColors[status]
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
+                  return (
+                    <div
+                      key={entry.id}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    >
+                      <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <Package className="h-4 w-4 text-gray-400" />
                           <span className="font-medium">
-                            {entry.amount} {entry.amount === 1 ? unitName : unitNamePlural}
+                            {entry.amount}{" "}
+                            {entry.amount === 1 ? unitName : unitNamePlural}
                           </span>
                           {entry.open && (
                             <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
                               opened
                             </span>
                           )}
+                          <span className={cn("text-xs px-2 py-0.5 rounded", statusColors[status])}>
+                            {expiryLabel}
+                          </span>
                         </div>
-
-                        {entry.location && (
-                          <div className="flex items-center gap-2 mt-1 text-sm text-gray-600">
-                            <MapPin className="h-3.5 w-3.5" />
-                            <span>{entry.location.name}</span>
-                          </div>
-                        )}
-
-                        <div className="flex items-center gap-2 mt-1 text-sm text-gray-600">
-                          <Calendar className="h-3.5 w-3.5" />
-                          <span>{label}</span>
+                        <div className="text-xs text-gray-500 space-x-2">
+                          {entry.location && <span>📍 {entry.location.name}</span>}
+                          {entry.price && <span>£{entry.price.toFixed(2)}</span>}
+                          {entry.note && <span>📝 {entry.note}</span>}
                         </div>
-
-                        {entry.price && (
-                          <div className="mt-1 text-sm text-gray-500">
-                            £{entry.price.toFixed(2)} each
-                          </div>
-                        )}
-
-                        {entry.note && (
-                          <div className="mt-1 text-sm text-gray-500 italic">
-                            {entry.note}
-                          </div>
-                        )}
                       </div>
 
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
-                        onClick={() => handleDeleteEntry(entry.id)}
-                        disabled={deleting === entry.id}
-                      >
-                        {deleting === entry.id ? (
-                          <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                        ) : (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-gray-500 hover:text-blue-600"
+                          onClick={() => setEditingEntry(entry)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-gray-500 hover:text-red-600"
+                          onClick={() => handleDeleteEntry(entry.id)}
+                          disabled={deleting === entry.id}
+                        >
                           <Trash2 className="h-4 w-4" />
-                        )}
-                      </Button>
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           </div>
-        </div>
+        </DialogContent>
+      </Dialog>
 
-        <div className="flex justify-end gap-2 pt-4 border-t">
-          <Button variant="outline" onClick={onClose}>
-            Close
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+      {/* Edit Modal */}
+      <EditStockEntryModal
+        entry={editingEntry}
+        locations={locations}
+        open={!!editingEntry}
+        onClose={() => setEditingEntry(null)}
+        onSaved={() => {
+          setEditingEntry(null);
+          onClose();
+        }}
+      />
+    </>
   );
 }

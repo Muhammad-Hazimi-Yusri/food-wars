@@ -5,7 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.X] - In Progress
+## [0.5.0] - In Progress
+
+### Added
+- Guest mode via Supabase anonymous auth
+  - Shared guest household for all anonymous users
+  - `GuestBanner` component with sign-in prompt
+  - Auto sign-in as guest when closing WelcomeModal
+  - WelcomeModal reappears after sign-out
+- Demo seed data for guest household
+  - 25 products across 10 categories
+  - 29 stock entries with edge cases (expired, due soon, below min stock, opened, no expiry)
+  - 5 locations, 4 stores, 10 product groups, 12 quantity units
+- Database migrations
+  - `003_guest_mode.sql` — guest household + updated RLS policies
+  - `004_guest_seed_data.sql` — demo data seeding
+- `src/lib/constants.ts` — shared constants (GUEST_HOUSEHOLD_ID)
+
+### Changed
+- `WelcomeModal` — uses `signInAnonymously()` for guest mode
+- `UserMenu` — clears localStorage on sign-out to show WelcomeModal again
+- RLS policies updated to allow anonymous users access to guest household
 
 ## [0.4.X] - 2025-01-26
 

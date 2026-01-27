@@ -27,7 +27,8 @@ export function UserMenu() {
   const handleSignOut = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
-    setUser(null);
+    localStorage.removeItem("hasVisitedBefore");
+    window.location.reload();
   };
 
   const handleSignIn = async () => {

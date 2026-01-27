@@ -40,13 +40,26 @@ export function WelcomeModal() {
     });
   };
 
-  const handleGuest = () => {
+  const handleGuest = async () => {
     localStorage.setItem("hasVisitedBefore", "true");
+    const supabase = createClient();
+    
+    const { error } = await supabase.auth.signInAnonymously();
+    
+    if (error) {
+      console.error("Guest sign-in failed:", error.message);
+    }
+    
     setOpen(false);
+    window.location.reload();
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      if (!isOpen) {
+        handleGuest();
+      }
+    }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="font-[family-name:var(--font-display)] text-2xl text-megumi text-center">
@@ -78,7 +91,7 @@ export function WelcomeModal() {
             Continue as Guest
           </Button>
           <p className="text-xs text-muted-foreground text-center">
-            Guest data stays on this device only
+            Demo mode — data is shared and may reset
           </p>
         </div>
       </DialogContent>

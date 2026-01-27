@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.5.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.5.1-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.5.0
+Current version is v0.5.1
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -186,7 +186,7 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Shared guest household (single anon account for all guests)
 - [x] Auto sign-in as guest when "Try as Guest" clicked
 - [x] Banner: "Guest mode — data shared and may reset anytime"
-- [ ] Admin endpoint `/api/admin/reset-guest` to wipe and re-seed
+- [x] Admin endpoint `/api/admin/reset-guest` to wipe and re-seed
 - [x] Seed data with varied test scenarios (edge cases for expiry, locations, etc.)
 
 **Master data management:** (`/master-data/*`)

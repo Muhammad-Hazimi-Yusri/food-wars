@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `003_guest_mode.sql` — guest household + updated RLS policies
   - `004_guest_seed_data.sql` — demo data seeding
 - `src/lib/constants.ts` — shared constants (GUEST_HOUSEHOLD_ID)
+- Admin page (`/admin`) to reset guest data
+  - `seed_guest_data()` Postgres function for re-seeding
+  - Protected by `ADMIN_SECRET` environment variable
 
 ### Changed
 - `WelcomeModal` — uses `signInAnonymously()` for guest mode

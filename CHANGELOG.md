@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.0] - In Progress
+## [0.5.X] - In Progress
 
 ### Added
 - Guest mode via Supabase anonymous auth
@@ -14,8 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Auto sign-in as guest when closing WelcomeModal
   - WelcomeModal reappears after sign-out
 - Demo seed data for guest household
-  - 25 products across 10 categories
-  - 29 stock entries with edge cases (expired, due soon, below min stock, opened, no expiry)
+  - 25 products across 10 categories (numbered like Grocy: "01 Dairy", etc.)
+  - 29 stock entries with edge cases (expired, overdue, due soon, below min stock)
+  - Proper `due_type` values: 1=best before (overdue), 2=expiration (expired)
   - 5 locations, 4 stores, 10 product groups, 12 quantity units
 - Admin page (`/admin`) to reset guest data
   - `seed_guest_data()` Postgres function for re-seeding
@@ -26,6 +27,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Mobile: collapsible filter panel with toggle button
   - Desktop: inline filter bar
   - Clear all filters button
+- Grocy-style warning banners (clickable to filter)
+  - Red: "X products are expired" (due_type=2, past date)
+  - Gray: "X products are overdue" (due_type=1, past date)
+  - Amber: "X products are due within the next 5 days"
+  - Teal: "X products are below defined min. stock amount"
 - Summary stats: products count, stock entries count, total value
 - Database migrations
   - `003_guest_mode.sql` — guest household + updated RLS policies
@@ -38,11 +44,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - `WelcomeModal` — uses `signInAnonymously()` for guest mode
 - `UserMenu` — clears localStorage on sign-out to show WelcomeModal again
-- `InventoryStats` — shows products, stock entries, and total value
+- `InventoryStats` — Grocy-style warning banners with proper status logic
+- `inventory-utils.ts` — new `ExpiryStatus` types: expired, overdue, due_soon, fresh, none
 - RLS policies updated to allow anonymous users access to guest household
 
 ### Fixed
 - Anonymous users no longer create orphan households
+- Expiry status now respects `due_type` (1=overdue, 2=expired)
 
 ## [0.4.X] - 2025-01-26
 

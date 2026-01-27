@@ -92,7 +92,7 @@ export function StockFilters({
           value={filters.productGroup}
           onValueChange={(v) => updateFilter("productGroup", v)}
         >
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Product group" />
           </SelectTrigger>
           <SelectContent>
@@ -110,16 +110,16 @@ export function StockFilters({
           value={filters.status}
           onValueChange={(v) => updateFilter("status", v)}
         >
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-[200px]">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="due_soon">Due soon</SelectItem>
+            <SelectItem value="overdue">Overdue</SelectItem>
             <SelectItem value="expired">Expired</SelectItem>
-            <SelectItem value="expiring">Due soon</SelectItem>
-            <SelectItem value="fresh">Fresh</SelectItem>
-            <SelectItem value="none">No expiry date</SelectItem>
-            <SelectItem value="below_min">Below min stock</SelectItem>
+            <SelectItem value="below_min">Below min. stock amount</SelectItem>
+            <SelectItem value="fresh">In stock</SelectItem>
           </SelectContent>
         </Select>
 

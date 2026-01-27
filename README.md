@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.5.2-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.5.3-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.5.2
+Current version is v0.5.3
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -193,17 +193,20 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Search input (filter by product name)
 - [x] Location dropdown filter
 - [x] Product group dropdown filter
-- [x] Status dropdown filter (All, Due soon, Expired, Fresh, No date, Below min stock)
+- [x] Status dropdown filter (All, Due soon, Overdue, Expired, Below min stock, In stock)
 - [x] Clear all filters button
-- [x] Mobile: collapsible filter panel
+- [x] Mobile: collapsible filter panel with toggle button
+
+**Clickable warning banners (Grocy-style):**
+- [x] Red: "X products are expired" (due_type=2, past date)
+- [x] Gray: "X products are overdue" (due_type=1, past date)  
+- [x] Amber: "X products are due within the next 5 days"
+- [x] Teal: "X products are below defined min. stock amount"
 
 **Summary stats:**
 - [x] Total products count
 - [x] Total stock entries count
 - [x] Total stock value (sum of price × amount)
-
-**Clickable warning banners:**
-- [x] Status badges filter when clicked
 
 **Master data management:** (`/master-data/*`)
 - [ ] Locations page — CRUD (name, is_freezer, sort_order)
@@ -632,7 +635,12 @@ food-wars/
 │   └── bump-version.mjs           # Interactive version updater
 ├── src/
 │   ├── app/
+│   │   ├── admin/
+│   │   │   └── page.tsx           # Admin page (reset guest data)
 │   │   ├── api/
+│   │   │   ├── admin/
+│   │   │   │   └── reset-guest/
+│   │   │   │       └── route.ts   # POST endpoint to reset guest data
 │   │   │   └── test-supabase/
 │   │   │       └── route.ts       # Supabase connection test endpoint
 │   │   ├── auth/
@@ -650,6 +658,7 @@ food-wars/
 │   │   └── page.tsx               # Home/Stock overview page
 │   ├── components/
 │   │   ├── diner/                 # Themed components
+│   │   │   ├── GuestBanner.tsx    # Guest mode warning banner
 │   │   │   ├── Noren.tsx          # Header with lantern decorations
 │   │   │   ├── UserMenu.tsx       # Auth dropdown menu
 │   │   │   └── WelcomeModal.tsx   # First-visit onboarding modal
@@ -660,7 +669,9 @@ food-wars/
 │   │   │   ├── InventoryWarning.tsx
 │   │   │   ├── MobileStockList.tsx
 │   │   │   ├── ProductDetailModal.tsx
-│   │   │   └── ProductForm.tsx
+│   │   │   ├── ProductForm.tsx
+│   │   │   ├── StockFilters.tsx   # Search + filter dropdowns
+│   │   │   └── StockOverviewClient.tsx  # Client-side filter wrapper
 │   │   └── ui/                    # shadcn/ui components
 │   │       ├── button.tsx
 │   │       ├── dialog.tsx
@@ -681,15 +692,22 @@ food-wars/
 │   │   │   └── storage.ts         # File upload utilities
 │   │   ├── __tests__/
 │   │   │   └── storage.test.ts    # Unit tests
-│   │   ├── inventory-utils.ts     # Stock aggregation helpers
+│   │   ├── constants.ts           # Shared constants (GUEST_HOUSEHOLD_ID)
+│   │   ├── inventory-utils.ts     # Stock aggregation & expiry helpers
 │   │   ├── storage.ts             # Guest mode localStorage (legacy)
 │   │   └── utils.ts               # cn() and general utilities
 │   └── types/
 │       └── database.ts            # Supabase generated types
 ├── supabase/
-│   └── migrations/
-│       ├── 001_core_schema.sql    # Main tables + RLS policies
-│       └── 002_storage.sql        # Product pictures bucket
+│   ├── migrations/
+│   │   ├── 001_core_schema.sql    # Main tables + RLS policies
+│   │   ├── 002_storage.sql        # Product pictures bucket
+│   │   ├── 003_guest_mode.sql     # Guest household + RLS updates
+│   │   ├── 004_guest_seed_data.sql    # Demo data for guest
+│   │   ├── 005_seed_guest_function.sql # Re-seed function for admin
+│   │   └── 006_fix_anon_trigger.sql   # Skip anon users in trigger
+│   └── scripts/
+│       └── cleanup_orphan_households.sql  # Manual cleanup script
 ├── BRANDING.md                    # Design system & color palette
 ├── CHANGELOG.md                   # Version history
 ├── CONTRIBUTING.md                # Development guidelines

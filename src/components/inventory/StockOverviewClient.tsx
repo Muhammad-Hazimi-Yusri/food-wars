@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { StockEntryWithProduct, Location, ProductGroup } from "@/types/database";
+import {
+  StockEntryWithProduct,
+  Location,
+  ProductGroup,
+} from "@/types/database";
 import { getExpiryStatus } from "@/lib/inventory-utils";
 import { StockFilters, FilterState } from "./StockFilters";
 import { InventoryStats } from "./InventoryStats";
@@ -87,7 +91,10 @@ export function StockOverviewClient({
         if (filters.status === "below_min") {
           if (!productMinStockStatus.has(entry.product_id)) return false;
         } else {
-          const status = getExpiryStatus(entry.best_before_date);
+          const status = getExpiryStatus(
+            entry.best_before_date,
+            entry.product?.due_type ?? 1
+          );
           if (status !== filters.status) return false;
         }
       }
@@ -216,12 +223,12 @@ export function StockOverviewClient({
                 <SelectValue placeholder="All statuses" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="due_soon">Due soon</SelectItem>
+                <SelectItem value="overdue">Overdue</SelectItem>
                 <SelectItem value="expired">Expired</SelectItem>
-                <SelectItem value="expiring">Due soon</SelectItem>
-                <SelectItem value="fresh">Fresh</SelectItem>
-                <SelectItem value="none">No expiry date</SelectItem>
-                <SelectItem value="below_min">Below min stock</SelectItem>
+                <SelectItem value="below_min">Below min. stock amount</SelectItem>
+                <SelectItem value="fresh">In stock</SelectItem>
               </SelectContent>
             </Select>
 

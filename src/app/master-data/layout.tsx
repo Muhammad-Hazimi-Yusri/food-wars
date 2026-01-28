@@ -1,9 +1,10 @@
 import { ReactNode } from "react";
 import Link from "next/link";
 import { Noren } from "@/components/diner/Noren";
-import { MapPin, ShoppingCart, Tags, Scale } from "lucide-react";
+import { MapPin, ShoppingCart, Tags, Scale, Package } from "lucide-react";
 
 const navItems = [
+  { href: "/master-data/products", label: "Products", icon: Package },
   { href: "/master-data/locations", label: "Locations", icon: MapPin },
   { href: "/master-data/product-groups", label: "Product Groups", icon: Tags },
   { href: "/master-data/quantity-units", label: "Quantity Units", icon: Scale },

@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.5.6-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.5.7-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.5.6
+Current version is v0.5.7
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -221,18 +221,20 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [ ] Drag-and-drop reordering (sort_order)
 
 **Products page:** (`/master-data/products`)
-- [ ] Products list with filters (product group, status, search)
-- [ ] Show: image, name, location, min stock, QU stock, QU purchase, product group
-- [ ] Add product (full Grocy fields)
-- [ ] Edit product
-- [ ] Delete product with confirmation
-- [ ] All Grocy product fields:
+- [x] Products list with filters (search, product group, status)
+- [x] Show: image, name, location, min stock, QU stock, QU purchase, product group, default store
+- [x] Table options: show/hide columns, group by
+- [x] Sortable columns (click header to sort asc/desc)
+- [x] Edit/Delete/Toggle active actions
+- [x] Mobile-responsive card layout
+- [ ] Add product page (full Grocy fields):
   - Basic: name, description, active, picture, parent product
   - Locations: default location, default consume location, move on open, default store
   - Stock: min stock amount, accumulate sub products, treat opened as out of stock
   - Due dates: due type (best before/expiration), default due days, after opened, after freezing, after thawing, should not be frozen
   - Units: QU stock, QU purchase, QU consume, QU for prices, tare weight handling
   - Misc: energy (kcal), quick consume/open amounts, stock entry label, auto reprint label, default purchase price type, can't be opened, never show on stock overview, disable own stock
+- [ ] Edit product page
 
 **Testing:**
 - [ ] Unit tests for `inventory-utils.ts`
@@ -665,8 +667,9 @@ food-wars/
 │   │   │       └── page.tsx       # Auth error page
 │   │   ├── master-data/
 │   │   │   ├── layout.tsx         # Master data layout with tab nav
-│   │   │   ├── page.tsx           # Redirects to /locations
-│   │   │   ├── locations/
+│   │   │   ├── page.tsx           # Redirects to /products
+│   │   │   ├── products/
+│   │   │   │   └── page.tsx       # Products list with filters & table options
 │   │   │   │   └── page.tsx       # Locations CRUD
 │   │   │   ├── product-groups/
 │   │   │   │   └── page.tsx       # Product groups CRUD
@@ -700,7 +703,8 @@ food-wars/
 │   │   │   └── StockOverviewClient.tsx
 │   │   ├── master-data/           # Master data components
 │   │   │   ├── MasterDataForm.tsx # Reusable add/edit modal
-│   │   │   └── MasterDataList.tsx # Reusable list with CRUD
+│   │   │   ├── MasterDataList.tsx # Reusable list with CRUD
+│   │   │   └── ProductsListClient.tsx # Products table with filters/sorting
 │   │   └── ui/                    # shadcn/ui components
 │   │       ├── button.tsx
 │   │       ├── dialog.tsx

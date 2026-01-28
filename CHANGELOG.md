@@ -53,6 +53,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Active/Inactive toggle (soft delete)
   - Freezer badge for locations
   - Mobile-first horizontal tab navigation
+- Products list page (`/master-data/products`)
+  - Table with sortable columns (Name, Location, Min stock, QU stock, QU purchase, Product group, Default store)
+  - Filters: search, product group, status (active/inactive)
+  - Table options popover: show/hide columns, group by (location, product group, min stock, QU stock, default store)
+  - Product images with signed URLs
+  - Edit/Delete/Toggle active actions
+  - Mobile-responsive with card layout and inline table options panel
+  - Preferences saved to localStorage
 
 ### Changed
 - `WelcomeModal` — uses `signInAnonymously()` for guest mode

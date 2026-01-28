@@ -7,7 +7,7 @@ import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, GripVertical, Snowflake 
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { MasterDataForm, FieldConfig } from "./MasterDataForm";
-import { Location, ProductGroup, QuantityUnit, ShoppingLocation } from "@/types/database";
+import { Location, QuantityUnit } from "@/types/database";
 
 type BaseItem = {
   id: string;

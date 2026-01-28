@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import Image from "next/image";
+import { Settings } from "lucide-react";
+import Link from "next/link";
 
 export function UserMenu() {
   const [user, setUser] = useState<SupabaseUser | null>(null);
@@ -76,6 +78,12 @@ export function UserMenu() {
             Sign in with Google
           </DropdownMenuItem>
         )}
+        <DropdownMenuItem asChild>
+          <Link href="/master-data" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
+            Master Data
+          </Link>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

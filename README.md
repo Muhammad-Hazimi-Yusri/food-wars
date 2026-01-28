@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.5.5-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.5.6-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.5.5
+Current version is v0.5.6
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -208,16 +208,31 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Total stock entries count
 - [x] Total stock value (sum of price × amount)
 
-**Master data management:** (`/master-data/*`)
-- [ ] Locations page — CRUD (name, is_freezer, sort_order)
-- [ ] Quantity units page — CRUD (name, name_plural, sort_order)
-- [ ] Product groups page — CRUD (name, sort_order)
-- [ ] Shopping locations page — CRUD (name, sort_order)
-- [ ] Soft delete support (`active` flag toggle)
-
 **Edit stock entries:**
 - [x] Edit button in ProductDetailModal
 - [x] Edit amount, location, expiry, price, note, opened status
+
+**Master data management:** (`/master-data/*`)
+- [x] Locations page — CRUD (name, description, is_freezer, sort_order)
+- [x] Quantity units page — CRUD (name, name_plural, description, sort_order)
+- [x] Product groups page — CRUD (name, description, sort_order)
+- [x] Shopping locations page — CRUD (name, description, sort_order)
+- [x] Soft delete support (`active` flag toggle)
+- [ ] Drag-and-drop reordering (sort_order)
+
+**Products page:** (`/master-data/products`)
+- [ ] Products list with filters (product group, status, search)
+- [ ] Show: image, name, location, min stock, QU stock, QU purchase, product group
+- [ ] Add product (full Grocy fields)
+- [ ] Edit product
+- [ ] Delete product with confirmation
+- [ ] All Grocy product fields:
+  - Basic: name, description, active, picture, parent product
+  - Locations: default location, default consume location, move on open, default store
+  - Stock: min stock amount, accumulate sub products, treat opened as out of stock
+  - Due dates: due type (best before/expiration), default due days, after opened, after freezing, after thawing, should not be frozen
+  - Units: QU stock, QU purchase, QU consume, QU for prices, tare weight handling
+  - Misc: energy (kcal), quick consume/open amounts, stock entry label, auto reprint label, default purchase price type, can't be opened, never show on stock overview, disable own stock
 
 **Testing:**
 - [ ] Unit tests for `inventory-utils.ts`
@@ -648,6 +663,17 @@ food-wars/
 │   │   │   │   └── route.ts       # OAuth callback handler
 │   │   │   └── error/
 │   │   │       └── page.tsx       # Auth error page
+│   │   ├── master-data/
+│   │   │   ├── layout.tsx         # Master data layout with tab nav
+│   │   │   ├── page.tsx           # Redirects to /locations
+│   │   │   ├── locations/
+│   │   │   │   └── page.tsx       # Locations CRUD
+│   │   │   ├── product-groups/
+│   │   │   │   └── page.tsx       # Product groups CRUD
+│   │   │   ├── quantity-units/
+│   │   │   │   └── page.tsx       # Quantity units CRUD
+│   │   │   └── shopping-locations/
+│   │   │       └── page.tsx       # Stores CRUD
 │   │   ├── products/
 │   │   │   └── new/
 │   │   │       └── page.tsx       # Add new product page
@@ -665,13 +691,16 @@ food-wars/
 │   │   ├── inventory/             # Stock management components
 │   │   │   ├── AddStockEntryModal.tsx
 │   │   │   ├── DesktopStockTable.tsx
+│   │   │   ├── EditStockEntryModal.tsx
 │   │   │   ├── InventoryStats.tsx
-│   │   │   ├── InventoryWarning.tsx
 │   │   │   ├── MobileStockList.tsx
 │   │   │   ├── ProductDetailModal.tsx
 │   │   │   ├── ProductForm.tsx
-│   │   │   ├── StockFilters.tsx   # Search + filter dropdowns
-│   │   │   └── StockOverviewClient.tsx  # Client-side filter wrapper
+│   │   │   ├── StockFilters.tsx
+│   │   │   └── StockOverviewClient.tsx
+│   │   ├── master-data/           # Master data components
+│   │   │   ├── MasterDataForm.tsx # Reusable add/edit modal
+│   │   │   └── MasterDataList.tsx # Reusable list with CRUD
 │   │   └── ui/                    # shadcn/ui components
 │   │       ├── button.tsx
 │   │       ├── dialog.tsx
@@ -718,7 +747,6 @@ food-wars/
 ├── vitest.config.js               # Unit test config
 └── vitest.setup.ts                # Test setup
 ```
----
 
 ## Database Schema
 

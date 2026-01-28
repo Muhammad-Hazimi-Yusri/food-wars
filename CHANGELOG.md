@@ -43,6 +43,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Edit stock entries from ProductDetailModal
   - `EditStockEntryModal` component for editing amount, location, expiry, price, note, opened status
   - Edit button (pencil icon) next to delete button for each entry
+- Master data management pages (`/master-data/*`)
+  - Locations: name, description, is_freezer, active, sort_order
+  - Product Groups: name, description, active, sort_order
+  - Quantity Units: name, name_plural, description, active, sort_order
+  - Shopping Locations (Stores): name, description, active, sort_order
+  - Reusable `MasterDataList` and `MasterDataForm` components
+  - Add/Edit/Delete functionality with confirmation
+  - Active/Inactive toggle (soft delete)
+  - Freezer badge for locations
+  - Mobile-first horizontal tab navigation
 
 ### Changed
 - `WelcomeModal` — uses `signInAnonymously()` for guest mode

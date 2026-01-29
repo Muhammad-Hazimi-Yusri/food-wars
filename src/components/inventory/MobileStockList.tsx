@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, Fragment } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, ImageIcon } from "lucide-react";
-import { StockEntryWithProduct } from "@/types/database";
+import { StockEntryWithProduct, Product } from "@/types/database";
 import { getExpiryStatus, getExpiryLabel } from "@/lib/inventory-utils";
 import { getProductPictureSignedUrl } from "@/lib/supabase/storage";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,7 @@ import Link from "next/link";
 
 type MobileStockListProps = {
   entries: StockEntryWithProduct[];
+  zeroStockProducts?: Product[];
 };
 
 type AggregatedProduct = {
@@ -130,7 +131,7 @@ function formatDueDate(date: string | null, days: number | null): string {
   return `${Math.ceil(days / 30)} months left`;
 }
 
-export function MobileStockList({ entries }: MobileStockListProps) {
+export function MobileStockList({ entries, zeroStockProducts = [] }: MobileStockListProps) {
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
   const [modalOpen, setModalOpen] = useState(false);
   const [modalEntries, setModalEntries] = useState<StockEntryWithProduct[]>([]);
@@ -345,6 +346,72 @@ export function MobileStockList({ entries }: MobileStockListProps) {
             );
           })}
         </tbody>
+
+        {/* Zero stock products (only shown when filtering by below_min) */}
+        {zeroStockProducts.map((product) => (
+          <tr key={product.id} className="border-b border-gray-100 bg-red-50">
+            <td className="px-1 py-1 border-r border-gray-100 border-l-4 border-l-teal-600">
+              <div className="flex items-center gap-1">
+                <div className="flex h-8 w-8 items-center justify-center rounded bg-gray-100">
+                  <ImageIcon className="h-3 w-3 text-gray-400" />
+                </div>
+                <span className="font-medium text-sm break-all min-w-0 w-[80px]">
+                  {product.name}
+                </span>
+              </div>
+            </td>
+            <td className="px-1 py-1 text-sm text-red-600 border-r border-gray-100 font-medium">
+              0 (min: {product.min_stock_amount})
+            </td>
+            <td className="px-1 py-1 text-xs text-gray-400 border-r border-gray-100">
+              —
+            </td>
+            <td className="px-1 py-1 bg-white sticky right-0 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)]">
+              {actionsExpanded ? (
+                <div className="flex items-center gap-0.5">
+                  <button disabled title="Consume 1" className="h-6 px-1.5 text-xs font-medium rounded bg-green-600 text-white opacity-50 cursor-not-allowed flex items-center gap-0.5">
+                    <Utensils className="h-3 w-3" />1
+                  </button>
+                  <button disabled title="Consume All" className="h-6 px-1.5 text-xs font-medium rounded bg-green-600 text-white opacity-50 cursor-not-allowed flex items-center gap-0.5">
+                    <Utensils className="h-3 w-3" />All
+                  </button>
+                  <button disabled title="Open 1" className="h-6 px-1.5 text-xs font-medium rounded bg-takumi text-white opacity-50 cursor-not-allowed flex items-center gap-0.5">
+                    <PackageOpen className="h-3 w-3" />1
+                  </button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="h-6 w-6 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded">
+                        <MoreVertical className="h-4 w-4" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem asChild>
+                        <Link href={`/products/${product.id}/edit`}>
+                          Edit product
+                        </Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              ) : (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="h-6 w-6 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded">
+                      <MoreVertical className="h-4 w-4" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem asChild>
+                      <Link href={`/products/${product.id}/edit`}>
+                        Edit product
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </td>
+          </tr>
+        ))}
       </table>
       </div>
       <div className="absolute right-8 top-0 bottom-2 w-4 bg-gradient-to-l from-gray-200/50 to-transparent pointer-events-none" />

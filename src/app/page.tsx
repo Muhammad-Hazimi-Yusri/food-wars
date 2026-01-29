@@ -3,7 +3,7 @@ import { Noren } from "@/components/diner/Noren";
 import { WelcomeModal } from "@/components/diner/WelcomeModal";
 import { AddStockEntryModal } from "@/components/inventory/AddStockEntryModal";
 import { StockOverviewClient } from "@/components/inventory/StockOverviewClient";
-import { StockEntryWithProduct, Location, ProductGroup } from "@/types/database";
+import { StockEntryWithProduct, Location, ProductGroup, Product } from "@/types/database";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 
@@ -11,16 +11,17 @@ async function getStockData(): Promise<{
   entries: StockEntryWithProduct[];
   locations: Location[];
   productGroups: ProductGroup[];
+  productsWithMinStock: Product[];
 }> {
   const supabase = await createClient();
 
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    return { entries: [], locations: [], productGroups: [] };
+    return { entries: [], locations: [], productGroups: [], productsWithMinStock: [] };
   }
 
-  const [entriesRes, locationsRes, productGroupsRes] = await Promise.all([
+  const [entriesRes, locationsRes, productGroupsRes, productsWithMinStockRes] = await Promise.all([
     supabase
       .from("stock_entries")
       .select(`
@@ -44,17 +45,23 @@ async function getStockData(): Promise<{
       .select("*")
       .eq("active", true)
       .order("sort_order"),
+    supabase
+      .from("products")
+      .select("*")
+      .eq("active", true)
+      .gt("min_stock_amount", 0),
   ]);
 
   return {
     entries: entriesRes.data ?? [],
     locations: locationsRes.data ?? [],
     productGroups: productGroupsRes.data ?? [],
+    productsWithMinStock: productsWithMinStockRes.data ?? [],
   };
 }
 
 export default async function Home() {
-  const { entries, locations, productGroups } = await getStockData();
+  const { entries, locations, productGroups, productsWithMinStock } = await getStockData();
 
   return (
     <div className="min-h-screen bg-hayama">
@@ -80,6 +87,7 @@ export default async function Home() {
           entries={entries}
           locations={locations}
           productGroups={productGroups}
+          productsWithMinStock={productsWithMinStock}
         />
       </main>
       <WelcomeModal />

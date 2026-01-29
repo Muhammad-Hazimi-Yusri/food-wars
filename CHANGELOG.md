@@ -80,10 +80,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Mobile: Collapsible action buttons with header toggle
   - Mobile: Batch count button expands stock entries inline
   - Tighter spacing with column dividers and scroll indicator
-
+- **InventoryStats refactor:** Removed duplicate min stock calculation
+  - Single source of truth in `StockOverviewClient`
+  - `InventoryStats` receives count as prop instead of recalculating
+  
 ### Fixed
 - Anonymous users no longer create orphan households
 - Expiry status now respects `due_type` (1=overdue, 2=expired)
+- **Min stock calculation:** Products with zero stock entries now correctly count toward "below min. stock" warning
+  - Previously only products with existing stock entries were evaluated
+  - Now fetches all products with `min_stock_amount > 0` and compares against stock totals
+  - Zero-stock products display in table when filtering by "below min. stock"
 
 ## [0.4.X] - 2025-01-26
 

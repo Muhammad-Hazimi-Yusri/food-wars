@@ -8,12 +8,14 @@ import { useMemo } from "react";
 
 type InventoryStatsProps = {
   entries: StockEntryWithProduct[];
+  belowMinStockCount: number;
   onFilterChange?: (filter: string | null) => void;
   activeFilter?: string | null;
 };
 
 export function InventoryStats({
   entries,
+  belowMinStockCount,
   onFilterChange,
   activeFilter,
 }: InventoryStatsProps) {
@@ -25,10 +27,9 @@ export function InventoryStats({
     0
   );
 
-  // Calculate status counts and below min stock
-  const { statusCounts, belowMinStockCount } = useMemo(() => {
+  // Calculate status counts only (min stock handled by parent)
+  const statusCounts = useMemo(() => {
     const counts = { expired: 0, overdue: 0, due_soon: 0, fresh: 0, none: 0 };
-    const productTotals: Record<string, { total: number; min: number }> = {};
 
     for (const entry of entries) {
       const status = getExpiryStatus(
@@ -36,27 +37,9 @@ export function InventoryStats({
         entry.product?.due_type ?? 1
       );
       counts[status]++;
-
-      // Track product totals for min stock
-      const pid = entry.product_id;
-      if (!productTotals[pid]) {
-        productTotals[pid] = {
-          total: 0,
-          min: entry.product?.min_stock_amount ?? 0,
-        };
-      }
-      productTotals[pid].total += entry.amount;
     }
 
-    // Count products below min stock
-    let belowMin = 0;
-    for (const { total, min } of Object.values(productTotals)) {
-      if (min > 0 && total < min) {
-        belowMin++;
-      }
-    }
-
-    return { statusCounts: counts, belowMinStockCount: belowMin };
+    return counts;
   }, [entries]);
 
   const banners = [

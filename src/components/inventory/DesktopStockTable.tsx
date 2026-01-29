@@ -15,9 +15,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Product } from "@/types/database";
 
 type DesktopStockTableProps = {
   entries: StockEntryWithProduct[];
+  zeroStockProducts?: Product[];
 };
 
 type AggregatedProduct = {
@@ -133,7 +135,7 @@ function formatDueDate(date: string | null, days: number | null): string {
   return `${formatted}\n${daysText}`;
 }
 
-export function DesktopStockTable({ entries }: DesktopStockTableProps) {
+export function DesktopStockTable({ entries, zeroStockProducts = [] }: DesktopStockTableProps) {
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
   const [modalOpen, setModalOpen] = useState(false);
   const [modalEntries, setModalEntries] = useState<StockEntryWithProduct[]>([]);
@@ -331,6 +333,57 @@ export function DesktopStockTable({ entries }: DesktopStockTableProps) {
                 </Fragment>
               );
             })}
+            {/* Zero stock products (only shown when filtering by below_min) */}
+            {zeroStockProducts.map((product) => (
+              <tr key={product.id} className="border-b hover:bg-gray-50 transition-colors bg-red-50">
+                <td className="p-0 border-l-4 border-l-teal-600">
+                  <div className="p-3 invisible">
+                    <ChevronRight className="h-4 w-4" />
+                  </div>
+                </td>
+                <td className="py-2 px-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded bg-gray-100">
+                      <ImageIcon className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <span className="font-medium">{product.name}</span>
+                  </div>
+                </td>
+                <td className="text-right px-4 py-2 text-red-600 font-medium">
+                  0 (min: {product.min_stock_amount})
+                </td>
+                <td className="text-right px-4 py-2 text-sm text-gray-400">
+                  —
+                </td>
+                <td className="px-2 py-2">
+                  <div className="flex items-center gap-1 justify-end">
+                    <button disabled className="h-7 px-2 text-xs font-medium rounded bg-green-600 text-white opacity-50 cursor-not-allowed flex items-center gap-1">
+                      <Utensils className="h-3 w-3" />1
+                    </button>
+                    <button disabled className="h-7 px-2 text-xs font-medium rounded bg-green-600 text-white opacity-50 cursor-not-allowed flex items-center gap-1">
+                      <Utensils className="h-3 w-3" />All
+                    </button>
+                    <button disabled className="h-7 px-2 text-xs font-medium rounded bg-takumi text-white opacity-50 cursor-not-allowed flex items-center gap-1">
+                      <PackageOpen className="h-3 w-3" />1
+                    </button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded">
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link href={`/products/${product.id}/edit`}>
+                            Edit product
+                          </Link>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

@@ -5,6 +5,7 @@ import {
   StockEntryWithProduct,
   Location,
   ProductGroup,
+  Product,
 } from "@/types/database";
 import { getExpiryStatus } from "@/lib/inventory-utils";
 import { StockFilters, FilterState } from "./StockFilters";
@@ -26,12 +27,14 @@ type StockOverviewClientProps = {
   entries: StockEntryWithProduct[];
   locations: Location[];
   productGroups: ProductGroup[];
+  productsWithMinStock: Product[];
 };
 
 export function StockOverviewClient({
   entries,
   locations,
   productGroups,
+  productsWithMinStock,
 }: StockOverviewClientProps) {
   const [filters, setFilters] = useState<FilterState>({
     search: "",
@@ -45,6 +48,15 @@ export function StockOverviewClient({
   const productMinStockStatus = useMemo(() => {
     const productTotals: Record<string, { total: number; min: number }> = {};
 
+    // First, add all products with min_stock_amount > 0 (starting with 0 stock)
+    for (const product of productsWithMinStock) {
+      productTotals[product.id] = {
+        total: 0,
+        min: product.min_stock_amount ?? 0,
+      };
+    }
+
+    // Then, sum up stock from entries
     for (const entry of entries) {
       const pid = entry.product_id;
       if (!productTotals[pid]) {
@@ -63,8 +75,14 @@ export function StockOverviewClient({
       }
     }
     return belowMin;
-  }, [entries]);
+  }, [entries, productsWithMinStock]);
 
+  // Products with min stock but ZERO stock entries (for display when filtering)
+  const zeroStockProducts = useMemo(() => {
+    const productIdsWithStock = new Set(entries.map(e => e.product_id));
+    return productsWithMinStock.filter(p => !productIdsWithStock.has(p.id));
+  }, [entries, productsWithMinStock]);
+  
   // Apply filters
   const filteredEntries = useMemo(() => {
     return entries.filter((entry) => {
@@ -137,6 +155,7 @@ export function StockOverviewClient({
       {/* Stats - uses all entries for counts, but can set filters */}
       <InventoryStats
         entries={entries}
+        belowMinStockCount={productMinStockStatus.size}
         onFilterChange={handleStatsFilter}
         activeFilter={filters.status !== "all" ? filters.status : null}
       />
@@ -259,12 +278,18 @@ export function StockOverviewClient({
 
       {/* Mobile view */}
       <div className="sm:hidden">
-        <MobileStockList entries={filteredEntries} />
+        <MobileStockList 
+          entries={filteredEntries}
+          zeroStockProducts={filters.status === "below_min" ? zeroStockProducts : []}
+        />
       </div>
 
       {/* Desktop view */}
       <div className="hidden sm:block">
-        <DesktopStockTable entries={filteredEntries} />
+        <DesktopStockTable 
+          entries={filteredEntries} 
+          zeroStockProducts={filters.status === "below_min" ? zeroStockProducts : []}
+        />
       </div>
     </>
   );

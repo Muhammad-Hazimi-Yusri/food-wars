@@ -632,7 +632,7 @@ export function ProductsListClient({
       </div>
 
       {/* Desktop Table */}
-      <div className="hidden md:block overflow-x-auto">
+      <div className="hidden md:block overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 [&::-webkit-scrollbar]:h-3 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:rounded-full">
         <table className="w-full">
           <thead>
             <tr className="bg-gray-100 text-left">
@@ -659,7 +659,7 @@ export function ProductsListClient({
                   )}
                 </th>
               ))}
-              <th className="w-28 px-3 py-2"></th>
+              <th className="w-28 px-3 py-2 sticky right-0 bg-gray-100 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)]"></th>
             </tr>
           </thead>
           <tbody>
@@ -706,7 +706,7 @@ export function ProductsListClient({
                           {getCellValue(product, col.key)}
                         </td>
                       ))}
-                      <td className="px-3 py-2">
+                      <td className="px-3 py-2 sticky right-0 bg-white shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)]">
                         <div className="flex items-center gap-1 justify-end">
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-blue-600" asChild>
                             <Link href={`/products/${product.id}/edit`}>
@@ -745,94 +745,98 @@ export function ProductsListClient({
         </table>
       </div>
 
-      {/* Mobile List */}
-      <div className="md:hidden space-y-2">
-        {filteredProducts.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-            <p className="text-gray-500">
-              {products.length === 0 ? "No products yet." : "No products match your filters."}
-            </p>
-            {products.length === 0 && (
-              <Button asChild variant="link" className="mt-2">
-                <Link href="/products/new">Add your first product</Link>
-              </Button>
-            )}
-          </div>
-        ) : (
-          groupedProducts.map(({ groupName, products: groupProducts }) => (
-            <div key={groupName || "all"}>
-              {groupBy !== "none" && (
-                <div className="bg-gray-200 px-3 py-2 text-sm font-medium text-gray-700 rounded-t-lg flex items-center gap-2">
-                  <ChevronDown className="h-4 w-4" />
-                  {groupName}
-                  <span className="text-gray-500 font-normal">({groupProducts.length})</span>
-                </div>
-              )}
-              {groupProducts.map((product, index) => (
-                <div
-                  key={product.id}
-                  className={cn(
-                    "flex items-center gap-3 p-3 bg-white shadow-sm",
-                    !product.active && "opacity-60",
-                    groupBy === "none" && index === 0 && "rounded-t-lg",
-                    index === groupProducts.length - 1 && "rounded-b-lg",
-                    "border-b border-gray-100 last:border-b-0"
+      {/* Mobile Table */}
+      <div className="md:hidden overflow-x-auto [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300">
+        <table className="w-full min-w-[600px]">
+          <thead>
+            <tr className="bg-gray-100 text-left">
+              {isColumnVisible("picture") && <th className="px-2 py-2 w-12"></th>}
+              <th className="px-2 py-2 text-xs font-medium text-gray-500">Name</th>
+              <th className="px-2 py-2 text-xs font-medium text-gray-500 w-20">Location</th>
+              <th className="px-2 py-2 text-xs font-medium text-gray-500 w-16">Min</th>
+              <th className="px-2 py-2 text-xs font-medium text-gray-500 w-16">QU</th>
+              <th className="px-2 py-2 text-xs font-medium text-gray-500 w-24">Group</th>
+              <th className="px-2 py-2 sticky right-0 bg-gray-100 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)] w-24"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredProducts.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="text-center py-12 bg-white">
+                  <p className="text-gray-500">
+                    {products.length === 0 ? "No products yet." : "No products match your filters."}
+                  </p>
+                </td>
+              </tr>
+            ) : (
+              groupedProducts.map(({ groupName, products: groupProducts }) => (
+                <Fragment key={groupName || "all"}>
+                  {groupBy !== "none" && (
+                    <tr className="bg-gray-200">
+                      <td colSpan={7} className="px-2 py-2 text-sm font-medium text-gray-700">
+                        <div className="flex items-center gap-2">
+                          <ChevronDown className="h-4 w-4" />
+                          {groupName}
+                          <span className="text-gray-500 font-normal">({groupProducts.length})</span>
+                        </div>
+                      </td>
+                    </tr>
                   )}
-                >
-                  {isColumnVisible("picture") && (
-                    <ProductImage fileName={product.picture_file_name} name={product.name} />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={cn("font-medium", !product.active && "line-through text-gray-500")}>
-                        {product.name}
-                      </span>
-                      {!product.active && (
-                        <span className="text-xs bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">inactive</span>
-                      )}
-                    </div>
-                    <div className="text-sm text-gray-500 truncate">
-                      {[product.product_group?.name, product.location?.name, product.qu_stock?.name]
-                        .filter(Boolean)
-                        .join(" • ")}
-                    </div>
-                    {product.min_stock_amount > 0 && (
-                      <div className="text-xs text-gray-400">Min: {product.min_stock_amount}</div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-blue-600" asChild>
-                      <Link href={`/products/${product.id}/edit`}>
-                        <Pencil className="h-4 w-4" />
-                      </Link>
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
+                  {groupProducts.map((product) => (
+                    <tr
+                      key={product.id}
                       className={cn(
-                        "h-8 w-8",
-                        product.active ? "text-green-600 hover:text-gray-600" : "text-gray-400 hover:text-green-600"
+                        "bg-white border-b border-gray-100",
+                        !product.active && "opacity-60"
                       )}
-                      onClick={() => handleToggleActive(product)}
-                      disabled={toggling === product.id}
                     >
-                      {product.active ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-gray-400 hover:text-red-600"
-                      onClick={() => handleDelete(product)}
-                      disabled={deleting === product.id}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ))
-        )}
+                      {isColumnVisible("picture") && (
+                        <td className="px-2 py-2">
+                          <ProductImage fileName={product.picture_file_name} name={product.name} />
+                        </td>
+                      )}
+                      <td className="px-2 py-2 text-sm font-medium">{product.name}</td>
+                      <td className="px-2 py-2 text-sm text-gray-600">{product.location?.name ?? "—"}</td>
+                      <td className="px-2 py-2 text-sm text-gray-600">{product.min_stock_amount || "—"}</td>
+                      <td className="px-2 py-2 text-sm text-gray-600">{product.qu_stock?.name ?? "—"}</td>
+                      <td className="px-2 py-2 text-sm text-gray-600">{product.product_group?.name ?? "—"}</td>
+                      <td className="px-2 py-2 sticky right-0 bg-white shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)]">
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-gray-400 hover:text-blue-600" asChild>
+                            <Link href={`/products/${product.id}/edit`}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Link>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={cn(
+                              "h-7 w-7",
+                              product.active ? "text-green-600 hover:text-gray-600" : "text-gray-400 hover:text-green-600"
+                            )}
+                            onClick={() => handleToggleActive(product)}
+                            disabled={toggling === product.id}
+                          >
+                            {product.active ? <ToggleRight className="h-3.5 w-3.5" /> : <ToggleLeft className="h-3.5 w-3.5" />}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-gray-400 hover:text-red-600"
+                            onClick={() => handleDelete(product)}
+                            disabled={deleting === product.id}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </Fragment>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
     </>
   );

@@ -1,13 +1,23 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Fragment } from "react";
 import Image from "next/image";
-import { ChevronDown, ChevronRight, ImageIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, ImageIcon } from "lucide-react";
 import { StockEntryWithProduct } from "@/types/database";
 import { getExpiryStatus, getExpiryLabel } from "@/lib/inventory-utils";
 import { getProductPictureSignedUrl } from "@/lib/supabase/storage";
 import { cn } from "@/lib/utils";
 import { ProductDetailModal } from "./ProductDetailModal";
+import { MoreVertical, Utensils, PackageOpen } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import Link from "next/link";
 
 type MobileStockListProps = {
   entries: StockEntryWithProduct[];
@@ -124,7 +134,8 @@ export function MobileStockList({ entries }: MobileStockListProps) {
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
   const [modalOpen, setModalOpen] = useState(false);
   const [modalEntries, setModalEntries] = useState<StockEntryWithProduct[]>([]);
-  
+  const [actionsExpanded, setActionsExpanded] = useState(true);
+
   const aggregated = useMemo(() => aggregateByProduct(entries), [entries]);
   
   const handleExpand = (productId: string) => {
@@ -166,116 +177,180 @@ export function MobileStockList({ entries }: MobileStockListProps) {
   }
 
   return (
-    <>
-      <div className="space-y-2">
-        {aggregated.map((product) => {
-          const isExpanded = expandedProducts.has(product.productId);
-          const hasMultipleBatches = product.entries.length > 1;
-          
-          return (
-            <div
-              key={product.productId}
-              className={cn(
-                "bg-white rounded-lg shadow-sm overflow-hidden border-l-4",
-                statusColors[product.worstStatus]
-              )}
-            >
-              {/* Main row */}
-              <div className="flex items-center p-3 gap-3">
-                {/* Expand button */}
-                <button
-                  onClick={() => handleExpand(product.productId)}
-                  className={cn(
-                    "p-1 -ml-1 hover:bg-gray-100 rounded transition-colors",
-                    !hasMultipleBatches && "invisible"
-                  )}
-                >
-                  {isExpanded ? (
-                    <ChevronDown className="h-4 w-4 text-gray-400" />
-                  ) : (
-                    <ChevronRight className="h-4 w-4 text-gray-400" />
-                  )}
-                </button>
+  <>
+    <div className="relative">
+    <div className="overflow-x-auto [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300">
+      <table className="w-full min-w-[500px]">
+        <thead>
+          <tr className="bg-gray-100 text-left">
+            <th className="px-1 py-1 text-xs font-medium text-gray-500 border-r border-gray-200">Product</th>
+            <th className={cn(
+              "px-1 py-1 text-xs font-medium text-gray-500 border-r border-gray-200",
+              actionsExpanded ? "w-20" : "w-auto"
+            )}>Amount</th>
+            <th className={cn(
+              "px-1 py-1 text-xs font-medium text-gray-500 border-r border-gray-200",
+              actionsExpanded ? "w-24" : "w-auto"
+            )}>Expires</th>
+            <th className="px-1 py-1 bg-gray-100 sticky right-0 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)]">
+              <button
+                onClick={() => setActionsExpanded(!actionsExpanded)}
+                className="h-6 w-6 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded"
+                title={actionsExpanded ? "Hide actions" : "Show actions"}
+              >
+                {actionsExpanded ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+              </button>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {aggregated.map((product) => {
+            const isExpanded = expandedProducts.has(product.productId);
+            const hasMultipleBatches = product.entries.length > 1;
 
-                {/* Product info (clickable) */}
-                <button
-                  onClick={() => handleOpenModal(product)}
-                  className="flex items-center gap-3 flex-1 text-left min-w-0"
+            return (
+              <Fragment key={product.productId}>
+                <tr
+                  className={cn(
+                    "border-b border-gray-100",
+                    statusColors[product.worstStatus]
+                  )}
                 >
-                  <ProductImage fileName={product.pictureFileName} name={product.productName} />
-                  <div className="min-w-0 flex-1">
-                    <div className="font-medium truncate">{product.productName}</div>
-                    <div className="text-sm text-gray-500">
-                      {product.totalAmount} {product.totalAmount === 1 ? product.unitName : product.unitNamePlural}
-                      {product.openedAmount > 0 && (
-                        <span className="text-blue-600 ml-1">
-                          ({product.openedAmount} opened)
-                        </span>
+                  <td className="px-1 py-1 border-r border-gray-100">
+                    <div className="flex items-center gap-1">
+                      <ProductImage fileName={product.pictureFileName} name={product.productName} />
+                      <button
+                        onClick={() => handleOpenModal(product)}
+                        className="font-medium text-sm text-left hover:text-soma transition-colors break-all min-w-0 w-[80px]"
+                      >
+                        {product.productName}
+                      </button>
+                      {hasMultipleBatches && (
+                        <button
+                          onClick={() => handleExpand(product.productId)}
+                          className="text-xs text-gray-500 bg-gray-100 hover:bg-gray-200 px-1.5 py-0.5 rounded transition-colors"
+                        >
+                          {product.entries.length}
+                        </button>
                       )}
                     </div>
-                    <div className="text-xs text-gray-500">
-                      {formatDueDate(product.nextDueDate, product.nextDueDays)}
-                    </div>
-                  </div>
-                </button>
+                  </td>
+                  <td className="px-1 py-1 text-sm text-gray-600 border-r border-gray-100">
+                    {product.totalAmount} {product.totalAmount === 1 ? product.unitName : product.unitNamePlural}
+                    {product.openedAmount > 0 && (
+                      <span className="text-blue-600 text-xs ml-1">
+                        ({product.openedAmount} open)
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-1 py-1 text-xs text-gray-500 border-r border-gray-100">
+                    {formatDueDate(product.nextDueDate, product.nextDueDays)}
+                  </td>
+                  <td className="px-1 py-1 bg-white sticky right-0 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)]">
+                    {actionsExpanded ? (
+                      <div className="flex items-center gap-0.5">
+                        <button
+                          disabled
+                          title="Consume 1"
+                          className="h-6 px-1.5 text-xs font-medium rounded bg-green-600 text-white opacity-50 cursor-not-allowed flex items-center gap-0.5"
+                        >
+                          <Utensils className="h-3 w-3" />1
+                        </button>
+                        <button
+                          disabled
+                          title="Consume All"
+                          className="h-6 px-1.5 text-xs font-medium rounded bg-green-600 text-white opacity-50 cursor-not-allowed flex items-center gap-0.5"
+                        >
+                          <Utensils className="h-3 w-3" />All
+                        </button>
+                        <button
+                          disabled
+                          title="Open 1"
+                          className="h-6 px-1.5 text-xs font-medium rounded bg-takumi text-white opacity-50 cursor-not-allowed flex items-center gap-0.5"
+                        >
+                          <PackageOpen className="h-3 w-3" />1
+                        </button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="h-6 w-6 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded">
+                              <MoreVertical className="h-4 w-4" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild>
+                              <Link href={`/products/${product.productId}/edit`}>
+                                Edit product
+                              </Link>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    ) : (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="h-6 w-6 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded">
+                            <MoreVertical className="h-4 w-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <Link href={`/products/${product.productId}/edit`}>
+                              Edit product
+                            </Link>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </td>
+                </tr>
 
-                {/* Batch count */}
-                {hasMultipleBatches && (
-                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">
-                    {product.entries.length}
-                  </span>
-                )}
-              </div>
-              
-              {/* Expanded batches */}
-              {isExpanded && (
-                <div className="border-t bg-gray-50 divide-y divide-gray-100">
-                  {product.entries.map((entry) => {
+                {/* Expanded batches */}
+                {isExpanded &&
+                  product.entries.map((entry) => {
                     const entryStatus = getExpiryStatus(entry.best_before_date, entry.product?.due_type ?? 1);
                     const entryLabel = getExpiryLabel(entry.best_before_date, entry.product?.due_type ?? 1);
-                    
+
                     return (
-                      <div key={entry.id} className="px-3 py-2 pl-12 flex items-center justify-between text-sm">
-                        <div>
-                          <span className="text-gray-700">
-                            {entry.amount} {entry.amount === 1 ? product.unitName : product.unitNamePlural}
-                          </span>
+                      <tr key={entry.id} className="bg-gray-50 border-b border-gray-100">
+                        <td className="px-2 py-2 pl-16 text-sm text-gray-600">
+                          {entry.location?.name ?? "No location"}
                           {entry.open && (
                             <span className="ml-1.5 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
                               opened
                             </span>
                           )}
-                          {entry.location && (
-                            <span className="ml-1.5 text-gray-400 text-xs">
-                              @ {entry.location.name}
-                            </span>
-                          )}
-                        </div>
-                        <span className={cn(
-                          "text-xs px-2 py-0.5 rounded",
-                          entryStatus === "expired" && "bg-red-100 text-red-700",
-                          entryStatus === "overdue" && "bg-gray-200 text-gray-700",
-                          entryStatus === "due_soon" && "bg-amber-100 text-amber-700",
-                          entryStatus === "fresh" && "bg-green-100 text-green-700",
-                          entryStatus === "none" && "bg-gray-100 text-gray-600"
-                        )}>
-                          {entryLabel}
-                        </span>
-                      </div>
+                        </td>
+                        <td className="px-1 py-1 text-sm text-gray-600 border-r border-gray-100">
+                          {entry.amount} {entry.amount === 1 ? product.unitName : product.unitNamePlural}
+                        </td>
+                        <td className="px-2 py-2">
+                          <span
+                            className={cn(
+                              "text-xs px-2 py-0.5 rounded",
+                              entryStatus === "expired" && "bg-red-100 text-red-700",
+                              entryStatus === "overdue" && "bg-gray-200 text-gray-700",
+                              entryStatus === "due_soon" && "bg-amber-100 text-amber-700",
+                              entryStatus === "fresh" && "bg-green-100 text-green-700",
+                              entryStatus === "none" && "bg-gray-100 text-gray-600"
+                            )}
+                          >
+                            {entryLabel}
+                          </span>
+                        </td>
+                        <td className="px-2 py-2 sticky right-0 bg-gray-50 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)]"></td>
+                      </tr>
                     );
                   })}
-                </div>
-              )}
-            </div>
-          );
-        })}
+              </Fragment>
+            );
+          })}
+        </tbody>
+      </table>
       </div>
+      <div className="absolute right-8 top-0 bottom-2 w-4 bg-gradient-to-l from-gray-200/50 to-transparent pointer-events-none" />
+    </div>
 
-      <ProductDetailModal
-        entries={modalEntries}
-        open={modalOpen}
-        onClose={handleCloseModal}
-      />
-    </>
-  );
+    <ProductDetailModal entries={modalEntries} open={modalOpen} onClose={handleCloseModal} />
+  </>
+);
 }

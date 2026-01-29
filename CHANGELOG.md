@@ -68,6 +68,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `InventoryStats` — Grocy-style warning banners with proper status logic
 - `inventory-utils.ts` — new `ExpiryStatus` types: expired, overdue, due_soon, fresh, none
 - RLS policies updated to allow anonymous users access to guest household
+- **ProductForm:** Fixed mobile footer layout using fixed positioning with proper bottom spacing
+- **Products list (master-data):**
+  - Desktop: Sticky action column (edit/toggle/delete) always visible when scrolling
+  - Mobile: Replaced card layout with horizontally scrollable table (Grocy-style)
+  - Added column dividers and visible scrollbar
+- **Stock overview (MobileStockList):**
+  - Converted to table layout matching Grocy mobile UX
+  - Added quick action buttons (Consume 1, Consume All, Open 1) — disabled until v0.6
+  - Collapsible actions with toggle in header
+  - Clickable product name opens detail modal
+  - Batch count button expands stock entries inline
+  - Tighter spacing with column dividers
 
 ### Fixed
 - Anonymous users no longer create orphan households

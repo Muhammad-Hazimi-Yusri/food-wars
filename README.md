@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.5.8-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.5.9-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,11 +30,11 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.5.8
+Current version is v0.5.9
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
-- **Responsive Views** — Mobile card layout, desktop table with expandable batches
+- **Responsive Views** — Mobile/desktop tables with Grocy-style quick actions (Consume, Open)
 - **Add Products** — 5-tab form (basic, stock defaults, locations, QU conversions, barcodes)
 - **Product Pictures** — Upload from camera or gallery (mobile-optimized)
 - **Add Stock** — Quick-add entries with location, expiry, price

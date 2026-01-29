@@ -70,16 +70,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - RLS policies updated to allow anonymous users access to guest household
 - **ProductForm:** Fixed mobile footer layout using fixed positioning with proper bottom spacing
 - **Products list (master-data):**
-  - Desktop: Sticky action column (edit/toggle/delete) always visible when scrolling
+  - Desktop: Sticky action column (edit/toggle/delete) always visible when scrolling horizontally
   - Mobile: Replaced card layout with horizontally scrollable table (Grocy-style)
   - Added column dividers and visible scrollbar
-- **Stock overview (MobileStockList):**
-  - Converted to table layout matching Grocy mobile UX
-  - Added quick action buttons (Consume 1, Consume All, Open 1) — disabled until v0.6
-  - Collapsible actions with toggle in header
+- **Stock overview:**
+  - Added Grocy-style quick action buttons (Consume 1, Consume All, Open 1) — disabled until v0.6
+  - Added 3-dots menu with "Edit product" option
   - Clickable product name opens detail modal
-  - Batch count button expands stock entries inline
-  - Tighter spacing with column dividers
+  - Mobile: Collapsible action buttons with header toggle
+  - Mobile: Batch count button expands stock entries inline
+  - Tighter spacing with column dividers and scroll indicator
 
 ### Fixed
 - Anonymous users no longer create orphan households

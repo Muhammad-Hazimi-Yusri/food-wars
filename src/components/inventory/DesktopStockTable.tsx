@@ -1,13 +1,20 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Fragment } from "react";
 import Image from "next/image";
-import { ChevronDown, ChevronRight, ImageIcon } from "lucide-react";
+import Link from "next/link";
+import { ChevronDown, ChevronRight, ImageIcon, MoreVertical, Utensils, PackageOpen } from "lucide-react";
 import { StockEntryWithProduct } from "@/types/database";
 import { getExpiryStatus, getExpiryLabel } from "@/lib/inventory-utils";
 import { getProductPictureSignedUrl } from "@/lib/supabase/storage";
 import { cn } from "@/lib/utils";
 import { ProductDetailModal } from "./ProductDetailModal";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type DesktopStockTableProps = {
   entries: StockEntryWithProduct[];
@@ -155,14 +162,6 @@ export function DesktopStockTable({ entries }: DesktopStockTableProps) {
     setModalOpen(false);
     setModalEntries([]);
   };
-  
-  const statusColors = {
-    expired: "border-l-kurokiba bg-red-50",
-    overdue: "border-l-gray-500 bg-gray-50",
-    due_soon: "border-l-takumi bg-amber-50",
-    fresh: "border-l-green-500 bg-green-50/50",
-    none: "border-l-gray-300 bg-white",
-  };
 
   if (aggregated.length === 0) {
     return (
@@ -182,25 +181,33 @@ export function DesktopStockTable({ entries }: DesktopStockTableProps) {
               <th className="text-left py-3 px-4 font-medium text-gray-700">Product</th>
               <th className="text-right py-3 px-4 font-medium text-gray-700">Amount</th>
               <th className="text-right py-3 px-4 font-medium text-gray-700">Next Due Date</th>
+              <th className="py-3 px-2"></th>
             </tr>
           </thead>
-          <tbody className="divide-y">
+          <tbody>
             {aggregated.map((product) => {
               const isExpanded = expandedProducts.has(product.productId);
               const hasMultipleBatches = product.entries.length > 1;
               
               return (
-                <tr key={product.productId} className="group">
-                  <td colSpan={4} className="p-0">
-                    {/* Main row */}
-                    <div
-                      className={cn(
-                        "flex items-center border-l-4 cursor-pointer hover:bg-gray-50 transition-colors",
-                        statusColors[product.worstStatus]
-                      )}
-                      onClick={() => handleOpenModal(product)}
-                    >
-                      {/* Expand button */}
+                <Fragment key={product.productId}>
+                  {/* Main row */}
+                  <tr className={cn(
+                    "border-b hover:bg-gray-50 transition-colors",
+                    product.worstStatus === "expired" && "bg-red-50",
+                    product.worstStatus === "overdue" && "bg-gray-50",
+                    product.worstStatus === "due_soon" && "bg-amber-50",
+                    product.worstStatus === "fresh" && "bg-green-50/50",
+                  )}>
+                    {/* Expand button */}
+                    <td className={cn(
+                      "p-0 border-l-4",
+                      product.worstStatus === "expired" && "border-l-kurokiba",
+                      product.worstStatus === "overdue" && "border-l-gray-500",
+                      product.worstStatus === "due_soon" && "border-l-takumi",
+                      product.worstStatus === "fresh" && "border-l-green-500",
+                      product.worstStatus === "none" && "border-l-gray-300",
+                    )}>
                       <button
                         onClick={(e) => handleExpand(e, product.productId)}
                         className={cn(
@@ -214,72 +221,114 @@ export function DesktopStockTable({ entries }: DesktopStockTableProps) {
                           <ChevronRight className="h-4 w-4 text-gray-400" />
                         )}
                       </button>
-                      
-                      {/* Product info */}
-                      <div className="flex items-center gap-3 flex-1 py-2">
+                    </td>
+                    
+                    {/* Product info */}
+                    <td className="py-2 px-4">
+                      <button
+                        onClick={() => handleOpenModal(product)}
+                        className="flex items-center gap-3 text-left hover:text-soma transition-colors"
+                      >
                         <ProductImage fileName={product.pictureFileName} name={product.productName} />
                         <span className="font-medium">{product.productName}</span>
-                      </div>
-                      
-                      {/* Amount */}
-                      <div className="text-right px-4 py-2">
-                        <div>
-                          {product.totalAmount} {product.totalAmount === 1 ? product.unitName : product.unitNamePlural}
-                        </div>
-                        {product.openedAmount > 0 && (
-                          <div className="text-xs text-blue-600">
-                            {product.openedAmount} opened
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Due date */}
-                      <div className="text-right px-4 py-2 whitespace-pre-line text-sm">
-                        {formatDueDate(product.nextDueDate, product.nextDueDays)}
-                      </div>
-                    </div>
+                      </button>
+                    </td>
                     
-                    {/* Expanded batches */}
-                    {isExpanded && (
-                      <div className="bg-gray-50 border-t divide-y divide-gray-100">
-                        {product.entries.map((entry) => {
-                          const entryStatus = getExpiryStatus(entry.best_before_date, entry.product?.due_type ?? 1);
-                          const entryLabel = getExpiryLabel(entry.best_before_date, entry.product?.due_type ?? 1);
-                          
-                          return (
-                            <div key={entry.id} className="flex items-center py-2 px-4 pl-14 text-sm">
-                              <div className="flex-1">
-                                <span className="text-gray-700">
-                                  {entry.amount} {entry.amount === 1 ? product.unitName : product.unitNamePlural}
-                                </span>
-                                {entry.open && (
-                                  <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
-                                    opened
-                                  </span>
-                                )}
-                                {entry.location && (
-                                  <span className="ml-2 text-gray-400 text-xs">
-                                    @ {entry.location.name}
-                                  </span>
-                                )}
-                              </div>
-                              <span className={cn(
-                                "text-xs px-2 py-0.5 rounded",
-                                entryStatus === "expired" && "bg-red-100 text-red-700",
-                                entryStatus === "overdue" && "bg-gray-200 text-gray-700",
-                                entryStatus === "due_soon" && "bg-amber-100 text-amber-700",
-                                entryStatus === "fresh" && "bg-green-100 text-green-700",
-                                entryStatus === "none" && "bg-gray-100 text-gray-600"
-                              )}>
-                                {entryLabel}
-                              </span>
-                            </div>
-                          );
-                        })}
+                    {/* Amount */}
+                    <td className="text-right px-4 py-2">
+                      <div>
+                        {product.totalAmount} {product.totalAmount === 1 ? product.unitName : product.unitNamePlural}
                       </div>
-                    )}
-                  </td>
-                </tr>
+                      {product.openedAmount > 0 && (
+                        <div className="text-xs text-blue-600">
+                          {product.openedAmount} opened
+                        </div>
+                      )}
+                    </td>
+                    
+                    {/* Due date */}
+                    <td className="text-right px-4 py-2 whitespace-pre-line text-sm">
+                      {formatDueDate(product.nextDueDate, product.nextDueDays)}
+                    </td>
+
+                    {/* Actions */}
+                    <td className="px-2 py-2">
+                      <div className="flex items-center gap-1 justify-end">
+                        <button
+                          disabled
+                          title="Consume 1"
+                          className="h-7 px-2 text-xs font-medium rounded bg-green-600 text-white opacity-50 cursor-not-allowed flex items-center gap-1"
+                        >
+                          <Utensils className="h-3 w-3" />1
+                        </button>
+                        <button
+                          disabled
+                          title="Consume All"
+                          className="h-7 px-2 text-xs font-medium rounded bg-green-600 text-white opacity-50 cursor-not-allowed flex items-center gap-1"
+                        >
+                          <Utensils className="h-3 w-3" />All
+                        </button>
+                        <button
+                          disabled
+                          title="Open 1"
+                          className="h-7 px-2 text-xs font-medium rounded bg-takumi text-white opacity-50 cursor-not-allowed flex items-center gap-1"
+                        >
+                          <PackageOpen className="h-3 w-3" />1
+                        </button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded">
+                              <MoreVertical className="h-4 w-4" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild>
+                              <Link href={`/products/${product.productId}/edit`}>
+                                Edit product
+                              </Link>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </td>
+                  </tr>
+                  
+                  {/* Expanded batches */}
+                  {isExpanded && product.entries.map((entry) => {
+                    const entryStatus = getExpiryStatus(entry.best_before_date, entry.product?.due_type ?? 1);
+                    const entryLabel = getExpiryLabel(entry.best_before_date, entry.product?.due_type ?? 1);
+                    
+                    return (
+                      <tr key={entry.id} className="bg-gray-50 border-b border-gray-100">
+                        <td className="border-l-4 border-l-transparent"></td>
+                        <td className="py-2 px-4 pl-14 text-sm text-gray-600">
+                          {entry.location?.name ?? "No location"}
+                          {entry.open && (
+                            <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                              opened
+                            </span>
+                          )}
+                        </td>
+                        <td className="text-right px-4 py-2 text-sm text-gray-600">
+                          {entry.amount} {entry.amount === 1 ? product.unitName : product.unitNamePlural}
+                        </td>
+                        <td className="text-right px-4 py-2">
+                          <span className={cn(
+                            "text-xs px-2 py-0.5 rounded",
+                            entryStatus === "expired" && "bg-red-100 text-red-700",
+                            entryStatus === "overdue" && "bg-gray-200 text-gray-700",
+                            entryStatus === "due_soon" && "bg-amber-100 text-amber-700",
+                            entryStatus === "fresh" && "bg-green-100 text-green-700",
+                            entryStatus === "none" && "bg-gray-100 text-gray-600"
+                          )}>
+                            {entryLabel}
+                          </span>
+                        </td>
+                        <td></td>
+                      </tr>
+                    );
+                  })}
+                </Fragment>
               );
             })}
           </tbody>

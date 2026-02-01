@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.5.10-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.5.11-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.5.10
+Current version is v0.5.11
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -790,7 +790,6 @@ Food Wars uses a Grocy-compatible database schema designed for comprehensive kit
 | `product_group_id` | FK | null | Category |
 | `qu_id_stock` | FK | null | Stock unit (immutable after first entry) |
 | `qu_id_purchase` | FK | null | Purchase unit |
-| `qu_factor_purchase_to_stock` | decimal | 1.0 | Conversion factor |
 | `min_stock_amount` | decimal | 0 | Low stock threshold |
 | `quick_consume_amount` | decimal | 1 | One-click consume quantity |
 | `quick_open_amount` | decimal | 1 | One-click open quantity |

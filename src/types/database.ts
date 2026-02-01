@@ -1,5 +1,5 @@
 // ============================================
-// FOOD WARS DATABASE TYPES v0.4.1
+// FOOD WARS DATABASE TYPES v0.5.0
 // Complete types matching Grocy schema
 // ============================================
 
@@ -97,10 +97,9 @@ export type Product = {
   // Categorization
   product_group_id: string | null;
   
-  // Quantity units
+  // Quantity units (conversions are in quantity_unit_conversions table)
   qu_id_stock: string | null;
   qu_id_purchase: string | null;
-  qu_factor_purchase_to_stock: number;
   
   // Stock management
   min_stock_amount: number;

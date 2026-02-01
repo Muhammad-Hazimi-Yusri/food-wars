@@ -2,10 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +9,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -20,146 +19,254 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Minus } from "lucide-react";
-import { Product, Location, QuantityUnit } from "@/types/database";
+import { Plus, ChevronUp, ChevronDown, AlertTriangle } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { Product, Location, QuantityUnit, ShoppingLocation } from "@/types/database";
 
 type ProductWithUnits = Product & {
   qu_stock?: QuantityUnit | null;
   qu_purchase?: QuantityUnit | null;
 };
 
-export function AddStockEntryModal() {
+type QuantityUnitConversion = {
+  id: string;
+  product_id: string | null;
+  from_qu_id: string;
+  to_qu_id: string;
+  factor: number;
+};
+
+type Props = {
+  products: ProductWithUnits[];
+  locations: Location[];
+  quantityUnits: QuantityUnit[];
+  shoppingLocations: ShoppingLocation[];
+  conversions: QuantityUnitConversion[];
+};
+
+export function AddStockEntryModal({ 
+  products = [], 
+  locations = [], 
+  quantityUnits = [], 
+  shoppingLocations = [],
+  conversions = [],
+}: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Master data
-  const [products, setProducts] = useState<ProductWithUnits[]>([]);
-  const [locations, setLocations] = useState<Location[]>([]);
-
   // Form state
   const [productId, setProductId] = useState("");
-  const [amount, setAmount] = useState("1");
+  const [amount, setAmount] = useState("");
+  const [selectedQuId, setSelectedQuId] = useState("");
   const [locationId, setLocationId] = useState("");
+  const [storeId, setStoreId] = useState("");
   const [bestBeforeDate, setBestBeforeDate] = useState("");
+  const [neverExpires, setNeverExpires] = useState(false);
   const [price, setPrice] = useState("");
+  const [priceType, setPriceType] = useState<"unit" | "total">("unit");
   const [note, setNote] = useState("");
 
-  // Load master data when modal opens
+  // Selected product
+  const selectedProduct = products.find((p) => p.id === productId);
+
+  // Available units for this product (stock unit + all units with conversions)
+  const availableUnits = selectedProduct
+    ? (() => {
+        const units: QuantityUnit[] = [];
+        
+        // Always include stock unit first
+        if (selectedProduct.qu_stock) {
+          units.push(selectedProduct.qu_stock);
+        }
+        
+        // Find all units that have conversions TO this product's stock unit
+        const productConversions = conversions.filter(
+          (c) => 
+            (c.product_id === selectedProduct.id || c.product_id === null) &&
+            c.to_qu_id === selectedProduct.qu_id_stock
+        );
+        
+        // Add each unique conversion unit
+        productConversions.forEach((conv) => {
+          const unit = quantityUnits.find((u) => u.id === conv.from_qu_id);
+          if (unit && !units.some((u) => u.id === unit.id)) {
+            units.push(unit);
+          }
+        });
+        
+        return units;
+      })()
+    : [];
+
+  // Get conversion factor from conversions table
+  const getConversionFactor = () => {
+    if (!selectedProduct || !selectedQuId) return 1;
+    
+    // If selected unit is the stock unit, no conversion needed
+    if (selectedQuId === selectedProduct.qu_id_stock) return 1;
+    
+    // Look for product-specific conversion first
+    const productConversion = conversions.find(
+      (c) =>
+        c.product_id === selectedProduct.id &&
+        c.from_qu_id === selectedQuId &&
+        c.to_qu_id === selectedProduct.qu_id_stock
+    );
+    if (productConversion) return productConversion.factor;
+
+    // Look for global conversion (product_id is null)
+    const globalConversion = conversions.find(
+      (c) =>
+        c.product_id === null &&
+        c.from_qu_id === selectedQuId &&
+        c.to_qu_id === selectedProduct.qu_id_stock
+    );
+    if (globalConversion) return globalConversion.factor;
+
+    return 1;
+  };
+
+  const conversionFactor = getConversionFactor();
+  const enteredAmount = parseFloat(amount) || 0;
+  const stockAmount = enteredAmount * conversionFactor;
+  const stockUnitName = selectedProduct?.qu_stock?.name ?? "unit";
+  const stockUnitNamePlural = selectedProduct?.qu_stock?.name_plural ?? stockUnitName + "s";
+  const selectedUnitName = quantityUnits.find((u) => u.id === selectedQuId)?.name ?? "unit";
+
+  // Price per stock unit calculation
+  const pricePerStockUnit = () => {
+    const p = parseFloat(price) || 0;
+    if (p === 0 || stockAmount === 0) return 0;
+    if (priceType === "total") {
+      return p / stockAmount;
+    }
+    return p / conversionFactor;
+  };
+
+  // Check if date is in the past
+  const isDatePast = bestBeforeDate && new Date(bestBeforeDate) < new Date();
+
+  // When product selected, pre-fill defaults
   useEffect(() => {
-    if (open) {
-      loadMasterData();
+    if (productId && selectedProduct) {
+      // Set default unit to purchase unit if available, else stock unit
+      setSelectedQuId(selectedProduct.qu_id_purchase || selectedProduct.qu_id_stock || "");
+      
+      // Set default location
+      if (selectedProduct.location_id) {
+        setLocationId(selectedProduct.location_id);
+      }
+
+      // Set default store
+      if (selectedProduct.shopping_location_id) {
+        setStoreId(selectedProduct.shopping_location_id);
+      }
+      
+      // Set default due date
+      if (selectedProduct.default_due_days > 0) {
+        const date = new Date();
+        date.setDate(date.getDate() + selectedProduct.default_due_days);
+        setBestBeforeDate(date.toISOString().split("T")[0]);
+        setNeverExpires(false);
+      } else if (selectedProduct.default_due_days === -1) {
+        setBestBeforeDate("");
+        setNeverExpires(true);
+      }
+    }
+  }, [productId, selectedProduct]);
+
+  // Handle never expires toggle
+  useEffect(() => {
+    if (neverExpires) {
+      setBestBeforeDate("");
+    }
+  }, [neverExpires]);
+
+  // Reset form when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setProductId("");
+      setAmount("");
+      setSelectedQuId("");
+      setLocationId("");
+      setStoreId("");
+      setBestBeforeDate("");
+      setNeverExpires(false);
+      setPrice("");
+      setPriceType("unit");
+      setNote("");
+      setError(null);
     }
   }, [open]);
 
-  const loadMasterData = async () => {
-    const supabase = createClient();
-
-    const [productsRes, locationsRes] = await Promise.all([
-      supabase
-        .from("products")
-        .select(`
-          *,
-          qu_stock:quantity_units!products_qu_id_stock_fkey(*),
-          qu_purchase:quantity_units!products_qu_id_purchase_fkey(*)
-        `)
-        .eq("active", true)
-        .order("name"),
-      supabase.from("locations").select("*").eq("active", true).order("sort_order"),
-    ]);
-
-    setProducts(productsRes.data ?? []);
-    setLocations(locationsRes.data ?? []);
+  const adjustAmount = (delta: number) => {
+    const current = parseFloat(amount) || 0;
+    const newAmount = Math.max(0, current + delta);
+    setAmount(newAmount.toString());
   };
-
-  // When product selected, pre-fill location and expiry
-  useEffect(() => {
-    if (productId) {
-      const product = products.find((p) => p.id === productId);
-      if (product?.location_id) {
-        setLocationId(product.location_id);
-      }
-      if (product && product.default_due_days > 0) {
-        const date = new Date();
-        date.setDate(date.getDate() + product.default_due_days);
-        setBestBeforeDate(date.toISOString().split("T")[0]);
-      } else if (product && product.default_due_days === -1) {
-        // Never expires
-        setBestBeforeDate("");
-      }
-    }
-  }, [productId, products]);
-
-  const selectedProduct = products.find((p) => p.id === productId);
-  
-  // Determine if we're using purchase units
-  const hasPurchaseConversion = selectedProduct && 
-    selectedProduct.qu_id_purchase && 
-    selectedProduct.qu_id_purchase !== selectedProduct.qu_id_stock &&
-    selectedProduct.qu_factor_purchase_to_stock > 1;
-
-  const purchaseUnitName = selectedProduct?.qu_purchase?.name ?? "unit";
-  const stockUnitName = selectedProduct?.qu_stock?.name ?? "unit";
-  const stockUnitNamePlural = selectedProduct?.qu_stock?.name_plural ?? stockUnitName + "s";
-  const factor = selectedProduct?.qu_factor_purchase_to_stock ?? 1;
-
-  // Calculate what will be stored
-  const purchaseAmount = parseFloat(amount) || 0;
-  const stockAmount = purchaseAmount * factor;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!productId || !amount || !selectedQuId) return;
+
     setLoading(true);
     setError(null);
 
     try {
       const supabase = createClient();
 
-      const { data: household } = await supabase
-        .from("households")
-        .select("id")
-        .single();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
 
-      if (!household) {
-        throw new Error("No household found");
+      const isGuest = user.is_anonymous === true;
+      let householdId: string;
+
+      if (isGuest) {
+        householdId = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
+      } else {
+        const { data: household } = await supabase
+          .from("households")
+          .select("id")
+          .eq("owner_id", user.id)
+          .single();
+        if (!household) throw new Error("No household found");
+        householdId = household.id;
       }
 
-      // Store the converted stock amount (pieces), not purchase amount (packs)
+      // Calculate final price (store as price per stock unit)
+      let finalPrice = null;
+      if (price) {
+        const p = parseFloat(price);
+        if (priceType === "total") {
+          finalPrice = p / stockAmount;
+        } else {
+          finalPrice = p / conversionFactor;
+        }
+      }
+
       const { error: insertError } = await supabase.from("stock_entries").insert({
-        household_id: household.id,
+        household_id: householdId,
         product_id: productId,
-        amount: stockAmount, // Converted to stock units
+        amount: stockAmount,
         location_id: locationId || null,
-        best_before_date: bestBeforeDate || null,
-        price: price ? parseFloat(price) : null,
+        shopping_location_id: storeId && storeId !== "none" ? storeId : null,
+        best_before_date: neverExpires ? "2999-12-31" : (bestBeforeDate || null),
+        price: finalPrice,
         note: note || null,
         purchased_date: new Date().toISOString().split("T")[0],
       });
 
       if (insertError) throw insertError;
 
-      // Reset form
-      setProductId("");
-      setAmount("1");
-      setLocationId("");
-      setBestBeforeDate("");
-      setPrice("");
-      setNote("");
       setOpen(false);
-
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add stock");
     } finally {
       setLoading(false);
     }
-  };
-
-  const adjustAmount = (delta: number) => {
-    const current = parseFloat(amount) || 0;
-    const newAmount = Math.max(0.1, current + delta);
-    setAmount(newAmount.toString());
   };
 
   return (
@@ -170,7 +277,7 @@ export function AddStockEntryModal() {
           <span>Add Stock</span>
         </button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add Stock Entry</DialogTitle>
         </DialogHeader>
@@ -185,148 +292,266 @@ export function AddStockEntryModal() {
             </Button>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="bg-red-50 text-red-700 p-3 rounded-lg text-sm">
-                {error}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            {/* Form Section */}
+            <form onSubmit={handleSubmit} className="lg:col-span-3 space-y-4">
+              {error && (
+                <div className="bg-red-50 text-red-700 p-3 rounded-lg text-sm">
+                  {error}
+                </div>
+              )}
+
+              {/* Product */}
+              <div>
+                <Label htmlFor="product">Product *</Label>
+                <Select value={productId} onValueChange={setProductId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select product" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products.map((product) => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            )}
 
-            {/* Product */}
-            <div>
-              <Label htmlFor="product">Product *</Label>
-              <Select value={productId} onValueChange={setProductId}>
-                <SelectTrigger className="h-12">
-                  <SelectValue placeholder="Select product" />
-                </SelectTrigger>
-                <SelectContent>
-                  {products.map((product) => (
-                    <SelectItem key={product.id} value={product.id}>
-                      {product.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              {/* Amount + Unit */}
+              <div>
+                <Label>Amount *</Label>
+                <div className="flex gap-2">
+                  <div className="flex items-center">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-10 w-10 rounded-r-none"
+                      onClick={() => adjustAmount(-1)}
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      className="h-10 w-24 rounded-none text-center"
+                      placeholder="0"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-10 w-10 rounded-l-none"
+                      onClick={() => adjustAmount(1)}
+                    >
+                      <ChevronUp className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Select value={selectedQuId} onValueChange={setSelectedQuId}>
+                    <SelectTrigger className="w-32">
+                      <SelectValue placeholder="Unit" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableUnits.map((unit) => (
+                        <SelectItem key={unit.id} value={unit.id}>
+                          {unit.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {/* Conversion info */}
+                {conversionFactor !== 1 && enteredAmount > 0 && (
+                  <p className="text-sm text-teal-600 mt-1">
+                    This equals {stockAmount} {stockAmount === 1 ? stockUnitName : stockUnitNamePlural}
+                  </p>
+                )}
+              </div>
 
-            {/* Amount with +/- buttons */}
-            <div>
-              <Label htmlFor="amount">
-                Amount {hasPurchaseConversion ? `(${purchaseUnitName}s)` : ""}*
-              </Label>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="h-12 w-12 flex-shrink-0"
-                  onClick={() => adjustAmount(-1)}
-                >
-                  <Minus className="h-5 w-5" />
-                </Button>
+              {/* Due Date */}
+              <div>
+                <Label htmlFor="bestBefore">Due Date</Label>
+                <div className="flex items-center gap-4">
+                  <Input
+                    id="bestBefore"
+                    type="date"
+                    value={bestBeforeDate}
+                    onChange={(e) => setBestBeforeDate(e.target.value)}
+                    disabled={neverExpires}
+                    className="flex-1"
+                  />
+                  <label className="flex items-center gap-2 text-sm whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={neverExpires}
+                      onChange={(e) => setNeverExpires(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300"
+                    />
+                    Never expires
+                  </label>
+                </div>
+                {isDatePast && !neverExpires && (
+                  <p className="text-sm text-amber-600 mt-1 flex items-center gap-1">
+                    <AlertTriangle className="h-4 w-4" />
+                    The given date is earlier than today, are you sure?
+                  </p>
+                )}
+              </div>
+
+              {/* Price */}
+              <div>
+                <Label htmlFor="price">Price</Label>
+                <div className="flex items-center gap-4">
+                  <Input
+                    id="price"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    placeholder="0.00"
+                    className="flex-1"
+                  />
+                  <div className="flex items-center gap-3 text-sm">
+                    <label className="flex items-center gap-1">
+                      <input
+                        type="radio"
+                        name="priceType"
+                        checked={priceType === "unit"}
+                        onChange={() => setPriceType("unit")}
+                        className="h-4 w-4"
+                      />
+                      Per {selectedUnitName}
+                    </label>
+                    <label className="flex items-center gap-1">
+                      <input
+                        type="radio"
+                        name="priceType"
+                        checked={priceType === "total"}
+                        onChange={() => setPriceType("total")}
+                        className="h-4 w-4"
+                      />
+                      Total
+                    </label>
+                  </div>
+                </div>
+                {price && parseFloat(price) > 0 && conversionFactor !== 1 && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    means £{pricePerStockUnit().toFixed(2)} per {stockUnitName}
+                  </p>
+                )}
+              </div>
+
+              {/* Store */}
+              <div>
+                <Label htmlFor="store">Store</Label>
+                <Select value={storeId} onValueChange={setStoreId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select store" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">—</SelectItem>
+                    {shoppingLocations.map((store) => (
+                      <SelectItem key={store.id} value={store.id}>
+                        {store.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Location */}
+              <div>
+                <Label htmlFor="location">Location</Label>
+                <Select value={locationId} onValueChange={setLocationId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locations.map((loc) => (
+                      <SelectItem key={loc.id} value={loc.id}>
+                        {loc.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Note */}
+              <div>
+                <Label htmlFor="note">Note</Label>
                 <Input
-                  id="amount"
-                  type="number"
-                  step="0.1"
-                  min="0.1"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  required
-                  className="h-12 text-center text-lg font-medium"
+                  id="note"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="e.g., Buy 1 get 1 free"
                 />
+              </div>
+
+              {/* Submit */}
+              <div className="flex gap-2 pt-2">
                 <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="h-12 w-12 flex-shrink-0"
-                  onClick={() => adjustAmount(1)}
+                  type="submit"
+                  disabled={loading || !productId || !amount || !selectedQuId}
+                  className="flex-1 bg-soma hover:bg-soma/90"
                 >
-                  <Plus className="h-5 w-5" />
+                  {loading ? "Adding..." : "Add Stock"}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                  Cancel
                 </Button>
               </div>
-              {/* Show conversion info */}
-              {hasPurchaseConversion && stockAmount > 0 && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  = {stockAmount} {stockAmount === 1 ? stockUnitName : stockUnitNamePlural} in stock
-                </p>
+            </form>
+
+            {/* Product Insight Panel */}
+            <div className="lg:col-span-2">
+              {selectedProduct ? (
+                <div className="bg-gray-50 rounded-lg p-4 space-y-4">
+                  <h3 className="font-semibold text-lg">{selectedProduct.name}</h3>
+                  
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Default location:</span>
+                      <span>{locations.find(l => l.id === selectedProduct.location_id)?.name ?? "—"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Default store:</span>
+                      <span>{shoppingLocations.find(s => s.id === selectedProduct.shopping_location_id)?.name ?? "—"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Stock unit:</span>
+                      <span>{selectedProduct.qu_stock?.name ?? "—"}</span>
+                    </div>
+                    {conversionFactor !== 1 && (
+                      <div className="flex justify-between text-teal-600">
+                        <span>Conversion:</span>
+                        <span>1 {selectedProduct.qu_purchase?.name} = {conversionFactor} {stockUnitNamePlural}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Min. stock:</span>
+                      <span>{selectedProduct.min_stock_amount ?? 0}</span>
+                    </div>
+                  </div>
+
+                  {/* Placeholder for future features */}
+                  <div className="border-t pt-4 mt-4">
+                    <p className="text-xs text-gray-400 italic">
+                      Stock amount, value, last purchased, last price, average price, price history coming in v0.6
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-gray-50 rounded-lg p-4 text-center text-gray-400">
+                  Select a product to see details
+                </div>
               )}
             </div>
-
-            {/* Location */}
-            <div>
-              <Label htmlFor="location">Location</Label>
-              <Select value={locationId} onValueChange={setLocationId}>
-                <SelectTrigger className="h-12">
-                  <SelectValue placeholder="Select location" />
-                </SelectTrigger>
-                <SelectContent>
-                  {locations.map((location) => (
-                    <SelectItem key={location.id} value={location.id}>
-                      {location.name} {location.is_freezer && "❄️"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Best Before Date */}
-            <div>
-              <Label htmlFor="bestBefore">Best Before Date</Label>
-              <input
-                id="bestBefore"
-                type="date"
-                value={bestBeforeDate}
-                onChange={(e) => setBestBeforeDate(e.target.value)}
-                className="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              />
-            </div>
-
-            {/* Price */}
-            <div>
-              <Label htmlFor="price">Price (optional)</Label>
-              <Input
-                id="price"
-                type="number"
-                step="0.01"
-                min="0"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder="0.00"
-                className="h-12"
-              />
-            </div>
-
-            {/* Note */}
-            <div>
-              <Label htmlFor="note">Note (optional)</Label>
-              <Input
-                id="note"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="e.g., Buy 1 get 1 free"
-                className="h-12"
-              />
-            </div>
-
-            {/* Submit */}
-            <div className="flex gap-3 pt-2">
-              <Button 
-                type="submit" 
-                disabled={loading || !productId}
-                className="flex-1 h-12"
-              >
-                {loading ? "Adding..." : "Add Stock"}
-              </Button>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setOpen(false)}
-                className="h-12"
-              >
-                Cancel
-              </Button>
-            </div>
-          </form>
+          </div>
         )}
       </DialogContent>
     </Dialog>

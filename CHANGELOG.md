@@ -83,7 +83,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **InventoryStats refactor:** Removed duplicate min stock calculation
   - Single source of truth in `StockOverviewClient`
   - `InventoryStats` receives count as prop instead of recalculating
-  
+- Redesigned `AddStockEntryModal` to match Grocy's Purchase page
+  - Two-column layout with product insight panel
+  - Unit dropdown shows all units with available conversions
+  - Store (shopping location) field added
+  - "Never expires" checkbox for due date
+  - Past date warning
+  - Price per unit/total toggle with calculated price per stock unit
+- Unit conversions now use `quantity_unit_conversions` table exclusively
+- Removed deprecated `qu_factor_purchase_to_stock` from Product type (migration 007)
+
 ### Fixed
 - Anonymous users no longer create orphan households
 - Expiry status now respects `due_type` (1=overdue, 2=expired)

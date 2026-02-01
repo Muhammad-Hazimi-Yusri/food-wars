@@ -150,89 +150,45 @@ export function ProductForm({
   const [removeImage, setRemoveImage] = useState(false);
 
   // Form state
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(() => ({
     // Basic
-    name: "",
-    description: "",
-    active: true,
-    picture_file_name: null as string | null,
-    product_group_id: "",
-    parent_product_id: "",
+    name: product?.name ?? "",
+    description: product?.description ?? "",
+    active: product?.active ?? true,
+    picture_file_name: product?.picture_file_name ?? null,
+    product_group_id: product?.product_group_id ?? "",
+    parent_product_id: product?.parent_product_id ?? "",
     // Locations
-    location_id: "",
-    default_consume_location_id: "",
-    shopping_location_id: "",
-    move_on_open: false,
+    location_id: product?.location_id ?? "",
+    default_consume_location_id: product?.default_consume_location_id ?? "",
+    shopping_location_id: product?.shopping_location_id ?? "",
+    move_on_open: product?.move_on_open ?? false,
     // Stock
-    min_stock_amount: 0,
-    cumulate_min_stock_amount_of_sub_products: false,
-    treat_opened_as_out_of_stock: true,
+    min_stock_amount: product?.min_stock_amount ?? 0,
+    cumulate_min_stock_amount_of_sub_products: product?.cumulate_min_stock_amount_of_sub_products ?? false,
+    treat_opened_as_out_of_stock: product?.treat_opened_as_out_of_stock ?? true,
     // Due dates
-    due_type: 1,
-    default_due_days: 0,
-    default_due_days_after_open: 0,
-    default_due_days_after_freezing: 0,
-    default_due_days_after_thawing: 0,
-    should_not_be_frozen: false,
+    due_type: product?.due_type ?? 1,
+    default_due_days: product?.default_due_days ?? 0,
+    default_due_days_after_open: product?.default_due_days_after_open ?? 0,
+    default_due_days_after_freezing: product?.default_due_days_after_freezing ?? 0,
+    default_due_days_after_thawing: product?.default_due_days_after_thawing ?? 0,
+    should_not_be_frozen: product?.should_not_be_frozen ?? false,
     // Units
-    qu_id_stock: "",
-    qu_id_purchase: "",
-    enable_tare_weight_handling: false,
-    tare_weight: 0,
+    qu_id_stock: product?.qu_id_stock ?? "",
+    qu_id_purchase: product?.qu_id_purchase ?? "",
+    enable_tare_weight_handling: product?.enable_tare_weight_handling ?? false,
+    tare_weight: product?.tare_weight ?? 0,
     // Misc
-    calories: "",
-    quick_consume_amount: 1,
-    quick_open_amount: 1,
-    default_stock_label_type: 0,
-    auto_reprint_stock_label: false,
-    not_check_stock_fulfillment_for_recipes: false,
-    hide_on_stock_overview: false,
-    no_own_stock: false,
-  });
-
-  // Load existing product data
-  useEffect(() => {
-    if (product && mode === "edit") {
-      setFormData({
-        name: product.name,
-        description: product.description ?? "",
-        active: product.active,
-        picture_file_name: product.picture_file_name,
-        product_group_id: product.product_group_id ?? "",
-        parent_product_id: product.parent_product_id ?? "",
-        location_id: product.location_id ?? "",
-        default_consume_location_id: product.default_consume_location_id ?? "",
-        shopping_location_id: product.shopping_location_id ?? "",
-        move_on_open: product.move_on_open,
-        min_stock_amount: product.min_stock_amount,
-        cumulate_min_stock_amount_of_sub_products: product.cumulate_min_stock_amount_of_sub_products,
-        treat_opened_as_out_of_stock: product.treat_opened_as_out_of_stock,
-        due_type: product.due_type,
-        default_due_days: product.default_due_days,
-        default_due_days_after_open: product.default_due_days_after_open,
-        default_due_days_after_freezing: product.default_due_days_after_freezing,
-        default_due_days_after_thawing: product.default_due_days_after_thawing,
-        should_not_be_frozen: product.should_not_be_frozen,
-        qu_id_stock: product.qu_id_stock ?? "",
-        qu_id_purchase: product.qu_id_purchase ?? "",
-        enable_tare_weight_handling: product.enable_tare_weight_handling,
-        tare_weight: product.tare_weight,
-        calories: product.calories?.toString() ?? "",
-        quick_consume_amount: product.quick_consume_amount,
-        quick_open_amount: product.quick_open_amount,
-        default_stock_label_type: product.default_stock_label_type,
-        auto_reprint_stock_label: product.auto_reprint_stock_label,
-        not_check_stock_fulfillment_for_recipes: product.not_check_stock_fulfillment_for_recipes,
-        hide_on_stock_overview: product.hide_on_stock_overview,
-        no_own_stock: product.no_own_stock,
-      });
-
-      // Load image preview
-      if (product.picture_file_name) {
-        getProductPictureSignedUrl(product.picture_file_name).then(setImagePreviewUrl);
-      }
-    }
-  }, [product, mode]);
+    calories: product?.calories?.toString() ?? "",
+    quick_consume_amount: product?.quick_consume_amount ?? 1,
+    quick_open_amount: product?.quick_open_amount ?? 1,
+    default_stock_label_type: product?.default_stock_label_type ?? 0,
+    auto_reprint_stock_label: product?.auto_reprint_stock_label ?? false,
+    not_check_stock_fulfillment_for_recipes: product?.not_check_stock_fulfillment_for_recipes ?? false,
+    hide_on_stock_overview: product?.hide_on_stock_overview ?? false,
+    no_own_stock: product?.no_own_stock ?? false,
+  }));
 
   const updateField = (field: string, value: unknown) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -252,6 +208,8 @@ export function ProductForm({
     setLoading(true);
     setError(null);
 
+    let productId = product?.id;
+
     try {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
@@ -267,40 +225,19 @@ export function ProductForm({
         // Use guest household ID
         householdId = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
       } else {
-        // Regular user - get from profile or create household
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("household_id")
-          .eq("id", user.id)
+        // Regular user - get household by owner_id
+        const { data: household, error: householdError } = await supabase
+          .from("households")
+          .select("id")
+          .eq("owner_id", user.id)
           .single();
 
-        if (profile?.household_id) {
-          householdId = profile.household_id;
-        } else {
-          // Create a new household for this user
-          const { data: newHousehold, error: householdError } = await supabase
-            .from("households")
-            .insert({ name: "My Household" })
-            .select()
-            .single();
-
-          if (householdError) {
-            console.error("Household creation error:", householdError);
-            throw new Error("Failed to create household");
-          }
-
-          // Update profile with new household
-          const { error: profileError } = await supabase
-            .from("profiles")
-            .update({ household_id: newHousehold.id })
-            .eq("id", user.id);
-
-          if (profileError) {
-            console.error("Profile update error:", profileError);
-          }
-
-          householdId = newHousehold.id;
+        if (householdError || !household) {
+          console.error("Household lookup error:", householdError);
+          throw new Error("No household found. Please sign out and sign in again.");
         }
+
+        householdId = household.id;
       }
 
       // Handle image upload
@@ -357,10 +294,15 @@ export function ProductForm({
           .eq("id", product.id);
         saveError = error;
       } else {
-        const { error } = await supabase
+        const { data: newProduct, error } = await supabase
           .from("products")
-          .insert(productData);
+          .insert(productData)
+          .select("id")
+          .single();
         saveError = error;
+        if (newProduct) {
+          productId = newProduct.id;
+        }
       }
 
       if (saveError) {
@@ -368,50 +310,12 @@ export function ProductForm({
         throw new Error(saveError.message || "Failed to save product");
       }
 
-      if (returnToList) {
-        router.push("/master-data/products");
-      } else if (mode === "create") {
-        // Reset form for another entry
-        setFormData({
-          name: "",
-          description: "",
-          active: true,
-          picture_file_name: null,
-          product_group_id: "",
-          parent_product_id: "",
-          location_id: "",
-          default_consume_location_id: "",
-          shopping_location_id: "",
-          move_on_open: false,
-          min_stock_amount: 0,
-          cumulate_min_stock_amount_of_sub_products: false,
-          treat_opened_as_out_of_stock: true,
-          due_type: 1,
-          default_due_days: 0,
-          default_due_days_after_open: 0,
-          default_due_days_after_freezing: 0,
-          default_due_days_after_thawing: 0,
-          should_not_be_frozen: false,
-          qu_id_stock: "",
-          qu_id_purchase: "",
-          enable_tare_weight_handling: false,
-          tare_weight: 0,
-          calories: "",
-          quick_consume_amount: 1,
-          quick_open_amount: 1,
-          default_stock_label_type: 0,
-          auto_reprint_stock_label: false,
-          not_check_stock_fulfillment_for_recipes: false,
-          hide_on_stock_overview: false,
-          no_own_stock: false,
-        });
-        setImageFile(null);
-        setImagePreviewUrl(null);
-        setRemoveImage(false);
-        router.refresh();
-      } else {
-        router.refresh();
-      }
+     if (returnToList) {
+      router.push("/master-data/products");
+    } else {
+      // Save & continue → go to conversions page
+      router.push(`/products/${productId}/conversions`);
+    }
     } catch (err) {
       console.error("Save error:", err);
       setError(err instanceof Error ? err.message : "Failed to save product");

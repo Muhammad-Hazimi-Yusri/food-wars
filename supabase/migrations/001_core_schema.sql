@@ -197,7 +197,7 @@ CREATE TABLE products (
   -- Quantity units
   qu_id_stock UUID REFERENCES quantity_units(id) ON DELETE SET NULL,
   qu_id_purchase UUID REFERENCES quantity_units(id) ON DELETE SET NULL,
-  qu_factor_purchase_to_stock DECIMAL NOT NULL DEFAULT 1.0,
+  -- qu_factor_purchase_to_stock DECIMAL NOT NULL DEFAULT 1.0, -- Deprecated, see migration 007_drop_qu_factor.sql
   
   -- Stock management
   min_stock_amount DECIMAL NOT NULL DEFAULT 0,

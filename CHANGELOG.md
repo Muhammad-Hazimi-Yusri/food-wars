@@ -61,6 +61,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Edit/Delete/Toggle active actions
   - Mobile-responsive with card layout and inline table options panel
   - Preferences saved to localStorage
+- `EditStockEntryModal`: Added store field, date warning for past dates
+- `ProductDetailModal`: Now displays store name for each stock entry
 
 ### Changed
 - `WelcomeModal` — uses `signInAnonymously()` for guest mode

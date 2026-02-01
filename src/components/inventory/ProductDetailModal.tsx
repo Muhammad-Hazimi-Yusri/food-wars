@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ImageIcon, Pencil, Trash2 } from "lucide-react";
-import { StockEntryWithProduct, Location } from "@/types/database";
+import { StockEntryWithProduct, Location, ShoppingLocation } from "@/types/database";
 import { getExpiryStatus, getExpiryLabel } from "@/lib/inventory-utils";
 import { getProductPictureSignedUrl } from "@/lib/supabase/storage";
 import { createClient } from "@/lib/supabase/client";
@@ -33,6 +33,7 @@ export function ProductDetailModal({
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [locations, setLocations] = useState<Location[]>([]);
+  const [shoppingLocations, setShoppingLocations] = useState<ShoppingLocation[]>([]);
   const [editingEntry, setEditingEntry] = useState<StockEntryWithProduct | null>(null);
 
   const product = entries[0]?.product;
@@ -46,10 +47,12 @@ export function ProductDetailModal({
     }
   }, [product?.picture_file_name]);
 
-  // Load locations for edit modal
+  // Load locations and stores for edit modal
   useEffect(() => {
     if (open) {
       const supabase = createClient();
+      
+      // Fetch locations
       supabase
         .from("locations")
         .select("*")
@@ -57,6 +60,16 @@ export function ProductDetailModal({
         .order("name")
         .then(({ data }) => {
           if (data) setLocations(data);
+        });
+
+      // Fetch shopping locations (stores)
+      supabase
+        .from("shopping_locations")
+        .select("*")
+        .eq("active", true)
+        .order("name")
+        .then(({ data }) => {
+          if (data) setShoppingLocations(data);
         });
     }
   }, [open]);
@@ -92,20 +105,13 @@ export function ProductDetailModal({
   const openedAmount = entries.filter((e) => e.open).reduce((sum, e) => sum + e.amount, 0);
   const totalValue = entries.reduce((sum, e) => sum + (e.price ?? 0) * e.amount, 0);
   const unitName = product.qu_stock?.name ?? "unit";
-  const unitNamePlural = product.qu_stock?.name_plural ?? "units";
-  const productLocations = [...new Set(entries.map((e) => e.location?.name).filter(Boolean))];
-  const lastPurchased = entries
-    .map((e) => e.purchased_date)
-    .filter(Boolean)
-    .sort()
-    .reverse()[0];
+  const unitNamePlural = product.qu_stock?.name_plural ?? unitName + "s";
 
   const statusColors: Record<string, string> = {
+    fresh: "bg-green-100 text-green-700",
+    expiring_soon: "bg-amber-100 text-amber-700",
     expired: "bg-red-100 text-red-700",
     overdue: "bg-gray-200 text-gray-700",
-    due_soon: "bg-amber-100 text-amber-700",
-    fresh: "bg-green-100 text-green-700",
-    none: "bg-gray-100 text-gray-600",
   };
 
   return (
@@ -113,65 +119,59 @@ export function ProductDetailModal({
       <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-xl">{product.name}</DialogTitle>
+            <DialogTitle>{product.name}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* Image */}
-            <div className="flex justify-center">
-              {imageUrl ? (
-                <Image
-                  src={imageUrl}
-                  alt={product.name}
-                  width={200}
-                  height={200}
-                  className="rounded-lg object-cover max-h-48"
-                />
-              ) : (
-                <div className="h-32 w-32 flex items-center justify-center rounded-lg bg-gray-100">
-                  <ImageIcon className="h-12 w-12 text-gray-300" />
-                </div>
-              )}
-            </div>
-
-            {/* Stats */}
-            <div className="text-center space-y-1 text-sm">
-              <p>
-                <span className="text-gray-500">Stock amount:</span>{" "}
-                <span className="font-medium">
-                  {totalAmount} {totalAmount === 1 ? unitName : unitNamePlural}
-                </span>
-                {openedAmount > 0 && (
-                  <span className="text-blue-600 ml-1">({openedAmount} opened)</span>
+            {/* Product Image & Summary */}
+            <div className="flex gap-4">
+              {/* Image */}
+              <div className="w-24 h-24 flex-shrink-0 bg-gray-100 rounded-lg overflow-hidden">
+                {imageUrl ? (
+                  <Image
+                    src={imageUrl}
+                    alt={product.name}
+                    width={96}
+                    height={96}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-400">
+                    <ImageIcon className="h-8 w-8" />
+                  </div>
                 )}
-              </p>
-              {totalValue > 0 && (
-                <p>
-                  <span className="text-gray-500">Stock value:</span>{" "}
-                  <span className="font-medium">£{totalValue.toFixed(2)}</span>
-                </p>
-              )}
-              {productLocations.length > 0 && (
-                <p>
-                  <span className="text-gray-500">Location:</span>{" "}
-                  <span className="font-medium">{productLocations.join(", ")}</span>
-                </p>
-              )}
-              {lastPurchased && (
-                <p>
-                  <span className="text-gray-500">Last purchased:</span>{" "}
-                  <span className="font-medium">{lastPurchased}</span>
-                </p>
-              )}
-            </div>
+              </div>
 
-            <hr />
+              {/* Summary Stats */}
+              <div className="flex-1 space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Total stock:</span>
+                  <span className="font-medium">
+                    {totalAmount} {totalAmount === 1 ? unitName : unitNamePlural}
+                  </span>
+                </div>
+                {openedAmount > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Opened:</span>
+                    <span>{openedAmount}</span>
+                  </div>
+                )}
+                {totalValue > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Total value:</span>
+                    <span>£{totalValue.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Batches:</span>
+                  <span>{entries.length}</span>
+                </div>
+              </div>
+            </div>
 
             {/* Stock Entries */}
             <div>
-              <h3 className="font-medium text-gray-700 mb-2">
-                Stock Entries ({entries.length})
-              </h3>
+              <h4 className="font-medium mb-2">Stock entries</h4>
               <div className="space-y-2">
                 {entries.map((entry) => {
                   const status = getExpiryStatus(
@@ -182,6 +182,11 @@ export function ProductDetailModal({
                     entry.best_before_date,
                     entry.product?.due_type ?? 1
                   );
+
+                  // Get store name
+                  const storeName = shoppingLocations.find(
+                    (s) => s.id === entry.shopping_location_id
+                  )?.name;
 
                   return (
                     <div
@@ -205,6 +210,7 @@ export function ProductDetailModal({
                         </div>
                         <div className="text-xs text-gray-500 space-x-2">
                           {entry.location && <span>📍 {entry.location.name}</span>}
+                          {storeName && <span>🏪 {storeName}</span>}
                           {entry.price && <span>£{entry.price.toFixed(2)}</span>}
                           {entry.note && <span>📝 {entry.note}</span>}
                         </div>
@@ -242,6 +248,7 @@ export function ProductDetailModal({
       <EditStockEntryModal
         entry={editingEntry}
         locations={locations}
+        shoppingLocations={shoppingLocations}
         open={!!editingEntry}
         onClose={() => setEditingEntry(null)}
         onSaved={() => {

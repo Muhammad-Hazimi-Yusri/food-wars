@@ -7,7 +7,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,12 +18,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { StockEntryWithProduct, Location } from "@/types/database";
+import { AlertTriangle } from "lucide-react";
+import { StockEntryWithProduct, Location, ShoppingLocation } from "@/types/database";
 import { createClient } from "@/lib/supabase/client";
 
 type EditStockEntryModalProps = {
   entry: StockEntryWithProduct | null;
   locations: Location[];
+  shoppingLocations: ShoppingLocation[];
   open: boolean;
   onClose: () => void;
   onSaved: () => void;
@@ -33,6 +34,7 @@ type EditStockEntryModalProps = {
 export function EditStockEntryModal({
   entry,
   locations,
+  shoppingLocations,
   open,
   onClose,
   onSaved,
@@ -42,11 +44,15 @@ export function EditStockEntryModal({
   const [formData, setFormData] = useState({
     amount: 1,
     location_id: "",
+    shopping_location_id: "",
     best_before_date: "",
     price: "",
     note: "",
     open: false,
   });
+
+  // Check if date is in the past
+  const isDatePast = formData.best_before_date && new Date(formData.best_before_date) < new Date();
 
   // Reset form when entry changes
   useEffect(() => {
@@ -54,6 +60,7 @@ export function EditStockEntryModal({
       setFormData({
         amount: entry.amount,
         location_id: entry.location_id ?? "",
+        shopping_location_id: entry.shopping_location_id ?? "",
         best_before_date: entry.best_before_date ?? "",
         price: entry.price?.toString() ?? "",
         note: entry.note ?? "",
@@ -74,6 +81,9 @@ export function EditStockEntryModal({
         .update({
           amount: formData.amount,
           location_id: formData.location_id || null,
+          shopping_location_id: formData.shopping_location_id && formData.shopping_location_id !== "none" 
+            ? formData.shopping_location_id 
+            : null,
           best_before_date: formData.best_before_date || null,
           price: formData.price ? parseFloat(formData.price) : null,
           note: formData.note || null,
@@ -132,6 +142,70 @@ export function EditStockEntryModal({
             />
           </div>
 
+          {/* Best before date */}
+          <div>
+            <Label htmlFor="best_before_date">Due Date</Label>
+            <Input
+              id="best_before_date"
+              type="date"
+              value={formData.best_before_date}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  best_before_date: e.target.value,
+                }))
+              }
+            />
+            {isDatePast && (
+              <p className="text-sm text-amber-600 mt-1 flex items-center gap-1">
+                <AlertTriangle className="h-4 w-4" />
+                The given date is earlier than today
+              </p>
+            )}
+          </div>
+
+          {/* Price */}
+          <div>
+            <Label htmlFor="price">Price (£ per {unitName})</Label>
+            <Input
+              id="price"
+              type="number"
+              min="0"
+              step="0.01"
+              value={formData.price}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  price: e.target.value,
+                }))
+              }
+              placeholder="0.00"
+            />
+          </div>
+
+          {/* Store */}
+          <div>
+            <Label htmlFor="store">Store</Label>
+            <Select
+              value={formData.shopping_location_id}
+              onValueChange={(v) =>
+                setFormData((prev) => ({ ...prev, shopping_location_id: v }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select store" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">—</SelectItem>
+                {shoppingLocations.map((store) => (
+                  <SelectItem key={store.id} value={store.id}>
+                    {store.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Location */}
           <div>
             <Label htmlFor="location">Location</Label>
@@ -154,53 +228,20 @@ export function EditStockEntryModal({
             </Select>
           </div>
 
-          {/* Best before date */}
-          <div>
-            <Label htmlFor="best_before_date">Best Before Date</Label>
-            <Input
-              id="best_before_date"
-              type="date"
-              value={formData.best_before_date}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  best_before_date: e.target.value,
-                }))
-              }
-            />
-          </div>
-
-          {/* Price */}
-          <div>
-            <Label htmlFor="price">Price (£)</Label>
-            <Input
-              id="price"
-              type="number"
-              min="0"
-              step="0.01"
-              value={formData.price}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, price: e.target.value }))
-              }
-              placeholder="0.00"
-            />
-          </div>
-
           {/* Note */}
           <div>
             <Label htmlFor="note">Note</Label>
             <Input
               id="note"
-              type="text"
               value={formData.note}
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, note: e.target.value }))
               }
-              placeholder="Optional note"
+              placeholder="e.g., Buy 1 get 1 free"
             />
           </div>
 
-          {/* Opened checkbox */}
+          {/* Opened toggle */}
           <div className="flex items-center gap-2">
             <input
               id="open"
@@ -216,14 +257,19 @@ export function EditStockEntryModal({
             </Label>
           </div>
 
-          <DialogFooter>
+          {/* Actions */}
+          <div className="flex gap-2 pt-2">
+            <Button
+              type="submit"
+              disabled={saving}
+              className="flex-1 bg-soma hover:bg-soma/90"
+            >
+              {saving ? "Saving..." : "Save Changes"}
+            </Button>
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving..." : "Save Changes"}
-            </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

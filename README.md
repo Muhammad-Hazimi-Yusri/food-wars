@@ -227,14 +227,15 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Sortable columns (click header to sort asc/desc)
 - [x] Edit/Delete/Toggle active actions
 - [x] Mobile-responsive card layout
-- [ ] Add product page (full Grocy fields):
-  - Basic: name, description, active, picture, parent product
-  - Locations: default location, default consume location, move on open, default store
-  - Stock: min stock amount, accumulate sub products, treat opened as out of stock
-  - Due dates: due type (best before/expiration), default due days, after opened, after freezing, after thawing, should not be frozen
-  - Units: QU stock, QU purchase, QU consume, QU for prices, tare weight handling
-  - Misc: energy (kcal), quick consume/open amounts, stock entry label, auto reprint label, default purchase price type, can't be opened, never show on stock overview, disable own stock
-- [ ] Edit product page
+- [x] Add product page (full Grocy fields):
+  - [x] Basic: name, description, active, picture, parent product
+  - [x] Locations: default location, default consume location, move on open, default store
+  - [x] Stock: min stock amount, accumulate sub products, treat opened as out of stock
+  - [x] Due dates: due type (best before/expiration), default due days, after opened, after freezing, after thawing, should not be frozen
+  - [x] Units: QU stock, QU purchase, tare weight handling
+  - [x] Misc: energy (kcal), quick consume/open amounts, stock entry label, auto reprint label
+- [x] Edit product page
+- [x] Product-specific quantity unit conversions page
 
 **Testing:**
 - [ ] Unit tests for `inventory-utils.ts`

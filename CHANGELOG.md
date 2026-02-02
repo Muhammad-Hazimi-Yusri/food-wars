@@ -118,6 +118,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Previously only products with existing stock entries were evaluated
   - Now fetches all products with `min_stock_amount > 0` and compares against stock totals
   - Zero-stock products display in table when filtering by "below min. stock"
+- Product pictures now display when editing existing products
+- Product pictures are deleted from storage when deleting products
 
 ## [0.4.X] - 2025-01-26
 

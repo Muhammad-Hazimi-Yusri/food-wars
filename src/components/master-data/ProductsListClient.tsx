@@ -33,7 +33,7 @@ import {
   Settings2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { getProductPictureSignedUrl } from "@/lib/supabase/storage";
+import { getProductPictureSignedUrl, deleteProductPicture } from "@/lib/supabase/storage";
 import { cn } from "@/lib/utils";
 import { ProductGroup } from "@/types/database";
 
@@ -399,6 +399,11 @@ export function ProductsListClient({
 
     setDeleting(product.id);
     try {
+      // Delete picture from storage first (fail silently)
+      if (product.picture_file_name) {
+        await deleteProductPicture(product.picture_file_name);
+      }
+
       const supabase = createClient();
       const { error } = await supabase.from("products").delete().eq("id", product.id);
       if (error) throw error;

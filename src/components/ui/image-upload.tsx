@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Camera, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
@@ -21,6 +21,12 @@ export function ImageUpload({
   disabled = false,
 }: ImageUploadProps) {
   const [preview, setPreview] = useState<string | null>(previewUrl);
+
+  // Sync with previewUrl prop when it changes (e.g., async load)
+  useEffect(() => {
+    setPreview(previewUrl);
+  }, [previewUrl]);
+
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 

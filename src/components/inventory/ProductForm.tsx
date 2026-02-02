@@ -150,6 +150,13 @@ export function ProductForm({
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [removeImage, setRemoveImage] = useState(false);
 
+  // Load existing product picture on mount (edit mode)
+  useEffect(() => {
+    if (product?.picture_file_name && !imageFile) {
+      getProductPictureSignedUrl(product.picture_file_name).then(setImagePreviewUrl);
+    }
+  }, [product?.picture_file_name, imageFile]);
+
   // Form state
   const [formData, setFormData] = useState(() => ({
     // Basic

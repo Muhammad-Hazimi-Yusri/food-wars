@@ -205,5 +205,48 @@ describe("inventory-utils", () => {
       const stats = getInventoryStats(entries as never[]);
       expect(stats.belowMinStock).toBe(1);
     });
+
+    it("handles entries with missing location (uses 'Unknown')", () => {
+      const entries = [
+        {
+          ...mockEntry({ id: "1" }),
+          location: null,
+        },
+      ];
+      const stats = getInventoryStats(entries as never[]);
+      expect(stats.byLocation["Unknown"]).toBe(1);
+    });
+
+    it("handles entries with missing product group (uses 'Uncategorized')", () => {
+      const entries = [
+        {
+          ...mockEntry({ id: "1" }),
+          product: {
+            due_type: 1,
+            min_stock_amount: 0,
+            product_group: null,
+          },
+        },
+      ];
+      const stats = getInventoryStats(entries as never[]);
+      expect(stats.byProductGroup["Uncategorized"]).toBe(1);
+    });
+
+    it("handles entries with missing product (defaults due_type to 1)", () => {
+      const entries = [
+        {
+          id: "1",
+          product_id: "prod-1",
+          amount: 1,
+          price: null,
+          best_before_date: "2025-01-20", // past date
+          location: { name: "Fridge" },
+          product: null,
+        },
+      ];
+      const stats = getInventoryStats(entries as never[]);
+      // With due_type defaulting to 1, past date should be "overdue"
+      expect(stats.overdue).toBe(1);
+    });
   });
 });

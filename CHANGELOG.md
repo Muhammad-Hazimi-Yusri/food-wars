@@ -67,11 +67,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Uses @dnd-kit/core + @dnd-kit/sortable
   - Touch support with 250ms hold delay for mobile
   - Saves sort_order to database on drop
-- Unit tests for `inventory-utils.ts` (28 test cases)
+- Unit tests for `inventory-utils.ts` (32 test cases, 100% coverage)
   - `getExpiryStatus` — expiry status logic with date mocking
   - `getExpiryLabel` — human-readable label formatting
   - `getExpiryDaysLabel` — relative day calculations
   - `getInventoryStats` — aggregation, value calc, min stock detection
+  - Edge cases: missing location, product group, product
+- Unit tests for `storage.ts` (4 test cases)
+  - Invalid JSON handling
 - E2E tests for guest mode flow (Playwright)
   - WelcomeModal visibility on first visit
   - Guest sign-in flow and GuestBanner display

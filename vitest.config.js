@@ -9,6 +9,12 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
     exclude: ["node_modules", "e2e"],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "html"],
+      include: ["src/lib/**/*.ts"],
+      exclude: ["src/lib/supabase/**", "**/*.test.ts", "**/*.d.ts"],
+    },
   },
   resolve: {
     alias: {

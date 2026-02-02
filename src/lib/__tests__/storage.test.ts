@@ -41,4 +41,11 @@ describe("storage", () => {
     const data = getGuestData();
     expect(data.inventory).toEqual([]);
   });
+
+  it("returns default data when stored data is invalid JSON", () => {
+    localStorage.setItem("food-wars-guest", "not-valid-json{{{");
+    const data = getGuestData();
+    expect(data.inventory).toEqual([]);
+    expect(data.shoppingList).toEqual([]);
+  });
 });

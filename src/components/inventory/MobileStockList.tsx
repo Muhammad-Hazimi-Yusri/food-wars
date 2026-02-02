@@ -9,12 +9,10 @@ import { getProductPictureSignedUrl } from "@/lib/supabase/storage";
 import { cn } from "@/lib/utils";
 import { ProductDetailModal } from "./ProductDetailModal";
 import { MoreVertical, Utensils, PackageOpen } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";

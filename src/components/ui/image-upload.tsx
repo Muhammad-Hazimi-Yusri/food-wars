@@ -14,7 +14,7 @@ type ImageUploadProps = {
 };
 
 export function ImageUpload({
-  value,
+  value: _value,
   onChange,
   onRemove,
   previewUrl,

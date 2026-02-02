@@ -42,18 +42,6 @@ export async function deleteProductPicture(
   return true;
 }
 
-export function getProductPictureUrl(fileName: string | null): string | null {
-  if (!fileName) return null;
-
-  const supabase = createClient();
-
-  const { data } = supabase.storage
-    .from("product-pictures")
-    .getPublicUrl(fileName);
-
-  return data?.publicUrl || null;
-}
-
 export async function getProductPictureSignedUrl(
   fileName: string | null
 ): Promise<string | null> {

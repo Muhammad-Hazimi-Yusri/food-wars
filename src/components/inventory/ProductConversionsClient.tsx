@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,7 +49,6 @@ export function ProductConversionsClient({
   conversions: initialConversions,
   quantityUnits,
 }: Props) {
-  const router = useRouter();
   const [conversions, setConversions] = useState(initialConversions);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);

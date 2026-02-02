@@ -647,7 +647,8 @@ food-wars/
 ├── .husky/
 │   └── pre-commit                 # Pre-commit hooks (lint, version check)
 ├── e2e/
-│   └── home.spec.ts               # Playwright E2E tests
+│   ├── home.spec.ts               # Home page E2E test
+│   └── guest-mode.spec.ts         # Guest mode flow E2E tests
 ├── public/                        # Static assets
 ├── scripts/
 │   └── bump-version.mjs           # Interactive version updater
@@ -725,7 +726,8 @@ food-wars/
 │   │   │   ├── server.ts          # Server-side Supabase client
 │   │   │   └── storage.ts         # File upload utilities
 │   │   ├── __tests__/
-│   │   │   └── storage.test.ts    # Unit tests
+│   │   │   ├── storage.test.ts        # Guest storage unit tests
+│   │   │   └── inventory-utils.test.ts # Inventory utils unit tests
 │   │   ├── constants.ts           # Shared constants (GUEST_HOUSEHOLD_ID)
 │   │   ├── inventory-utils.ts     # Stock aggregation & expiry helpers
 │   │   ├── storage.ts             # Guest mode localStorage (legacy)

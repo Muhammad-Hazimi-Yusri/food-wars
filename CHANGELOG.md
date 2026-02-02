@@ -72,6 +72,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `getExpiryLabel` — human-readable label formatting
   - `getExpiryDaysLabel` — relative day calculations
   - `getInventoryStats` — aggregation, value calc, min stock detection
+- E2E tests for guest mode flow (Playwright)
+  - WelcomeModal visibility on first visit
+  - Guest sign-in flow and GuestBanner display
+  - Stock overview loads after guest auth
 
 ### Changed
 - `WelcomeModal` — uses `signInAnonymously()` for guest mode

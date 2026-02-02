@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { ArrowLeft, Plus, Pencil, Trash2, Barcode } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { GUEST_HOUSEHOLD_ID } from "@/lib/constants";
 
 type QuantityUnit = {
   id: string;
@@ -89,7 +90,7 @@ export function ProductConversionsClient({
 
       let householdId: string;
       if (isGuest) {
-        householdId = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
+        householdId = GUEST_HOUSEHOLD_ID;
       } else {
         const { data: household } = await supabase
           .from("households")

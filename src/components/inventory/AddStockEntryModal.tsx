@@ -22,6 +22,7 @@ import {
 import { Plus, ChevronUp, ChevronDown, AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Product, Location, QuantityUnit, ShoppingLocation } from "@/types/database";
+import { GUEST_HOUSEHOLD_ID } from "@/lib/constants";
 
 type ProductWithUnits = Product & {
   qu_stock?: QuantityUnit | null;
@@ -224,7 +225,7 @@ export function AddStockEntryModal({
       let householdId: string;
 
       if (isGuest) {
-        householdId = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
+        householdId = GUEST_HOUSEHOLD_ID;
       } else {
         const { data: household } = await supabase
           .from("households")

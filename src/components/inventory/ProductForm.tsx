@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { GUEST_HOUSEHOLD_ID } from "@/lib/constants";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -223,7 +224,7 @@ export function ProductForm({
       
       if (isAnonymous) {
         // Use guest household ID
-        householdId = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
+        householdId = GUEST_HOUSEHOLD_ID;
       } else {
         // Regular user - get household by owner_id
         const { data: household, error: householdError } = await supabase

@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.5.16-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.5.17-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.5.16
+Current version is v0.5.17
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -242,6 +242,13 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Unit tests for stock aggregation logic
 - [x] Unit tests for expiry status calculations
 - [x] E2E tests for guest mode flow
+
+**Code quality:**
+- [x] Code coverage reporting (vitest --coverage)
+- [x] Unused code detection (knip)
+- [x] Dependency graph visualization (madge)
+- [x] Consolidated constants (GUEST_HOUSEHOLD_ID)
+- [ ] Delete product pictures when deleting products
 
 ### Planned
 
@@ -726,11 +733,9 @@ food-wars/
 │   │   │   ├── server.ts          # Server-side Supabase client
 │   │   │   └── storage.ts         # File upload utilities
 │   │   ├── __tests__/
-│   │   │   ├── storage.test.ts        # Guest storage unit tests
 │   │   │   └── inventory-utils.test.ts # Inventory utils unit tests
 │   │   ├── constants.ts           # Shared constants (GUEST_HOUSEHOLD_ID)
 │   │   ├── inventory-utils.ts     # Stock aggregation & expiry helpers
-│   │   ├── storage.ts             # Guest mode localStorage (legacy)
 │   │   └── utils.ts               # cn() and general utilities
 │   └── types/
 │       └── database.ts            # Supabase generated types
@@ -905,7 +910,13 @@ Get these from [Supabase Dashboard](https://supabase.com) → Project Settings �
 | `pnpm build` | Build for production |
 | `pnpm start` | Run production build |
 | `pnpm lint` | Run ESLint |
+| `pnpm test` | Run unit tests (watch mode) |
+| `pnpm test:run` | Run unit tests once |
+| `pnpm test:run --coverage` | Run tests with coverage report |
+| `pnpm test:e2e` | Run Playwright E2E tests |
 | `pnpm version:bump` | Interactive version updater |
+| `npx knip` | Find unused files, exports, dependencies |
+| `npx madge --image graph.png --extensions ts,tsx --ts-config tsconfig.json src/` | Generate dependency graph |
 
 ---
 

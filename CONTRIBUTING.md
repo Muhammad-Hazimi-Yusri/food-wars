@@ -95,6 +95,10 @@ When deploying, update these in Supabase Dashboard (Authentication → URL Confi
 
 Want to run your own instance? See the "Self-Hosting Option" section in README.md.
 
+## Code Analysis
+
+See the [Scripts section in README.md](README.md#scripts) for testing and code analysis commands.
+
 ## Questions?
 
 Open an issue or start a discussion. We're happy to help!

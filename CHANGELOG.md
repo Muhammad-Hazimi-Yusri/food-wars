@@ -63,6 +63,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Preferences saved to localStorage
 - `EditStockEntryModal`: Added store field, date warning for past dates
 - `ProductDetailModal`: Now displays store name for each stock entry
+- Drag-and-drop reordering for master data tables (locations, product groups, quantity units, stores)
+  - Uses @dnd-kit/core + @dnd-kit/sortable
+  - Touch support with 250ms hold delay for mobile
+  - Saves sort_order to database on drop
 
 ### Changed
 - `WelcomeModal` — uses `signInAnonymously()` for guest mode

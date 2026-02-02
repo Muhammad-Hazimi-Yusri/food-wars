@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.5.12-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.5.13-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.5.12
+Current version is v0.5.13
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -218,7 +218,7 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Product groups page — CRUD (name, description, sort_order)
 - [x] Shopping locations page — CRUD (name, description, sort_order)
 - [x] Soft delete support (`active` flag toggle)
-- [ ] Drag-and-drop reordering (sort_order)
+- [x] Drag-and-drop reordering (sort_order)
 
 **Products page:** (`/master-data/products`)
 - [x] Products list with filters (search, product group, status)

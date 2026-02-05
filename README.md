@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.5.20-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.6.0-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.5.20
+Current version is v0.6.0
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -174,11 +174,8 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - Guest mode temporarily disabled
 </details>
 
----
-
-### In Progress
-
-#### v0.5 - Guest Mode & Filtering
+<details>
+<summary><strong>v0.5 - Guest Mode & Filtering ✓</strong></summary>
 
 **Goal:** Demo-friendly guest mode + filtering UI + master data CRUD
 
@@ -248,9 +245,12 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Unused code detection (knip)
 - [x] Dependency graph visualization (madge)
 - [x] Consolidated constants (GUEST_HOUSEHOLD_ID)
-- [ ] Delete product pictures when deleting products
+- [x] Delete product pictures when deleting products
+</details>
+---
 
-### Planned
+### In Progress
+
 
 #### v0.6 - Stock Actions & Journal
 
@@ -291,6 +291,8 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [ ] Undo recent transactions (sets `undone = true`, `undone_timestamp`)
 - [ ] Journal summary view (aggregated by product/type)
 - [ ] Uses `correlation_id` to group related transactions
+
+### Planned
 
 #### v0.7 - Shopping Lists
 

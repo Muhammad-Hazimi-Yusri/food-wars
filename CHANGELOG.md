@@ -79,6 +79,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - WelcomeModal visibility on first visit
   - Guest sign-in flow and GuestBanner display
   - Stock overview loads after guest auth
+- E2E tests for product CRUD (create, edit, delete)
+- Local Supabase setup for isolated E2E testing
+  - Anonymous auth enabled in `supabase/config.toml`
+  - CI uses local Supabase instead of cloud
 
 ### Changed
 - `WelcomeModal` — uses `signInAnonymously()` for guest mode

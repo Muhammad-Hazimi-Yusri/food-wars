@@ -36,9 +36,6 @@ jobs:
       - run: pnpm test:run
 
   e2e:
-    env:
-      NEXT_PUBLIC_SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -49,6 +46,19 @@ jobs:
         with:
           node-version: 20
           cache: "pnpm"
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Start Supabase
+        run: supabase start
+      - name: Get Supabase anon key
+        id: supabase
+        run: |
+          echo "ANON_KEY=$(supabase status -o env | grep ANON_KEY | cut -d '=' -f2)" >> $GITHUB_OUTPUT
       - run: pnpm install
       - run: npx playwright install --with-deps chromium
-      - run: pnpm test:e2e
+      - name: Run E2E tests
+        run: pnpm test:e2e
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase.outputs.ANON_KEY }}

@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.5.19-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.5.20-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.5.19
+Current version is v0.5.20
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -919,6 +919,34 @@ Get these from [Supabase Dashboard](https://supabase.com) → Project Settings �
 | `npx madge --image graph.png --extensions ts,tsx --ts-config tsconfig.json src/` | Generate dependency graph |
 
 ---
+
+## Testing
+
+### Unit Tests
+```bash
+pnpm test:run              # Run once
+pnpm test                  # Watch mode
+pnpm test:run --coverage   # With coverage
+```
+
+### E2E Tests
+
+E2E tests require local Supabase:
+```bash
+# Start local Supabase (requires Docker)
+supabase start
+
+# Run E2E tests
+pnpm test:e2e
+
+# Run with UI
+pnpm test:e2e --ui
+```
+
+To stop Supabase when done:
+```bash
+supabase stop
+```
 
 ## Self-Hosting
 

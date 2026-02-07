@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect, useMemo, Fragment } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, ImageIcon } from "lucide-react";
+import { consumeStock } from "@/lib/stock-actions";
 import { StockEntryWithProduct, Product } from "@/types/database";
 import { getExpiryStatus, getExpiryLabel } from "@/lib/inventory-utils";
 import { getProductPictureSignedUrl } from "@/lib/supabase/storage";
@@ -130,10 +132,12 @@ function formatDueDate(date: string | null, days: number | null): string {
 }
 
 export function MobileStockList({ entries, zeroStockProducts = [] }: MobileStockListProps) {
+  const router = useRouter();
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
   const [modalOpen, setModalOpen] = useState(false);
   const [modalEntries, setModalEntries] = useState<StockEntryWithProduct[]>([]);
   const [actionsExpanded, setActionsExpanded] = useState(true);
+  const [consuming, setConsuming] = useState<string | null>(null);
 
   const aggregated = useMemo(() => aggregateByProduct(entries), [entries]);
   
@@ -158,7 +162,19 @@ export function MobileStockList({ entries, zeroStockProducts = [] }: MobileStock
     setModalOpen(false);
     setModalEntries([]);
   };
-  
+
+  const handleConsume = async (product: AggregatedProduct) => {
+    setConsuming(product.productId);
+    const amount = product.entries[0].product.quick_consume_amount;
+    const result = await consumeStock(product.productId, product.entries, amount);
+    setConsuming(null);
+    if (result.success) {
+      router.refresh();
+    } else {
+      alert(result.error ?? "Failed to consume");
+    }
+  };
+
   const statusColors = {
     expired: "border-l-kurokiba bg-red-50",
     overdue: "border-l-gray-500 bg-gray-50",
@@ -249,11 +265,17 @@ export function MobileStockList({ entries, zeroStockProducts = [] }: MobileStock
                     {actionsExpanded ? (
                       <div className="flex items-center gap-0.5">
                         <button
-                          disabled
-                          title="Consume 1"
-                          className="h-6 px-1.5 text-xs font-medium rounded bg-green-600 text-white opacity-50 cursor-not-allowed flex items-center gap-0.5"
+                          onClick={() => handleConsume(product)}
+                          disabled={consuming === product.productId}
+                          title={`Consume ${product.entries[0]?.product.quick_consume_amount ?? 1}`}
+                          className={cn(
+                            "h-6 px-1.5 text-xs font-medium rounded bg-green-600 text-white flex items-center gap-0.5",
+                            consuming === product.productId
+                              ? "opacity-50 cursor-wait"
+                              : "hover:bg-green-700 transition-colors"
+                          )}
                         >
-                          <Utensils className="h-3 w-3" />1
+                          <Utensils className="h-3 w-3" />{product.entries[0]?.product.quick_consume_amount ?? 1}
                         </button>
                         <button
                           disabled

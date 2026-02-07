@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.6.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.6.1-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.6.0
+Current version is v0.6.1
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -259,12 +259,12 @@ Food Wars targets a different audience: people who want Grocy-like features with
 > Schema ready: `stock_log` table with `stock_transaction_type` enum already in place
 
 **Consume action:**
-- [ ] Partial consume (reduce quantity)
+- [x] Partial consume (reduce quantity)
 - [ ] Mark as spoiled option (waste tracking)
-- [ ] Consume rule: opened first → due soonest → FIFO
+- [x] Consume rule: opened first → due soonest → FIFO
 - [ ] Consume from specific location
-- [ ] Quick consume button (uses `quick_consume_amount`)
-- [ ] Log to `stock_log` with `transaction_type = 'consume'`
+- [x] Quick consume button (uses `quick_consume_amount`)
+- [x] Log to `stock_log` with `transaction_type = 'consume'`
 
 **Open action:**
 - [ ] Mark stock entry as opened

@@ -1,4 +1,4 @@
-import { StockEntryWithProduct } from '@/types/database';
+import { StockEntry, StockEntryWithProduct } from '@/types/database';
 
 export type ExpiryStatus = 'expired' | 'overdue' | 'due_soon' | 'fresh' | 'none';
 
@@ -156,4 +156,87 @@ export function getInventoryStats(
   }
 
   return stats;
+}
+
+// ============================================
+// CONSUME LOGIC
+// ============================================
+
+export type ConsumeInput = Pick<StockEntry, 'id' | 'amount' | 'open' | 'best_before_date' | 'purchased_date'>;
+
+export type ConsumePlanItem = {
+  entryId: string;
+  amountToConsume: number;
+  deleteEntry: boolean;
+  newAmount: number;
+};
+
+export type ConsumePlan = {
+  items: ConsumePlanItem[];
+  totalConsumed: number;
+  shortfall: number;
+};
+
+/**
+ * Compute which stock entries to update/delete when consuming a given amount.
+ * Pure function — no DB calls.
+ *
+ * FIFO priority:
+ *  1. Opened entries first
+ *  2. Earliest best_before_date (nulls last)
+ *  3. Oldest purchased_date (nulls last)
+ */
+export function computeConsumePlan(
+  entries: ConsumeInput[],
+  amountToConsume: number
+): ConsumePlan {
+  if (amountToConsume <= 0 || entries.length === 0) {
+    return { items: [], totalConsumed: 0, shortfall: Math.max(0, amountToConsume) };
+  }
+
+  const sorted = [...entries].sort((a, b) => {
+    // 1. Opened first
+    if (a.open !== b.open) return a.open ? -1 : 1;
+
+    // 2. Earliest best_before_date (nulls last)
+    if (a.best_before_date !== b.best_before_date) {
+      if (!a.best_before_date) return 1;
+      if (!b.best_before_date) return -1;
+      return a.best_before_date.localeCompare(b.best_before_date);
+    }
+
+    // 3. Oldest purchased_date (nulls last)
+    if (a.purchased_date !== b.purchased_date) {
+      if (!a.purchased_date) return 1;
+      if (!b.purchased_date) return -1;
+      return a.purchased_date.localeCompare(b.purchased_date);
+    }
+
+    return 0;
+  });
+
+  let remaining = amountToConsume;
+  const items: ConsumePlanItem[] = [];
+
+  for (const entry of sorted) {
+    if (remaining <= 0) break;
+
+    const take = Math.min(remaining, entry.amount);
+    const newAmount = entry.amount - take;
+
+    items.push({
+      entryId: entry.id,
+      amountToConsume: take,
+      deleteEntry: newAmount === 0,
+      newAmount,
+    });
+
+    remaining -= take;
+  }
+
+  return {
+    items,
+    totalConsumed: amountToConsume - remaining,
+    shortfall: remaining,
+  };
 }

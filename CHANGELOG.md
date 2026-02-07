@@ -5,7 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.X] - In Progress
+## [0.6.X] - In Progress
+
+### Added
+- **Consume 1 quick action** (v0.6.1)
+  - Pure FIFO consume logic in `inventory-utils.ts` (`computeConsumePlan`)
+    - Priority: opened entries first → earliest due date → oldest purchase date
+    - Supports partial consume (reduce amount) and full consume (delete entry)
+  - Stock action handler (`src/lib/stock-actions.ts`) with `consumeStock()`
+    - Applies mutations to Supabase for both authenticated and guest mode
+    - Writes `stock_log` entries with `transaction_type = 'consume'`
+    - Groups related log rows with shared `correlation_id`
+  - Wired "Consume" button in `DesktopStockTable` and `MobileStockList`
+    - Uses product's `quick_consume_amount` for consume quantity
+    - Loading state while consuming, refreshes stock overview on success
+
+## [0.5.X] - 2026-02-05
 
 ### Added
 - Guest mode via Supabase anonymous auth
@@ -125,7 +140,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Product pictures now display when editing existing products
 - Product pictures are deleted from storage when deleting products
 
-## [0.4.X] - 2025-01-26
+## [0.4.X] - 2026-01-26
 
 ### Added
 - Complete Grocy-compatible database schema (`supabase/migrations/001_core_schema.sql`)
@@ -181,7 +196,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Database schema completely restructured
 - Guest mode temporarily non-functional
 
-## [0.3.X] - 2025-01-24
+## [0.3.X] - 2026-01-24
 
 ### Added
 - Database tables: households, inventory_items
@@ -213,7 +228,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - AuthStatus component (replaced by UserMenu)
 - GuestStorageTest component (replaced by InventoryList)
 
-## [0.2.X] - 2025-01-23
+## [0.2.X] - 2026-01-23
 
 ### Added
 - Next.js 14 project scaffolding with App Router
@@ -257,7 +272,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - pnpm as package manager
 
 
-## [0.1.X] - 2025-01-19
+## [0.1.X] - 2026-01-19
 
 ### Added
 - Project documentation

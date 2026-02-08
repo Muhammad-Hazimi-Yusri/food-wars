@@ -4,12 +4,14 @@ import { useState, useEffect, useMemo, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, ImageIcon } from "lucide-react";
-import { consumeStock } from "@/lib/stock-actions";
+import { consumeStock, undoConsume } from "@/lib/stock-actions";
+import { toast } from "sonner";
 import { StockEntryWithProduct, Product } from "@/types/database";
 import { getExpiryStatus, getExpiryLabel } from "@/lib/inventory-utils";
 import { getProductPictureSignedUrl } from "@/lib/supabase/storage";
 import { cn } from "@/lib/utils";
 import { ProductDetailModal } from "./ProductDetailModal";
+import { ConsumeModal } from "./ConsumeModal";
 import { MoreVertical, Utensils, PackageOpen } from "lucide-react";
 import {
   DropdownMenu,
@@ -138,6 +140,7 @@ export function MobileStockList({ entries, zeroStockProducts = [] }: MobileStock
   const [modalEntries, setModalEntries] = useState<StockEntryWithProduct[]>([]);
   const [actionsExpanded, setActionsExpanded] = useState(true);
   const [consuming, setConsuming] = useState<string | null>(null);
+  const [consumeModalEntries, setConsumeModalEntries] = useState<StockEntryWithProduct[] | null>(null);
 
   const aggregated = useMemo(() => aggregateByProduct(entries), [entries]);
   
@@ -170,6 +173,31 @@ export function MobileStockList({ entries, zeroStockProducts = [] }: MobileStock
     setConsuming(null);
     if (result.success) {
       router.refresh();
+    } else {
+      alert(result.error ?? "Failed to consume");
+    }
+  };
+
+  const handleConsumeAll = async (product: AggregatedProduct) => {
+    setConsuming(product.productId);
+    const result = await consumeStock(product.productId, product.entries, product.totalAmount);
+    setConsuming(null);
+    if (result.success) {
+      router.refresh();
+      const unit = product.totalAmount === 1 ? product.unitName : product.unitNamePlural;
+      toast(`Consumed all ${product.totalAmount} ${unit} of ${product.productName}`, {
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            const undo = await undoConsume(result.correlationId!);
+            if (undo.success) {
+              router.refresh();
+            } else {
+              toast.error(undo.error ?? "Failed to undo");
+            }
+          },
+        },
+      });
     } else {
       alert(result.error ?? "Failed to consume");
     }
@@ -278,9 +306,15 @@ export function MobileStockList({ entries, zeroStockProducts = [] }: MobileStock
                           <Utensils className="h-3 w-3" />{product.entries[0]?.product.quick_consume_amount ?? 1}
                         </button>
                         <button
-                          disabled
+                          onClick={() => handleConsumeAll(product)}
+                          disabled={consuming === product.productId}
                           title="Consume All"
-                          className="h-6 px-1.5 text-xs font-medium rounded bg-green-600 text-white opacity-50 cursor-not-allowed flex items-center gap-0.5"
+                          className={cn(
+                            "h-6 px-1.5 text-xs font-medium rounded bg-green-600 text-white flex items-center gap-0.5",
+                            consuming === product.productId
+                              ? "opacity-50 cursor-wait"
+                              : "hover:bg-green-700 transition-colors"
+                          )}
                         >
                           <Utensils className="h-3 w-3" />All
                         </button>
@@ -298,6 +332,9 @@ export function MobileStockList({ entries, zeroStockProducts = [] }: MobileStock
                             </button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setConsumeModalEntries(product.entries)}>
+                              Consume...
+                            </DropdownMenuItem>
                             <DropdownMenuItem asChild>
                               <Link href={`/products/${product.productId}/edit`}>
                                 Edit product
@@ -314,6 +351,9 @@ export function MobileStockList({ entries, zeroStockProducts = [] }: MobileStock
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setConsumeModalEntries(product.entries)}>
+                            Consume...
+                          </DropdownMenuItem>
                           <DropdownMenuItem asChild>
                             <Link href={`/products/${product.productId}/edit`}>
                               Edit product
@@ -438,6 +478,11 @@ export function MobileStockList({ entries, zeroStockProducts = [] }: MobileStock
     </div>
 
     <ProductDetailModal entries={modalEntries} open={modalOpen} onClose={handleCloseModal} />
+
+    <ConsumeModal
+      entries={consumeModalEntries}
+      onClose={() => setConsumeModalEntries(null)}
+    />
   </>
 );
 }

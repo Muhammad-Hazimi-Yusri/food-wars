@@ -5,12 +5,14 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { ChevronDown, ChevronRight, ImageIcon, MoreVertical, Utensils, PackageOpen } from "lucide-react";
-import { consumeStock } from "@/lib/stock-actions";
+import { consumeStock, undoConsume } from "@/lib/stock-actions";
+import { toast } from "sonner";
 import { StockEntryWithProduct } from "@/types/database";
 import { getExpiryStatus, getExpiryLabel } from "@/lib/inventory-utils";
 import { getProductPictureSignedUrl } from "@/lib/supabase/storage";
 import { cn } from "@/lib/utils";
 import { ProductDetailModal } from "./ProductDetailModal";
+import { ConsumeModal } from "./ConsumeModal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -143,7 +145,8 @@ export function DesktopStockTable({ entries, zeroStockProducts = [] }: DesktopSt
   const [modalOpen, setModalOpen] = useState(false);
   const [modalEntries, setModalEntries] = useState<StockEntryWithProduct[]>([]);
   const [consuming, setConsuming] = useState<string | null>(null);
-  
+  const [consumeModalEntries, setConsumeModalEntries] = useState<StockEntryWithProduct[] | null>(null);
+
   const aggregated = useMemo(() => aggregateByProduct(entries), [entries]);
   
   const handleExpand = (e: React.MouseEvent, productId: string) => {
@@ -176,6 +179,31 @@ export function DesktopStockTable({ entries, zeroStockProducts = [] }: DesktopSt
     setConsuming(null);
     if (result.success) {
       router.refresh();
+    } else {
+      alert(result.error ?? "Failed to consume");
+    }
+  };
+
+  const handleConsumeAll = async (product: AggregatedProduct) => {
+    setConsuming(product.productId);
+    const result = await consumeStock(product.productId, product.entries, product.totalAmount);
+    setConsuming(null);
+    if (result.success) {
+      router.refresh();
+      const unit = product.totalAmount === 1 ? product.unitName : product.unitNamePlural;
+      toast(`Consumed all ${product.totalAmount} ${unit} of ${product.productName}`, {
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            const undo = await undoConsume(result.correlationId!);
+            if (undo.success) {
+              router.refresh();
+            } else {
+              toast.error(undo.error ?? "Failed to undo");
+            }
+          },
+        },
+      });
     } else {
       alert(result.error ?? "Failed to consume");
     }
@@ -286,9 +314,15 @@ export function DesktopStockTable({ entries, zeroStockProducts = [] }: DesktopSt
                           <Utensils className="h-3 w-3" />{product.entries[0]?.product.quick_consume_amount ?? 1}
                         </button>
                         <button
-                          disabled
+                          onClick={() => handleConsumeAll(product)}
+                          disabled={consuming === product.productId}
                           title="Consume All"
-                          className="h-7 px-2 text-xs font-medium rounded bg-green-600 text-white opacity-50 cursor-not-allowed flex items-center gap-1"
+                          className={cn(
+                            "h-7 px-2 text-xs font-medium rounded bg-green-600 text-white flex items-center gap-1",
+                            consuming === product.productId
+                              ? "opacity-50 cursor-wait"
+                              : "hover:bg-green-700 transition-colors"
+                          )}
                         >
                           <Utensils className="h-3 w-3" />All
                         </button>
@@ -306,6 +340,9 @@ export function DesktopStockTable({ entries, zeroStockProducts = [] }: DesktopSt
                             </button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setConsumeModalEntries(product.entries)}>
+                              Consume...
+                            </DropdownMenuItem>
                             <DropdownMenuItem asChild>
                               <Link href={`/products/${product.productId}/edit`}>
                                 Edit product
@@ -316,7 +353,7 @@ export function DesktopStockTable({ entries, zeroStockProducts = [] }: DesktopSt
                       </div>
                     </td>
                   </tr>
-                  
+
                   {/* Expanded batches */}
                   {isExpanded && product.entries.map((entry) => {
                     const entryStatus = getExpiryStatus(entry.best_before_date, entry.product?.due_type ?? 1);
@@ -414,6 +451,11 @@ export function DesktopStockTable({ entries, zeroStockProducts = [] }: DesktopSt
         entries={modalEntries}
         open={modalOpen}
         onClose={handleCloseModal}
+      />
+
+      <ConsumeModal
+        entries={consumeModalEntries}
+        onClose={() => setConsumeModalEntries(null)}
       />
     </>
   );

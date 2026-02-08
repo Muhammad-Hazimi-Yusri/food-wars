@@ -10,10 +10,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ImageIcon, Pencil, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ImageIcon, Pencil, Trash2, Utensils, AlertTriangle, Check, X } from "lucide-react";
 import { StockEntryWithProduct, Location, ShoppingLocation } from "@/types/database";
 import { getExpiryStatus, getExpiryLabel } from "@/lib/inventory-utils";
 import { getProductPictureSignedUrl } from "@/lib/supabase/storage";
+import { consumeStock } from "@/lib/stock-actions";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { EditStockEntryModal } from "./EditStockEntryModal";
@@ -35,6 +37,8 @@ export function ProductDetailModal({
   const [locations, setLocations] = useState<Location[]>([]);
   const [shoppingLocations, setShoppingLocations] = useState<ShoppingLocation[]>([]);
   const [editingEntry, setEditingEntry] = useState<StockEntryWithProduct | null>(null);
+  const [consumingEntry, setConsumingEntry] = useState<{ id: string; amount: string } | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const product = entries[0]?.product;
 
@@ -94,6 +98,40 @@ export function ProductDetailModal({
       alert("Failed to delete entry");
     } finally {
       setDeleting(null);
+    }
+  };
+
+  const handleConsumeEntry = async (entry: StockEntryWithProduct) => {
+    const numAmount = parseFloat(consumingEntry?.amount ?? "");
+    if (isNaN(numAmount) || numAmount <= 0 || numAmount > entry.amount) {
+      alert(`Enter a valid amount (1-${entry.amount})`);
+      return;
+    }
+    setActionLoading(entry.id);
+    const result = await consumeStock(entry.product_id, [entry], numAmount);
+    setActionLoading(null);
+    setConsumingEntry(null);
+    if (result.success) {
+      onClose();
+      router.refresh();
+    } else {
+      alert(result.error ?? "Failed to consume");
+    }
+  };
+
+  const handleSpoilEntry = async (entry: StockEntryWithProduct) => {
+    const unit = entry.amount === 1
+      ? (product?.qu_stock?.name ?? "unit")
+      : (product?.qu_stock?.name_plural ?? "units");
+    if (!confirm(`Mark ${entry.amount} ${unit} as spoiled?`)) return;
+    setActionLoading(entry.id);
+    const result = await consumeStock(entry.product_id, [entry], entry.amount, { spoiled: true });
+    setActionLoading(null);
+    if (result.success) {
+      onClose();
+      router.refresh();
+    } else {
+      alert(result.error ?? "Failed to mark as spoiled");
     }
   };
 
@@ -217,23 +255,77 @@ export function ProductDetailModal({
                       </div>
 
                       <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-gray-500 hover:text-blue-600"
-                          onClick={() => setEditingEntry(entry)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-gray-500 hover:text-red-600"
-                          onClick={() => handleDeleteEntry(entry.id)}
-                          disabled={deleting === entry.id}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {consumingEntry?.id === entry.id ? (
+                          <>
+                            <Input
+                              type="number"
+                              step="any"
+                              min="0.01"
+                              max={entry.amount}
+                              value={consumingEntry.amount}
+                              onChange={(e) => setConsumingEntry({ id: entry.id, amount: e.target.value })}
+                              className="h-8 w-16 text-xs"
+                              autoFocus
+                            />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-green-600 hover:text-green-700"
+                              onClick={() => handleConsumeEntry(entry)}
+                              disabled={actionLoading === entry.id}
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-gray-500 hover:text-gray-700"
+                              onClick={() => setConsumingEntry(null)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-gray-500 hover:text-green-600"
+                              onClick={() => setConsumingEntry({ id: entry.id, amount: String(entry.amount) })}
+                              disabled={actionLoading === entry.id}
+                              title="Consume"
+                            >
+                              <Utensils className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-gray-500 hover:text-amber-600"
+                              onClick={() => handleSpoilEntry(entry)}
+                              disabled={actionLoading === entry.id}
+                              title="Mark as spoiled"
+                            >
+                              <AlertTriangle className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-gray-500 hover:text-blue-600"
+                              onClick={() => setEditingEntry(entry)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-gray-500 hover:text-red-600"
+                              onClick={() => handleDeleteEntry(entry.id)}
+                              disabled={deleting === entry.id}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </div>
                   );

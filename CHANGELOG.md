@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.6.X] - In Progress
 
 ### Added
+- **Consume enhancements** (v0.6.2)
+  - **Consume Modal** — product-level consume via three-dots menu → "Consume..."
+    - Amount input (decimal), location filter (only locations with stock), spoiled checkbox
+    - FIFO within selected location, logs `transaction_type = 'spoiled'` when toggled
+    - New `ConsumeModal` component using shadcn Dialog
+  - **Entry-level actions** in `ProductDetailModal`
+    - Consume button (fork icon) — inline amount input with confirm/cancel
+    - Spoiled button (warning icon) — consumes full entry as spoiled
+    - Both target a specific entry by passing single-entry array to `consumeStock`
+  - **Undo toast** for Consume All (replaces `window.confirm`)
+    - Executes immediately, shows 8-second undo toast via `sonner`
+    - Undo reverses the consume: re-creates deleted entries, increments partial entries
+    - `undoConsume(correlationId)` in `stock-actions.ts` marks `stock_log` rows as undone
+  - Extended `consumeStock` with `options?: { spoiled }` and `correlationId` in return
+  - Preserves `entry.note` in `stock_log` for lossless undo reconstruction
+  - Toast infrastructure: `sonner` package, `Toaster` component in root layout
 - **Consume 1 quick action** (v0.6.1)
   - Pure FIFO consume logic in `inventory-utils.ts` (`computeConsumePlan`)
     - Priority: opened entries first → earliest due date → oldest purchase date

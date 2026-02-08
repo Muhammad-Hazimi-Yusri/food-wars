@@ -19,8 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
 import { StockEntryWithProduct } from "@/types/database";
-import { consumeStock } from "@/lib/stock-actions";
+import { consumeStock, undoConsume } from "@/lib/stock-actions";
 
 type ConsumeModalProps = {
   entries: StockEntryWithProduct[] | null;
@@ -98,8 +99,23 @@ export function ConsumeModal({ entries, onClose }: ConsumeModalProps) {
     setSubmitting(false);
 
     if (result.success) {
+      const unit = numAmount === 1 ? unitName : unitNamePlural;
+      const action = spoiled ? "Marked as spoiled" : "Consumed";
       handleClose();
       router.refresh();
+      toast(`${action}: ${numAmount} ${unit} of ${product!.name}`, {
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            const undo = await undoConsume(result.correlationId!);
+            if (undo.success) {
+              router.refresh();
+            } else {
+              toast.error(undo.error ?? "Failed to undo");
+            }
+          },
+        },
+      });
     } else {
       setError(result.error ?? "Failed to consume");
     }

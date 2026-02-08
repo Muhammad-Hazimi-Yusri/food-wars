@@ -188,3 +188,64 @@ export async function undoConsume(
     };
   }
 }
+
+/**
+ * Undo a stock entry deletion by re-inserting it.
+ */
+export async function undoDeleteEntry(snapshot: {
+  household_id: string;
+  product_id: string;
+  amount: number;
+  best_before_date: string | null;
+  purchased_date: string | null;
+  price: number | null;
+  location_id: string | null;
+  shopping_location_id: string | null;
+  open: boolean;
+  opened_date: string | null;
+  stock_id: string;
+  note: string | null;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = createClient();
+    const { error } = await supabase.from('stock_entries').insert(snapshot);
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to restore entry',
+    };
+  }
+}
+
+/**
+ * Undo a stock entry edit by restoring old values.
+ */
+export async function undoEditEntry(
+  entryId: string,
+  oldValues: {
+    amount: number;
+    location_id: string | null;
+    shopping_location_id: string | null;
+    best_before_date: string | null;
+    price: number | null;
+    note: string | null;
+    open: boolean;
+  }
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from('stock_entries')
+      .update(oldValues)
+      .eq('id', entryId);
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to restore entry',
+    };
+  }
+}

@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.6.X] - In Progress
 
 ### Added
+- **Undo toast for all actions** (v0.6.3)
+  - Every destructive action now executes immediately with an undo toast (no more `window.confirm`)
+  - Consume 1 (quick action) — toast with undo via `undoConsume`
+  - Consume... (modal) — toast with undo via `undoConsume`
+  - Entry-level consume in `ProductDetailModal` — toast with undo
+  - Mark as spoiled — removed `confirm()`, toast with undo via `undoConsume`
+  - Delete stock entry — removed `confirm()`, captures snapshot, toast with undo via `undoDeleteEntry`
+  - Edit stock entry — captures old values, toast with undo via `undoEditEntry`
+  - New `undoDeleteEntry(snapshot)` — re-inserts deleted stock entry from captured data
+  - New `undoEditEntry(entryId, oldValues)` — restores previous field values
 - **Consume enhancements** (v0.6.2)
   - **Consume Modal** — product-level consume via three-dots menu → "Consume..."
     - Amount input (decimal), location filter (only locations with stock), spoiled checkbox

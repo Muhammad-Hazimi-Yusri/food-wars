@@ -15,7 +15,8 @@ import { ImageIcon, Pencil, Trash2, Utensils, AlertTriangle, Check, X } from "lu
 import { StockEntryWithProduct, Location, ShoppingLocation } from "@/types/database";
 import { getExpiryStatus, getExpiryLabel } from "@/lib/inventory-utils";
 import { getProductPictureSignedUrl } from "@/lib/supabase/storage";
-import { consumeStock } from "@/lib/stock-actions";
+import { consumeStock, undoConsume, undoDeleteEntry } from "@/lib/stock-actions";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { EditStockEntryModal } from "./EditStockEntryModal";
@@ -78,21 +79,51 @@ export function ProductDetailModal({
     }
   }, [open]);
 
-  const handleDeleteEntry = async (entryId: string) => {
-    if (!confirm("Delete this stock entry?")) return;
-
-    setDeleting(entryId);
+  const handleDeleteEntry = async (entry: StockEntryWithProduct) => {
+    setDeleting(entry.id);
     try {
+      // Capture snapshot before deleting
+      const snapshot = {
+        household_id: entry.household_id,
+        product_id: entry.product_id,
+        amount: entry.amount,
+        best_before_date: entry.best_before_date,
+        purchased_date: entry.purchased_date,
+        price: entry.price,
+        location_id: entry.location_id,
+        shopping_location_id: entry.shopping_location_id,
+        open: entry.open,
+        opened_date: entry.opened_date,
+        stock_id: entry.stock_id,
+        note: entry.note,
+      };
+
       const supabase = createClient();
       const { error } = await supabase
         .from("stock_entries")
         .delete()
-        .eq("id", entryId);
+        .eq("id", entry.id);
 
       if (error) throw error;
 
+      const unitName = product?.qu_stock?.name ?? "unit";
+      const unitNamePlural = product?.qu_stock?.name_plural ?? "units";
+      const unit = entry.amount === 1 ? unitName : unitNamePlural;
       onClose();
       router.refresh();
+      toast(`Deleted ${entry.amount} ${unit} of ${product?.name}`, {
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            const undo = await undoDeleteEntry(snapshot);
+            if (undo.success) {
+              router.refresh();
+            } else {
+              toast.error(undo.error ?? "Failed to undo");
+            }
+          },
+        },
+      });
     } catch (err) {
       console.error("Delete error:", err);
       alert("Failed to delete entry");
@@ -112,24 +143,52 @@ export function ProductDetailModal({
     setActionLoading(null);
     setConsumingEntry(null);
     if (result.success) {
+      const unitName = product?.qu_stock?.name ?? "unit";
+      const unitNamePlural = product?.qu_stock?.name_plural ?? "units";
+      const unit = numAmount === 1 ? unitName : unitNamePlural;
       onClose();
       router.refresh();
+      toast(`Consumed ${numAmount} ${unit} of ${product?.name}`, {
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            const undo = await undoConsume(result.correlationId!);
+            if (undo.success) {
+              router.refresh();
+            } else {
+              toast.error(undo.error ?? "Failed to undo");
+            }
+          },
+        },
+      });
     } else {
       alert(result.error ?? "Failed to consume");
     }
   };
 
   const handleSpoilEntry = async (entry: StockEntryWithProduct) => {
-    const unit = entry.amount === 1
-      ? (product?.qu_stock?.name ?? "unit")
-      : (product?.qu_stock?.name_plural ?? "units");
-    if (!confirm(`Mark ${entry.amount} ${unit} as spoiled?`)) return;
+    const unitName = product?.qu_stock?.name ?? "unit";
+    const unitNamePlural = product?.qu_stock?.name_plural ?? "units";
+    const unit = entry.amount === 1 ? unitName : unitNamePlural;
     setActionLoading(entry.id);
     const result = await consumeStock(entry.product_id, [entry], entry.amount, { spoiled: true });
     setActionLoading(null);
     if (result.success) {
       onClose();
       router.refresh();
+      toast(`Marked ${entry.amount} ${unit} of ${product?.name} as spoiled`, {
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            const undo = await undoConsume(result.correlationId!);
+            if (undo.success) {
+              router.refresh();
+            } else {
+              toast.error(undo.error ?? "Failed to undo");
+            }
+          },
+        },
+      });
     } else {
       alert(result.error ?? "Failed to mark as spoiled");
     }
@@ -319,7 +378,7 @@ export function ProductDetailModal({
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-gray-500 hover:text-red-600"
-                              onClick={() => handleDeleteEntry(entry.id)}
+                              onClick={() => handleDeleteEntry(entry)}
                               disabled={deleting === entry.id}
                             >
                               <Trash2 className="h-4 w-4" />

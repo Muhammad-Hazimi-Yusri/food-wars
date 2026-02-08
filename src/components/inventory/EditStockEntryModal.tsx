@@ -21,6 +21,8 @@ import {
 import { AlertTriangle } from "lucide-react";
 import { StockEntryWithProduct, Location, ShoppingLocation } from "@/types/database";
 import { createClient } from "@/lib/supabase/client";
+import { undoEditEntry } from "@/lib/stock-actions";
+import { toast } from "sonner";
 
 type EditStockEntryModalProps = {
   entry: StockEntryWithProduct | null;
@@ -73,6 +75,19 @@ export function EditStockEntryModal({
     e.preventDefault();
     if (!entry) return;
 
+    // Capture old values for undo before saving
+    const oldValues = {
+      amount: entry.amount,
+      location_id: entry.location_id,
+      shopping_location_id: entry.shopping_location_id,
+      best_before_date: entry.best_before_date,
+      price: entry.price,
+      note: entry.note,
+      open: entry.open ?? false,
+    };
+    const entryId = entry.id;
+    const productName = entry.product?.name ?? "item";
+
     setSaving(true);
     try {
       const supabase = createClient();
@@ -81,8 +96,8 @@ export function EditStockEntryModal({
         .update({
           amount: formData.amount,
           location_id: formData.location_id || null,
-          shopping_location_id: formData.shopping_location_id && formData.shopping_location_id !== "none" 
-            ? formData.shopping_location_id 
+          shopping_location_id: formData.shopping_location_id && formData.shopping_location_id !== "none"
+            ? formData.shopping_location_id
             : null,
           best_before_date: formData.best_before_date || null,
           price: formData.price ? parseFloat(formData.price) : null,
@@ -96,6 +111,19 @@ export function EditStockEntryModal({
       onSaved();
       onClose();
       router.refresh();
+      toast(`Updated entry for ${productName}`, {
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            const undo = await undoEditEntry(entryId, oldValues);
+            if (undo.success) {
+              router.refresh();
+            } else {
+              toast.error(undo.error ?? "Failed to undo");
+            }
+          },
+        },
+      });
     } catch (err) {
       console.error("Update error:", err);
       alert("Failed to update entry");

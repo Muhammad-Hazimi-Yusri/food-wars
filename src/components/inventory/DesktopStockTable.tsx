@@ -179,6 +179,20 @@ export function DesktopStockTable({ entries, zeroStockProducts = [] }: DesktopSt
     setConsuming(null);
     if (result.success) {
       router.refresh();
+      const unit = amount === 1 ? product.unitName : product.unitNamePlural;
+      toast(`Consumed ${amount} ${unit} of ${product.productName}`, {
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            const undo = await undoConsume(result.correlationId!);
+            if (undo.success) {
+              router.refresh();
+            } else {
+              toast.error(undo.error ?? "Failed to undo");
+            }
+          },
+        },
+      });
     } else {
       alert(result.error ?? "Failed to consume");
     }

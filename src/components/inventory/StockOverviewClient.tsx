@@ -278,16 +278,18 @@ export function StockOverviewClient({
 
       {/* Mobile view */}
       <div className="sm:hidden">
-        <MobileStockList 
+        <MobileStockList
           entries={filteredEntries}
+          locations={locations}
           zeroStockProducts={filters.status === "below_min" ? zeroStockProducts : []}
         />
       </div>
 
       {/* Desktop view */}
       <div className="hidden sm:block">
-        <DesktopStockTable 
-          entries={filteredEntries} 
+        <DesktopStockTable
+          entries={filteredEntries}
+          locations={locations}
           zeroStockProducts={filters.status === "below_min" ? zeroStockProducts : []}
         />
       </div>

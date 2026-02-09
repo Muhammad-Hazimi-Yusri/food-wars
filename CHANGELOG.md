@@ -8,6 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.6.X] - In Progress
 
 ### Added
+- **Transfer stock action** (v0.6.5)
+  - Move stock entries between locations via `TransferModal`
+    - Entry-level transfer button in `ProductDetailModal`
+    - Product-level "Transfer..." in three-dots menus (desktop + mobile)
+    - Entry selector when product has multiple stock entries
+  - `transferStock()` in `stock-actions.ts`
+    - Updates `location_id` on the stock entry
+    - Dual logging: `transfer-from` (original values for undo) + `transfer-to` (new values for audit)
+    - Both rows share a `correlation_id`
+  - `undoTransfer(correlationId)` — restores original location and due date
+  - **Freezer detection** (non-freezer → freezer):
+    - When `default_due_days_after_freezing` is configured: radio choice to keep current due date or use freezer shelf life
+    - When not configured: warning + manual date input
+  - **Thaw detection** (freezer → non-freezer):
+    - When `default_due_days_after_thawing` is configured: auto-replaces due date (fresh shelf-life window)
+    - When not configured: warning + manual date input
+  - **Should-not-be-frozen guard**: blocks transfer to freezer locations (disables button, red error)
+  - Undo toast with sonner for all transfers
+  - Supports both authenticated and guest mode
 - **Open stock action** (v0.6.4)
   - Pure FIFO open logic in `inventory-utils.ts` (`computeOpenPlan`)
     - Selects sealed entries by earliest due date → oldest purchase date

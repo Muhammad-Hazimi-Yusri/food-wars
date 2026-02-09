@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ImageIcon, Pencil, Trash2, Utensils, AlertTriangle, Check, X } from "lucide-react";
+import { ImageIcon, Pencil, Trash2, Utensils, AlertTriangle, ArrowRightLeft, Check, X } from "lucide-react";
 import { StockEntryWithProduct, Location, ShoppingLocation } from "@/types/database";
 import { getExpiryStatus, getExpiryLabel } from "@/lib/inventory-utils";
 import { getProductPictureSignedUrl } from "@/lib/supabase/storage";
@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { EditStockEntryModal } from "./EditStockEntryModal";
+import { TransferModal } from "./TransferModal";
 
 type ProductDetailModalProps = {
   entries: StockEntryWithProduct[];
@@ -38,6 +39,7 @@ export function ProductDetailModal({
   const [locations, setLocations] = useState<Location[]>([]);
   const [shoppingLocations, setShoppingLocations] = useState<ShoppingLocation[]>([]);
   const [editingEntry, setEditingEntry] = useState<StockEntryWithProduct | null>(null);
+  const [transferringEntry, setTransferringEntry] = useState<StockEntryWithProduct | null>(null);
   const [consumingEntry, setConsumingEntry] = useState<{ id: string; amount: string } | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
@@ -369,6 +371,15 @@ export function ProductDetailModal({
                             <Button
                               variant="ghost"
                               size="icon"
+                              className="h-8 w-8 text-gray-500 hover:text-indigo-600"
+                              onClick={() => setTransferringEntry(entry)}
+                              title="Transfer"
+                            >
+                              <ArrowRightLeft className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
                               className="h-8 w-8 text-gray-500 hover:text-blue-600"
                               onClick={() => setEditingEntry(entry)}
                             >
@@ -404,6 +415,17 @@ export function ProductDetailModal({
         onClose={() => setEditingEntry(null)}
         onSaved={() => {
           setEditingEntry(null);
+          onClose();
+        }}
+      />
+
+      {/* Transfer Modal */}
+      <TransferModal
+        entries={transferringEntry ? [transferringEntry] : null}
+        locations={locations}
+        preSelectedEntryId={transferringEntry?.id}
+        onClose={() => {
+          setTransferringEntry(null);
           onClose();
         }}
       />

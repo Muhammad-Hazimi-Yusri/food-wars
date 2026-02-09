@@ -184,7 +184,7 @@ export async function undoConsume(
   } catch (err) {
     return {
       success: false,
-      error: err instanceof Error ? err.message : 'Failed to undo',
+      error: err instanceof Error ? err.message : 'Failed to undo consume',
     };
   }
 }
@@ -427,7 +427,201 @@ export async function undoOpen(
   } catch (err) {
     return {
       success: false,
-      error: err instanceof Error ? err.message : 'Failed to undo',
+      error: err instanceof Error ? err.message : 'Failed to undo open',
+    };
+  }
+}
+
+// ============================================
+// TRANSFER STOCK
+// ============================================
+
+type TransferResult = {
+  success: boolean;
+  error?: string;
+  warning?: string;
+  correlationId?: string;
+};
+
+/**
+ * Transfer a stock entry to a different location.
+ * Inserts two stock_log rows (transfer-from + transfer-to) with the same correlation_id.
+ * Recalculates best_before_date when moving to/from a freezer.
+ */
+export async function transferStock(
+  entry: StockEntryWithProduct,
+  destinationLocationId: string,
+  sourceIsFreezer: boolean,
+  destinationIsFreezer: boolean,
+  options?: { useFreezingDueDate?: boolean; manualDueDate?: string }
+): Promise<TransferResult> {
+  try {
+    if (entry.location_id === destinationLocationId) {
+      return { success: false, error: 'Already at that location' };
+    }
+
+    const supabase = createClient();
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: 'Not authenticated' };
+
+    const isGuest = user.is_anonymous === true;
+    let householdId: string;
+
+    if (isGuest) {
+      householdId = GUEST_HOUSEHOLD_ID;
+    } else {
+      const { data: household } = await supabase
+        .from('households')
+        .select('id')
+        .eq('owner_id', user.id)
+        .single();
+      if (!household) return { success: false, error: 'No household found' };
+      householdId = household.id;
+    }
+
+    const correlationId = crypto.randomUUID();
+    const today = new Date().toISOString().split('T')[0];
+    const product = entry.product;
+
+    // Determine new best_before_date based on freezer/thaw detection
+    let newBestBeforeDate = entry.best_before_date;
+
+    if (!sourceIsFreezer && destinationIsFreezer && product.default_due_days_after_freezing > 0) {
+      // Freezing: user chooses to keep current date or use freezer shelf life
+      if (options?.useFreezingDueDate) {
+        const d = new Date();
+        d.setDate(d.getDate() + product.default_due_days_after_freezing);
+        newBestBeforeDate = d.toISOString().split('T')[0];
+      }
+      // else: keep original due date (default)
+    } else if (sourceIsFreezer && !destinationIsFreezer && product.default_due_days_after_thawing > 0) {
+      // Thawing: always replace — frozen food is preserved, thawing starts fresh shelf life
+      const d = new Date();
+      d.setDate(d.getDate() + product.default_due_days_after_thawing);
+      newBestBeforeDate = d.toISOString().split('T')[0];
+    }
+
+    // Manual override from user input (when no auto days configured)
+    if (options?.manualDueDate) {
+      newBestBeforeDate = options.manualDueDate;
+    }
+
+    // Update the stock entry
+    const update: Record<string, unknown> = { location_id: destinationLocationId };
+    if (newBestBeforeDate !== entry.best_before_date) {
+      update.best_before_date = newBestBeforeDate;
+    }
+
+    const { error: updateError } = await supabase
+      .from('stock_entries')
+      .update(update)
+      .eq('id', entry.id);
+    if (updateError) throw updateError;
+
+    // Shared log fields
+    const sharedLog = {
+      household_id: householdId,
+      product_id: entry.product_id,
+      amount: entry.amount,
+      purchased_date: entry.purchased_date ?? null,
+      used_date: today,
+      opened_date: entry.opened_date ?? null,
+      price: entry.price ?? null,
+      shopping_location_id: entry.shopping_location_id ?? null,
+      spoiled: false,
+      stock_id: entry.stock_id,
+      stock_entry_id: entry.id,
+      correlation_id: correlationId,
+      undone: false,
+      user_id: user.id,
+      note: entry.note ?? null,
+    };
+
+    // Insert transfer-from log (original values for undo)
+    const { error: fromError } = await supabase.from('stock_log').insert({
+      ...sharedLog,
+      transaction_type: 'transfer-from',
+      location_id: entry.location_id ?? null,
+      best_before_date: entry.best_before_date ?? null,
+      transaction_id: crypto.randomUUID(),
+    });
+    if (fromError) throw fromError;
+
+    // Insert transfer-to log (new values for audit)
+    const { error: toError } = await supabase.from('stock_log').insert({
+      ...sharedLog,
+      transaction_type: 'transfer-to',
+      location_id: destinationLocationId,
+      best_before_date: newBestBeforeDate ?? null,
+      transaction_id: crypto.randomUUID(),
+    });
+    if (toError) throw toError;
+
+    const warning = product.should_not_be_frozen && destinationIsFreezer
+      ? 'This product should not be frozen'
+      : undefined;
+
+    return { success: true, correlationId, warning };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to transfer stock',
+    };
+  }
+}
+
+/**
+ * Undo a transfer by correlation ID.
+ * Restores original location and best_before_date from the transfer-from log row.
+ */
+export async function undoTransfer(
+  correlationId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = createClient();
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: 'Not authenticated' };
+
+    const { data: logRows, error: fetchError } = await supabase
+      .from('stock_log')
+      .select('*')
+      .eq('correlation_id', correlationId)
+      .eq('undone', false);
+    if (fetchError) throw fetchError;
+    if (!logRows || logRows.length === 0) {
+      return { success: false, error: 'Nothing to undo' };
+    }
+
+    // Find the transfer-from row (has original values)
+    const fromRow = logRows.find((r) => r.transaction_type === 'transfer-from');
+    if (!fromRow || !fromRow.stock_entry_id) {
+      return { success: false, error: 'Transfer-from log not found' };
+    }
+
+    // Restore original location and due date
+    const { error: updateError } = await supabase
+      .from('stock_entries')
+      .update({
+        location_id: fromRow.location_id,
+        best_before_date: fromRow.best_before_date,
+      })
+      .eq('id', fromRow.stock_entry_id);
+    if (updateError) throw updateError;
+
+    // Mark all log rows as undone
+    const { error: undoError } = await supabase
+      .from('stock_log')
+      .update({ undone: true, undone_timestamp: new Date().toISOString() })
+      .eq('correlation_id', correlationId);
+    if (undoError) throw undoError;
+
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to undo transfer',
     };
   }
 }

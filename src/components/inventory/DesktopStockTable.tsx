@@ -7,12 +7,13 @@ import Link from "next/link";
 import { ChevronDown, ChevronRight, ImageIcon, MoreVertical, Utensils, PackageOpen } from "lucide-react";
 import { consumeStock, undoConsume, openStock, undoOpen } from "@/lib/stock-actions";
 import { toast } from "sonner";
-import { StockEntryWithProduct } from "@/types/database";
+import { StockEntryWithProduct, Location } from "@/types/database";
 import { getExpiryStatus, getExpiryLabel } from "@/lib/inventory-utils";
 import { getProductPictureSignedUrl } from "@/lib/supabase/storage";
 import { cn } from "@/lib/utils";
 import { ProductDetailModal } from "./ProductDetailModal";
 import { ConsumeModal } from "./ConsumeModal";
+import { TransferModal } from "./TransferModal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +24,7 @@ import { Product } from "@/types/database";
 
 type DesktopStockTableProps = {
   entries: StockEntryWithProduct[];
+  locations: Location[];
   zeroStockProducts?: Product[];
 };
 
@@ -139,7 +141,7 @@ function formatDueDate(date: string | null, days: number | null): string {
   return `${formatted}\n${daysText}`;
 }
 
-export function DesktopStockTable({ entries, zeroStockProducts = [] }: DesktopStockTableProps) {
+export function DesktopStockTable({ entries, locations, zeroStockProducts = [] }: DesktopStockTableProps) {
   const router = useRouter();
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
   const [modalOpen, setModalOpen] = useState(false);
@@ -147,6 +149,7 @@ export function DesktopStockTable({ entries, zeroStockProducts = [] }: DesktopSt
   const [consuming, setConsuming] = useState<string | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
   const [consumeModalEntries, setConsumeModalEntries] = useState<StockEntryWithProduct[] | null>(null);
+  const [transferModalEntries, setTransferModalEntries] = useState<StockEntryWithProduct[] | null>(null);
 
   const aggregated = useMemo(() => aggregateByProduct(entries), [entries]);
   
@@ -392,6 +395,9 @@ export function DesktopStockTable({ entries, zeroStockProducts = [] }: DesktopSt
                             <DropdownMenuItem onClick={() => setConsumeModalEntries(product.entries)}>
                               Consume...
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setTransferModalEntries(product.entries)}>
+                              Transfer...
+                            </DropdownMenuItem>
                             <DropdownMenuItem asChild>
                               <Link href={`/products/${product.productId}/edit`}>
                                 Edit product
@@ -505,6 +511,12 @@ export function DesktopStockTable({ entries, zeroStockProducts = [] }: DesktopSt
       <ConsumeModal
         entries={consumeModalEntries}
         onClose={() => setConsumeModalEntries(null)}
+      />
+
+      <TransferModal
+        entries={transferModalEntries}
+        locations={locations}
+        onClose={() => setTransferModalEntries(null)}
       />
     </>
   );

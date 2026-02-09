@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.6.4-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.6.5-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.6.4
+Current version is v0.6.5
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -276,11 +276,11 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Log to `stock_log` with `transaction_type = 'product-opened'`
 
 **Transfer action:**
-- [ ] Move stock between locations
-- [ ] Freezer detection: apply `default_due_days_after_freezing`
-- [ ] Thaw detection: apply `default_due_days_after_thawing`
-- [ ] Warn if `should_not_be_frozen` product moved to freezer
-- [ ] Log to `stock_log` with `transaction_type = 'transfer-from'` and `'transfer-to'`
+- [x] Move stock between locations
+- [x] Freezer detection: apply `default_due_days_after_freezing`
+- [x] Thaw detection: apply `default_due_days_after_thawing`
+- [x] Warn if `should_not_be_frozen` product moved to freezer
+- [x] Log to `stock_log` with `transaction_type = 'transfer-from'` and `'transfer-to'`
 
 **Inventory correction:**
 - [ ] Adjust stock amount directly

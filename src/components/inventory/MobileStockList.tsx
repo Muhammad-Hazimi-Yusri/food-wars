@@ -6,12 +6,13 @@ import Image from "next/image";
 import { ChevronLeft, ChevronRight, ImageIcon } from "lucide-react";
 import { consumeStock, undoConsume, openStock, undoOpen } from "@/lib/stock-actions";
 import { toast } from "sonner";
-import { StockEntryWithProduct, Product } from "@/types/database";
+import { StockEntryWithProduct, Product, Location } from "@/types/database";
 import { getExpiryStatus, getExpiryLabel } from "@/lib/inventory-utils";
 import { getProductPictureSignedUrl } from "@/lib/supabase/storage";
 import { cn } from "@/lib/utils";
 import { ProductDetailModal } from "./ProductDetailModal";
 import { ConsumeModal } from "./ConsumeModal";
+import { TransferModal } from "./TransferModal";
 import { MoreVertical, Utensils, PackageOpen } from "lucide-react";
 import {
   DropdownMenu,
@@ -23,6 +24,7 @@ import Link from "next/link";
 
 type MobileStockListProps = {
   entries: StockEntryWithProduct[];
+  locations: Location[];
   zeroStockProducts?: Product[];
 };
 
@@ -133,7 +135,7 @@ function formatDueDate(date: string | null, days: number | null): string {
   return `${Math.ceil(days / 30)} months left`;
 }
 
-export function MobileStockList({ entries, zeroStockProducts = [] }: MobileStockListProps) {
+export function MobileStockList({ entries, locations, zeroStockProducts = [] }: MobileStockListProps) {
   const router = useRouter();
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(new Set());
   const [modalOpen, setModalOpen] = useState(false);
@@ -142,6 +144,7 @@ export function MobileStockList({ entries, zeroStockProducts = [] }: MobileStock
   const [consuming, setConsuming] = useState<string | null>(null);
   const [opening, setOpening] = useState<string | null>(null);
   const [consumeModalEntries, setConsumeModalEntries] = useState<StockEntryWithProduct[] | null>(null);
+  const [transferModalEntries, setTransferModalEntries] = useState<StockEntryWithProduct[] | null>(null);
 
   const aggregated = useMemo(() => aggregateByProduct(entries), [entries]);
   
@@ -384,6 +387,9 @@ export function MobileStockList({ entries, zeroStockProducts = [] }: MobileStock
                             <DropdownMenuItem onClick={() => setConsumeModalEntries(product.entries)}>
                               Consume...
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setTransferModalEntries(product.entries)}>
+                              Transfer...
+                            </DropdownMenuItem>
                             <DropdownMenuItem asChild>
                               <Link href={`/products/${product.productId}/edit`}>
                                 Edit product
@@ -402,6 +408,9 @@ export function MobileStockList({ entries, zeroStockProducts = [] }: MobileStock
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => setConsumeModalEntries(product.entries)}>
                             Consume...
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setTransferModalEntries(product.entries)}>
+                            Transfer...
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
                             <Link href={`/products/${product.productId}/edit`}>
@@ -531,6 +540,12 @@ export function MobileStockList({ entries, zeroStockProducts = [] }: MobileStock
     <ConsumeModal
       entries={consumeModalEntries}
       onClose={() => setConsumeModalEntries(null)}
+    />
+
+    <TransferModal
+      entries={transferModalEntries}
+      locations={locations}
+      onClose={() => setTransferModalEntries(null)}
     />
   </>
 );

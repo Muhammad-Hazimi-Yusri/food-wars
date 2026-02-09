@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { ProductDetailModal } from "./ProductDetailModal";
 import { ConsumeModal } from "./ConsumeModal";
 import { TransferModal } from "./TransferModal";
+import { CorrectionModal } from "./CorrectionModal";
 import { MoreVertical, Utensils, PackageOpen } from "lucide-react";
 import {
   DropdownMenu,
@@ -145,9 +146,10 @@ export function MobileStockList({ entries, locations, zeroStockProducts = [] }: 
   const [opening, setOpening] = useState<string | null>(null);
   const [consumeModalEntries, setConsumeModalEntries] = useState<StockEntryWithProduct[] | null>(null);
   const [transferModalEntries, setTransferModalEntries] = useState<StockEntryWithProduct[] | null>(null);
+  const [correctionModalEntries, setCorrectionModalEntries] = useState<StockEntryWithProduct[] | null>(null);
 
   const aggregated = useMemo(() => aggregateByProduct(entries), [entries]);
-  
+
   const handleExpand = (productId: string) => {
     setExpandedProducts((prev) => {
       const next = new Set(prev);
@@ -390,6 +392,9 @@ export function MobileStockList({ entries, locations, zeroStockProducts = [] }: 
                             <DropdownMenuItem onClick={() => setTransferModalEntries(product.entries)}>
                               Transfer...
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setCorrectionModalEntries(product.entries)}>
+                              Correct...
+                            </DropdownMenuItem>
                             <DropdownMenuItem asChild>
                               <Link href={`/products/${product.productId}/edit`}>
                                 Edit product
@@ -411,6 +416,9 @@ export function MobileStockList({ entries, locations, zeroStockProducts = [] }: 
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => setTransferModalEntries(product.entries)}>
                             Transfer...
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setCorrectionModalEntries(product.entries)}>
+                            Correct...
                           </DropdownMenuItem>
                           <DropdownMenuItem asChild>
                             <Link href={`/products/${product.productId}/edit`}>
@@ -546,6 +554,11 @@ export function MobileStockList({ entries, locations, zeroStockProducts = [] }: 
       entries={transferModalEntries}
       locations={locations}
       onClose={() => setTransferModalEntries(null)}
+    />
+
+    <CorrectionModal
+      entries={correctionModalEntries}
+      onClose={() => setCorrectionModalEntries(null)}
     />
   </>
 );

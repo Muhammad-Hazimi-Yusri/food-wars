@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.6.X] - In Progress
 
 ### Added
+- **Inventory correction action** (v0.6.6)
+  - Grocy-style correction: user enters new total amount, system computes delta
+  - `correctInventory()` in `stock-actions.ts`
+    - Decrease path: removes stock via FIFO (`computeConsumePlan`)
+    - Increase path: adds delta to the most recent stock entry
+    - Logs to `stock_log` with `transaction_type = 'inventory-correction'`
+  - `undoCorrectInventory(correlationId)` — restores previous amounts
+  - `CorrectionModal` with location filter and current stock display
+  - "Correct..." in three-dots menus (desktop + mobile)
+  - Undo toast with sonner
+  - Supports both authenticated and guest mode
 - **Transfer stock action** (v0.6.5)
   - Move stock entries between locations via `TransferModal`
     - Entry-level transfer button in `ProductDetailModal`

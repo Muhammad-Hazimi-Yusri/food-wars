@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.6.5-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.6.6-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.6.5
+Current version is v0.6.6
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -283,8 +283,8 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Log to `stock_log` with `transaction_type = 'transfer-from'` and `'transfer-to'`
 
 **Inventory correction:**
-- [ ] Adjust stock amount directly
-- [ ] Log to `stock_log` with `transaction_type = 'inventory-correction'`
+- [x] Adjust stock amount directly
+- [x] Log to `stock_log` with `transaction_type = 'inventory-correction'`
 
 **Journal UI:**
 - [ ] Stock journal page with filters (product, type, date range)

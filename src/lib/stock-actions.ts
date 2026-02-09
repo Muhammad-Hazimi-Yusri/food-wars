@@ -571,6 +571,267 @@ export async function transferStock(
   }
 }
 
+// ============================================
+// INVENTORY CORRECTION
+// ============================================
+
+type CorrectionResult = {
+  success: boolean;
+  error?: string;
+  delta: number;
+  correlationId?: string;
+};
+
+/**
+ * Correct stock for a product to a new total amount (Grocy-style).
+ * If the new amount is less, entries are removed via FIFO.
+ * If the new amount is more, the newest entry is increased.
+ * Logs to stock_log with transaction_type = 'inventory-correction'.
+ */
+export async function correctInventory(
+  productId: string,
+  entries: StockEntryWithProduct[],
+  newAmount: number
+): Promise<CorrectionResult> {
+  try {
+    const currentTotal = entries.reduce((sum, e) => sum + e.amount, 0);
+    const delta = newAmount - currentTotal;
+
+    if (delta === 0) {
+      return { success: true, delta: 0 };
+    }
+
+    const supabase = createClient();
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: 'Not authenticated', delta: 0 };
+
+    const isGuest = user.is_anonymous === true;
+    let householdId: string;
+
+    if (isGuest) {
+      householdId = GUEST_HOUSEHOLD_ID;
+    } else {
+      const { data: household } = await supabase
+        .from('households')
+        .select('id')
+        .eq('owner_id', user.id)
+        .single();
+      if (!household) return { success: false, error: 'No household found', delta: 0 };
+      householdId = household.id;
+    }
+
+    const correlationId = crypto.randomUUID();
+    const today = new Date().toISOString().split('T')[0];
+    const entryMap = new Map(entries.map((e) => [e.id, e]));
+
+    if (delta < 0) {
+      // DECREASE: remove stock via FIFO
+      const plan = computeConsumePlan(entries, Math.abs(delta));
+      if (plan.items.length === 0) {
+        return { success: false, error: 'Nothing to correct', delta: 0 };
+      }
+
+      for (const item of plan.items) {
+        const entry = entryMap.get(item.entryId)!;
+
+        if (item.deleteEntry) {
+          const { error } = await supabase
+            .from('stock_entries')
+            .delete()
+            .eq('id', item.entryId);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from('stock_entries')
+            .update({ amount: item.newAmount })
+            .eq('id', item.entryId);
+          if (error) throw error;
+        }
+
+        const { error: logError } = await supabase.from('stock_log').insert({
+          household_id: householdId,
+          product_id: productId,
+          amount: item.amountToConsume,
+          transaction_type: 'inventory-correction',
+          best_before_date: entry.best_before_date ?? null,
+          purchased_date: entry.purchased_date ?? null,
+          used_date: today,
+          opened_date: entry.opened_date ?? null,
+          price: entry.price ?? null,
+          location_id: entry.location_id ?? null,
+          shopping_location_id: entry.shopping_location_id ?? null,
+          spoiled: false,
+          stock_id: entry.stock_id,
+          stock_entry_id: item.deleteEntry ? null : entry.id,
+          correlation_id: correlationId,
+          transaction_id: crypto.randomUUID(),
+          undone: false,
+          user_id: user.id,
+          note: JSON.stringify({ direction: 'decrease' }),
+        });
+        if (logError) throw logError;
+      }
+    } else {
+      // INCREASE: add stock to the most recent entry
+      const sorted = [...entries].sort((a, b) =>
+        (b.created_at ?? '').localeCompare(a.created_at ?? '')
+      );
+      const target = sorted[0];
+      const newEntryAmount = target.amount + delta;
+
+      const { error: updateError } = await supabase
+        .from('stock_entries')
+        .update({ amount: newEntryAmount })
+        .eq('id', target.id);
+      if (updateError) throw updateError;
+
+      const { error: logError } = await supabase.from('stock_log').insert({
+        household_id: householdId,
+        product_id: productId,
+        amount: delta,
+        transaction_type: 'inventory-correction',
+        best_before_date: target.best_before_date ?? null,
+        purchased_date: target.purchased_date ?? null,
+        used_date: today,
+        opened_date: target.opened_date ?? null,
+        price: target.price ?? null,
+        location_id: target.location_id ?? null,
+        shopping_location_id: target.shopping_location_id ?? null,
+        spoiled: false,
+        stock_id: target.stock_id,
+        stock_entry_id: target.id,
+        correlation_id: correlationId,
+        transaction_id: crypto.randomUUID(),
+        undone: false,
+        user_id: user.id,
+        note: JSON.stringify({ direction: 'increase' }),
+      });
+      if (logError) throw logError;
+    }
+
+    return { success: true, delta, correlationId };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to correct inventory',
+      delta: 0,
+    };
+  }
+}
+
+/**
+ * Undo an inventory correction by correlation ID.
+ * Parses direction from log note to determine decrease vs increase undo path.
+ */
+export async function undoCorrectInventory(
+  correlationId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = createClient();
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: 'Not authenticated' };
+
+    const { data: logRows, error: fetchError } = await supabase
+      .from('stock_log')
+      .select('*')
+      .eq('correlation_id', correlationId)
+      .eq('undone', false);
+    if (fetchError) throw fetchError;
+    if (!logRows || logRows.length === 0) {
+      return { success: false, error: 'Nothing to undo' };
+    }
+
+    let direction: string;
+    try {
+      direction = JSON.parse(logRows[0].note ?? '{}').direction;
+    } catch {
+      return { success: false, error: 'Invalid correction log data' };
+    }
+
+    if (direction === 'decrease') {
+      // Same undo logic as undoConsume
+      for (const row of logRows) {
+        if (row.stock_entry_id) {
+          const { data: existing, error: getError } = await supabase
+            .from('stock_entries')
+            .select('amount')
+            .eq('id', row.stock_entry_id)
+            .single();
+          if (getError) throw getError;
+
+          const { error: updateError } = await supabase
+            .from('stock_entries')
+            .update({ amount: existing.amount + row.amount })
+            .eq('id', row.stock_entry_id);
+          if (updateError) throw updateError;
+        } else {
+          const { error: insertError } = await supabase
+            .from('stock_entries')
+            .insert({
+              household_id: row.household_id,
+              product_id: row.product_id,
+              amount: row.amount,
+              best_before_date: row.best_before_date,
+              purchased_date: row.purchased_date,
+              price: row.price,
+              location_id: row.location_id,
+              shopping_location_id: row.shopping_location_id,
+              stock_id: row.stock_id,
+              open: row.opened_date !== null,
+              opened_date: row.opened_date,
+              note: null,
+            });
+          if (insertError) throw insertError;
+        }
+      }
+    } else if (direction === 'increase') {
+      const row = logRows[0];
+      if (!row.stock_entry_id) {
+        return { success: false, error: 'Correction entry not found' };
+      }
+
+      const { data: existing, error: getError } = await supabase
+        .from('stock_entries')
+        .select('amount')
+        .eq('id', row.stock_entry_id)
+        .single();
+      if (getError) throw getError;
+
+      const restoredAmount = existing.amount - row.amount;
+      if (restoredAmount <= 0) {
+        const { error: deleteError } = await supabase
+          .from('stock_entries')
+          .delete()
+          .eq('id', row.stock_entry_id);
+        if (deleteError) throw deleteError;
+      } else {
+        const { error: updateError } = await supabase
+          .from('stock_entries')
+          .update({ amount: restoredAmount })
+          .eq('id', row.stock_entry_id);
+        if (updateError) throw updateError;
+      }
+    } else {
+      return { success: false, error: 'Unknown correction direction' };
+    }
+
+    const { error: undoError } = await supabase
+      .from('stock_log')
+      .update({ undone: true, undone_timestamp: new Date().toISOString() })
+      .eq('correlation_id', correlationId);
+    if (undoError) throw undoError;
+
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to undo correction',
+    };
+  }
+}
+
 /**
  * Undo a transfer by correlation ID.
  * Restores original location and best_before_date from the transfer-from log row.

@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.6.X] - In Progress
 
 ### Added
+- **Open stock action** (v0.6.4)
+  - Pure FIFO open logic in `inventory-utils.ts` (`computeOpenPlan`)
+    - Selects sealed entries by earliest due date → oldest purchase date
+  - `openStock()` in `stock-actions.ts`
+    - Sets `open: true` and `opened_date` on selected entries
+    - Recalculates `best_before_date` using `default_due_days_after_open` (never extends original)
+    - Auto-moves to `default_consume_location_id` when `move_on_open` is enabled
+    - Logs to `stock_log` with `transaction_type = 'product-opened'`
+    - Supports both authenticated and guest mode
+  - `undoOpen(correlationId)` — restores sealed state, original due date, and original location
+  - Wired quick open button in `DesktopStockTable` and `MobileStockList`
+    - Uses product's `quick_open_amount`, undo toast via sonner
+    - Disabled when all entries already open
 - **Undo toast for all actions** (v0.6.3)
   - Every destructive action now executes immediately with an undo toast (no more `window.confirm`)
   - Consume 1 (quick action) — toast with undo via `undoConsume`

@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, ImageIcon } from "lucide-react";
-import { consumeStock, undoConsume } from "@/lib/stock-actions";
+import { consumeStock, undoConsume, openStock, undoOpen } from "@/lib/stock-actions";
 import { toast } from "sonner";
 import { StockEntryWithProduct, Product } from "@/types/database";
 import { getExpiryStatus, getExpiryLabel } from "@/lib/inventory-utils";
@@ -140,6 +140,7 @@ export function MobileStockList({ entries, zeroStockProducts = [] }: MobileStock
   const [modalEntries, setModalEntries] = useState<StockEntryWithProduct[]>([]);
   const [actionsExpanded, setActionsExpanded] = useState(true);
   const [consuming, setConsuming] = useState<string | null>(null);
+  const [opening, setOpening] = useState<string | null>(null);
   const [consumeModalEntries, setConsumeModalEntries] = useState<StockEntryWithProduct[] | null>(null);
 
   const aggregated = useMemo(() => aggregateByProduct(entries), [entries]);
@@ -214,6 +215,32 @@ export function MobileStockList({ entries, zeroStockProducts = [] }: MobileStock
       });
     } else {
       alert(result.error ?? "Failed to consume");
+    }
+  };
+
+  const handleOpen = async (product: AggregatedProduct) => {
+    setOpening(product.productId);
+    const count = product.entries[0].product.quick_open_amount;
+    const result = await openStock(product.productId, product.entries, count);
+    setOpening(null);
+    if (result.success) {
+      router.refresh();
+      const label = result.opened === 1 ? "entry" : "entries";
+      toast(`Opened ${result.opened} ${label} of ${product.productName}`, {
+        action: {
+          label: "Undo",
+          onClick: async () => {
+            const undo = await undoOpen(result.correlationId!);
+            if (undo.success) {
+              router.refresh();
+            } else {
+              toast.error(undo.error ?? "Failed to undo");
+            }
+          },
+        },
+      });
+    } else {
+      alert(result.error ?? "Failed to open");
     }
   };
 
@@ -333,11 +360,19 @@ export function MobileStockList({ entries, zeroStockProducts = [] }: MobileStock
                           <Utensils className="h-3 w-3" />All
                         </button>
                         <button
-                          disabled
-                          title="Open 1"
-                          className="h-6 px-1.5 text-xs font-medium rounded bg-takumi text-white opacity-50 cursor-not-allowed flex items-center gap-0.5"
+                          onClick={() => handleOpen(product)}
+                          disabled={opening === product.productId || !product.entries.some(e => !e.open)}
+                          title={`Open ${product.entries[0]?.product.quick_open_amount ?? 1}`}
+                          className={cn(
+                            "h-6 px-1.5 text-xs font-medium rounded bg-takumi text-white flex items-center gap-0.5",
+                            opening === product.productId
+                              ? "opacity-50 cursor-wait"
+                              : !product.entries.some(e => !e.open)
+                                ? "opacity-50 cursor-not-allowed"
+                                : "hover:bg-takumi/90 transition-colors"
+                          )}
                         >
-                          <PackageOpen className="h-3 w-3" />1
+                          <PackageOpen className="h-3 w-3" />{product.entries[0]?.product.quick_open_amount ?? 1}
                         </button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>

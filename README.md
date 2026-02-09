@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.6.3-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.6.4-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.6.3
+Current version is v0.6.4
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -267,13 +267,13 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Log to `stock_log` with `transaction_type = 'consume'`
 
 **Open action:**
-- [ ] Mark stock entry as opened
-- [ ] Set `opened_date`
-- [ ] Recalculate due date using `default_due_days_after_open`
-- [ ] New due date never extends original
-- [ ] Quick open button (uses `quick_open_amount`)
-- [ ] Optional: auto-move to `default_consume_location_id` if `move_on_open` is true
-- [ ] Log to `stock_log` with `transaction_type = 'product-opened'`
+- [x] Mark stock entry as opened
+- [x] Set `opened_date`
+- [x] Recalculate due date using `default_due_days_after_open`
+- [x] New due date never extends original
+- [x] Quick open button (uses `quick_open_amount`)
+- [x] Optional: auto-move to `default_consume_location_id` if `move_on_open` is true
+- [x] Log to `stock_log` with `transaction_type = 'product-opened'`
 
 **Transfer action:**
 - [ ] Move stock between locations

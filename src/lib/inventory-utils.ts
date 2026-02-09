@@ -240,3 +240,61 @@ export function computeConsumePlan(
     shortfall: remaining,
   };
 }
+
+// ============================================
+// OPEN LOGIC
+// ============================================
+
+export type OpenInput = Pick<StockEntry, 'id' | 'open' | 'best_before_date' | 'purchased_date'>;
+
+export type OpenPlanItem = {
+  entryId: string;
+};
+
+export type OpenPlan = {
+  items: OpenPlanItem[];
+  totalOpened: number;
+};
+
+/**
+ * Compute which sealed stock entries to mark as opened.
+ * Pure function — no DB calls.
+ *
+ * FIFO priority (sealed entries only):
+ *  1. Earliest best_before_date (nulls last)
+ *  2. Oldest purchased_date (nulls last)
+ */
+export function computeOpenPlan(
+  entries: OpenInput[],
+  count: number
+): OpenPlan {
+  if (count <= 0 || entries.length === 0) {
+    return { items: [], totalOpened: 0 };
+  }
+
+  const sealed = entries.filter((e) => !e.open);
+
+  const sorted = [...sealed].sort((a, b) => {
+    // 1. Earliest best_before_date (nulls last)
+    if (a.best_before_date !== b.best_before_date) {
+      if (!a.best_before_date) return 1;
+      if (!b.best_before_date) return -1;
+      return a.best_before_date.localeCompare(b.best_before_date);
+    }
+
+    // 2. Oldest purchased_date (nulls last)
+    if (a.purchased_date !== b.purchased_date) {
+      if (!a.purchased_date) return 1;
+      if (!b.purchased_date) return -1;
+      return a.purchased_date.localeCompare(b.purchased_date);
+    }
+
+    return 0;
+  });
+
+  const items: OpenPlanItem[] = sorted.slice(0, count).map((entry) => ({
+    entryId: entry.id,
+  }));
+
+  return { items, totalOpened: items.length };
+}

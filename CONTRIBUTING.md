@@ -23,10 +23,14 @@ Visit `http://localhost:3000/test` to see the color palette test page.
 See README.md for full directory tree.
 
 Key areas:
-- `app/` — Next.js App Router pages
-- `components/ui/` — shadcn components
-- `components/diner/` — Themed components (Noren, Chalkboard, WoodCard)
-- `lib/supabase/` — Database client and utilities
+- `src/app/` — Next.js App Router pages
+- `src/components/ui/` — shadcn components
+- `src/components/diner/` — Themed components (Noren, WelcomeModal, UserMenu)
+- `src/components/inventory/` — Stock overview, modals, tables
+- `src/components/journal/` — Stock journal, filters, pagination, summary
+- `src/lib/supabase/` — Database client and utilities
+- `src/lib/stock-actions.ts` — Stock action logic (consume, open, transfer, correct, undo)
+- `src/lib/inventory-utils.ts` — FIFO helpers, expiry calculations
 - `src/app/globals.css` — Tailwind + theme CSS variables (see BRANDING.md)
 
 ## Ways to Contribute
@@ -61,6 +65,21 @@ Key areas:
 - Supabase migrations go in `supabase/migrations/`
 - Always include RLS policies for new tables
 - Test with both authenticated and guest modes
+
+### Architecture Patterns
+
+**Stock Action Pattern** — All stock mutations live in `src/lib/stock-actions.ts`. Each action function (e.g. `consumeStock`, `openStock`, `transferStock`, `correctInventory`) follows the same shape:
+1. Accept product ID, stock entries, and action-specific params
+2. Compute a mutation plan (using pure helpers from `inventory-utils.ts`)
+3. Apply mutations to Supabase (update/delete stock entries)
+4. Log to `stock_log` with the appropriate `transaction_type` and a shared `correlation_id`
+5. Return `{ success, correlationId }` for the caller to wire up undo
+
+**Undo Toast Pattern** — Destructive actions execute immediately, then show an 8-second undo toast via `sonner`. The undo callback calls the matching undo function (e.g. `undoConsume(correlationId)`), which reads the `stock_log` rows by `correlation_id` to reverse the mutation and marks them `undone = true`.
+
+**Dual Mode Pattern** — All data mutations must work for both authenticated users (Supabase RLS scoped to their household) and guest mode (using `GUEST_HOUSEHOLD_ID` from `src/lib/constants.ts`). Check `user.is_anonymous` when determining the household.
+
+**Journal Integration** — Every stock mutation logs to `stock_log` with a `transaction_type` and `correlation_id`. Transfers create two rows (`transfer-from` + `transfer-to`) sharing the same `correlation_id`. The journal page filters out `transfer-to`, `stock-edit-old`, and `stock-edit-new` rows from display.
 
 ## Environment Variables
 

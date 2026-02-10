@@ -4,6 +4,10 @@ import {
   getExpiryLabel,
   getExpiryDaysLabel,
   getInventoryStats,
+  computeConsumePlan,
+  computeOpenPlan,
+  type ConsumeInput,
+  type OpenInput,
 } from "../inventory-utils";
 
 // Mock current date to 2025-02-01 for deterministic tests
@@ -247,6 +251,224 @@ describe("inventory-utils", () => {
       const stats = getInventoryStats(entries as never[]);
       // With due_type defaulting to 1, past date should be "overdue"
       expect(stats.overdue).toBe(1);
+    });
+  });
+
+  // ============================================
+  // computeConsumePlan
+  // ============================================
+
+  describe("computeConsumePlan", () => {
+    const entry = (overrides: Partial<ConsumeInput> & { id: string }): ConsumeInput => ({
+      amount: 1,
+      open: false,
+      best_before_date: null,
+      purchased_date: null,
+      ...overrides,
+    });
+
+    it("returns empty plan for zero amount", () => {
+      const plan = computeConsumePlan([entry({ id: "a" })], 0);
+      expect(plan.items).toHaveLength(0);
+      expect(plan.totalConsumed).toBe(0);
+    });
+
+    it("returns empty plan for negative amount", () => {
+      const plan = computeConsumePlan([entry({ id: "a" })], -1);
+      expect(plan.items).toHaveLength(0);
+    });
+
+    it("returns empty plan for empty entries", () => {
+      const plan = computeConsumePlan([], 5);
+      expect(plan.items).toHaveLength(0);
+      expect(plan.shortfall).toBe(5);
+    });
+
+    it("fully consumes a single entry (delete)", () => {
+      const plan = computeConsumePlan([entry({ id: "a", amount: 3 })], 3);
+      expect(plan.items).toHaveLength(1);
+      expect(plan.items[0].entryId).toBe("a");
+      expect(plan.items[0].deleteEntry).toBe(true);
+      expect(plan.items[0].newAmount).toBe(0);
+      expect(plan.items[0].amountToConsume).toBe(3);
+      expect(plan.totalConsumed).toBe(3);
+      expect(plan.shortfall).toBe(0);
+    });
+
+    it("partially consumes an entry (update)", () => {
+      const plan = computeConsumePlan([entry({ id: "a", amount: 5 })], 2);
+      expect(plan.items).toHaveLength(1);
+      expect(plan.items[0].deleteEntry).toBe(false);
+      expect(plan.items[0].newAmount).toBe(3);
+      expect(plan.items[0].amountToConsume).toBe(2);
+      expect(plan.totalConsumed).toBe(2);
+    });
+
+    it("reports shortfall when consuming more than available", () => {
+      const plan = computeConsumePlan([entry({ id: "a", amount: 2 })], 5);
+      expect(plan.totalConsumed).toBe(2);
+      expect(plan.shortfall).toBe(3);
+    });
+
+    it("FIFO: opened entries first", () => {
+      const entries = [
+        entry({ id: "sealed", amount: 1, open: false, best_before_date: "2025-02-01" }),
+        entry({ id: "opened", amount: 1, open: true, best_before_date: "2025-03-01" }),
+      ];
+      const plan = computeConsumePlan(entries, 1);
+      expect(plan.items[0].entryId).toBe("opened");
+    });
+
+    it("FIFO: earliest best_before_date first (among same open status)", () => {
+      const entries = [
+        entry({ id: "later", amount: 1, best_before_date: "2025-03-01" }),
+        entry({ id: "sooner", amount: 1, best_before_date: "2025-02-01" }),
+      ];
+      const plan = computeConsumePlan(entries, 1);
+      expect(plan.items[0].entryId).toBe("sooner");
+    });
+
+    it("FIFO: null best_before_date sorted last", () => {
+      const entries = [
+        entry({ id: "no-date", amount: 1, best_before_date: null }),
+        entry({ id: "has-date", amount: 1, best_before_date: "2025-06-01" }),
+      ];
+      const plan = computeConsumePlan(entries, 1);
+      expect(plan.items[0].entryId).toBe("has-date");
+    });
+
+    it("FIFO: oldest purchased_date as tiebreaker", () => {
+      const entries = [
+        entry({ id: "newer", amount: 1, best_before_date: "2025-03-01", purchased_date: "2025-01-15" }),
+        entry({ id: "older", amount: 1, best_before_date: "2025-03-01", purchased_date: "2025-01-01" }),
+      ];
+      const plan = computeConsumePlan(entries, 1);
+      expect(plan.items[0].entryId).toBe("older");
+    });
+
+    it("FIFO: null purchased_date sorted last", () => {
+      const entries = [
+        entry({ id: "no-purchase", amount: 1, best_before_date: "2025-03-01", purchased_date: null }),
+        entry({ id: "has-purchase", amount: 1, best_before_date: "2025-03-01", purchased_date: "2025-01-01" }),
+      ];
+      const plan = computeConsumePlan(entries, 1);
+      expect(plan.items[0].entryId).toBe("has-purchase");
+    });
+
+    it("consumes across multiple entries in FIFO order", () => {
+      const entries = [
+        entry({ id: "a", amount: 2, open: true, best_before_date: "2025-02-01" }),
+        entry({ id: "b", amount: 3, open: false, best_before_date: "2025-02-05" }),
+        entry({ id: "c", amount: 4, open: false, best_before_date: "2025-03-01" }),
+      ];
+      const plan = computeConsumePlan(entries, 6);
+      expect(plan.items).toHaveLength(3);
+      expect(plan.items[0].entryId).toBe("a");
+      expect(plan.items[0].deleteEntry).toBe(true); // fully consumed (2)
+      expect(plan.items[1].entryId).toBe("b");
+      expect(plan.items[1].deleteEntry).toBe(true); // fully consumed (3)
+      expect(plan.items[2].entryId).toBe("c");
+      expect(plan.items[2].amountToConsume).toBe(1); // partial (need 1 more)
+      expect(plan.items[2].newAmount).toBe(3);
+      expect(plan.totalConsumed).toBe(6);
+      expect(plan.shortfall).toBe(0);
+    });
+  });
+
+  // ============================================
+  // computeOpenPlan
+  // ============================================
+
+  describe("computeOpenPlan", () => {
+    const entry = (overrides: Partial<OpenInput> & { id: string }): OpenInput => ({
+      open: false,
+      best_before_date: null,
+      purchased_date: null,
+      ...overrides,
+    });
+
+    it("returns empty plan for zero count", () => {
+      const plan = computeOpenPlan([entry({ id: "a" })], 0);
+      expect(plan.items).toHaveLength(0);
+      expect(plan.totalOpened).toBe(0);
+    });
+
+    it("returns empty plan for negative count", () => {
+      const plan = computeOpenPlan([entry({ id: "a" })], -1);
+      expect(plan.items).toHaveLength(0);
+    });
+
+    it("returns empty plan for empty entries", () => {
+      const plan = computeOpenPlan([], 1);
+      expect(plan.items).toHaveLength(0);
+    });
+
+    it("skips already-opened entries", () => {
+      const entries = [
+        entry({ id: "opened", open: true }),
+        entry({ id: "sealed", open: false }),
+      ];
+      const plan = computeOpenPlan(entries, 2);
+      expect(plan.items).toHaveLength(1);
+      expect(plan.items[0].entryId).toBe("sealed");
+      expect(plan.totalOpened).toBe(1);
+    });
+
+    it("returns empty plan when all entries already opened", () => {
+      const entries = [
+        entry({ id: "a", open: true }),
+        entry({ id: "b", open: true }),
+      ];
+      const plan = computeOpenPlan(entries, 1);
+      expect(plan.items).toHaveLength(0);
+      expect(plan.totalOpened).toBe(0);
+    });
+
+    it("opens a single sealed entry", () => {
+      const plan = computeOpenPlan([entry({ id: "a" })], 1);
+      expect(plan.items).toHaveLength(1);
+      expect(plan.items[0].entryId).toBe("a");
+      expect(plan.totalOpened).toBe(1);
+    });
+
+    it("FIFO: earliest best_before_date first", () => {
+      const entries = [
+        entry({ id: "later", best_before_date: "2025-04-01" }),
+        entry({ id: "sooner", best_before_date: "2025-02-01" }),
+      ];
+      const plan = computeOpenPlan(entries, 1);
+      expect(plan.items[0].entryId).toBe("sooner");
+    });
+
+    it("FIFO: null best_before_date sorted last", () => {
+      const entries = [
+        entry({ id: "no-date", best_before_date: null }),
+        entry({ id: "has-date", best_before_date: "2025-06-01" }),
+      ];
+      const plan = computeOpenPlan(entries, 1);
+      expect(plan.items[0].entryId).toBe("has-date");
+    });
+
+    it("FIFO: oldest purchased_date as tiebreaker", () => {
+      const entries = [
+        entry({ id: "newer", best_before_date: "2025-03-01", purchased_date: "2025-01-20" }),
+        entry({ id: "older", best_before_date: "2025-03-01", purchased_date: "2025-01-01" }),
+      ];
+      const plan = computeOpenPlan(entries, 1);
+      expect(plan.items[0].entryId).toBe("older");
+    });
+
+    it("limits opened count to requested count", () => {
+      const entries = [
+        entry({ id: "a", best_before_date: "2025-02-01" }),
+        entry({ id: "b", best_before_date: "2025-03-01" }),
+        entry({ id: "c", best_before_date: "2025-04-01" }),
+      ];
+      const plan = computeOpenPlan(entries, 2);
+      expect(plan.items).toHaveLength(2);
+      expect(plan.items[0].entryId).toBe("a");
+      expect(plan.items[1].entryId).toBe("b");
+      expect(plan.totalOpened).toBe(2);
     });
   });
 });

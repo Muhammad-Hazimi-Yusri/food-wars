@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.6.8-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.7.0-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.6.8
+Current version is v0.7.0
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -38,9 +38,17 @@ Current version is v0.6.8
 - **Add Products** — 5-tab form (basic, stock defaults, locations, QU conversions, barcodes)
 - **Product Pictures** — Upload from camera or gallery (mobile-optimized)
 - **Add Stock** — Quick-add entries with location, expiry, price
-- **Stock Details** — View and delete individual batches per product
-- **Status Warnings** — Expired, overdue, due soon, below minimum alerts
-- **Google Sign-in** — OAuth authentication with household isolation
+- **Stock Details** — View and edit individual batches per product
+- **Status Warnings** — Clickable expired/overdue/due soon/below minimum alert banners
+- **Stock Filters** — Search by name, filter by location, product group, status
+- **Master Data** — Manage locations, product groups, quantity units, stores (CRUD + drag reorder)
+- **Products List** — Sortable/filterable product table with column options
+- **Stock Actions** — Consume, Open, Transfer, and Inventory Correction with FIFO logic
+- **Quick Actions** — One-tap Consume/Open buttons using product defaults
+- **Undo Toasts** — Every destructive action is reversible with an 8-second undo window
+- **Stock Journal** — Full transaction history with filters, pagination, and summary view
+- **Freezer Intelligence** — Auto-adjusts due dates on freeze/thaw, warns for freeze-sensitive products
+- **Authentication** — Google Sign-in with household isolation + guest mode with demo data
 
 ### For Contributors
 - **Documentation** — README, BRANDING.md, CONTRIBUTING.md, CHANGELOG.md
@@ -247,13 +255,9 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Consolidated constants (GUEST_HOUSEHOLD_ID)
 - [x] Delete product pictures when deleting products
 </details>
----
 
-### In Progress
-
-
-#### v0.6 - Stock Actions & Journal
-
+<details>
+<summary><strong>v0.6 - Stock Actions & Journal ✓</strong></summary>
 **Goal:** Consume vs Open distinction + transaction logging
 
 > Schema ready: `stock_log` table with `stock_transaction_type` enum already in place
@@ -292,8 +296,10 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Pagination for journal entries (page size selector, prev/next, page X of Y)
 - [x] Journal summary view (aggregated by product/type)
 - [x] Uses `correlation_id` to group related transactions
+</details>
+---
 
-### Planned
+### In Progress
 
 #### v0.7 - Shopping Lists
 
@@ -345,6 +351,8 @@ CREATE TABLE shopping_list_items (
 - [ ] "Add all overdue" button
 - [ ] Setting: auto-add products below min stock
 - [ ] Calculates missing amount: `min_stock - current_stock`
+
+### Planned
 
 #### v0.8 - Barcodes & Smart Input
 
@@ -658,7 +666,8 @@ food-wars/
 │   └── pre-commit                 # Pre-commit hooks (lint, version check)
 ├── e2e/
 │   ├── home.spec.ts               # Home page E2E test
-│   └── guest-mode.spec.ts         # Guest mode flow E2E tests
+│   ├── guest-mode.spec.ts         # Guest mode flow E2E tests
+│   └── product-crud.spec.ts       # Product CRUD E2E tests
 ├── public/                        # Static assets
 ├── scripts/
 │   └── bump-version.mjs           # Interactive version updater
@@ -677,12 +686,15 @@ food-wars/
 │   │   │   │   └── route.ts       # OAuth callback handler
 │   │   │   └── error/
 │   │   │       └── page.tsx       # Auth error page
+│   │   ├── journal/
+│   │   │   └── page.tsx           # Stock journal page
 │   │   ├── master-data/
 │   │   │   ├── layout.tsx         # Master data layout with tab nav
 │   │   │   ├── page.tsx           # Redirects to /products
+│   │   │   ├── locations/
+│   │   │   │   └── page.tsx       # Locations CRUD
 │   │   │   ├── products/
 │   │   │   │   └── page.tsx       # Products list with filters & table options
-│   │   │   │   └── page.tsx       # Locations CRUD
 │   │   │   ├── product-groups/
 │   │   │   │   └── page.tsx       # Product groups CRUD
 │   │   │   ├── quantity-units/
@@ -690,12 +702,17 @@ food-wars/
 │   │   │   └── shopping-locations/
 │   │   │       └── page.tsx       # Stores CRUD
 │   │   ├── products/
-│   │   │   └── new/
-│   │   │       └── page.tsx       # Add new product page
+│   │   │   ├── new/
+│   │   │   │   └── page.tsx       # Add new product page
+│   │   │   └── [id]/
+│   │   │       ├── edit/
+│   │   │       │   └── page.tsx   # Edit product page
+│   │   │       └── conversions/
+│   │   │           └── page.tsx   # QU conversions page
 │   │   ├── test/
 │   │   │   └── page.tsx           # Color palette test page
 │   │   ├── globals.css            # Tailwind + theme CSS variables
-│   │   ├── layout.tsx             # Root layout with fonts
+│   │   ├── layout.tsx             # Root layout with fonts + Toaster
 │   │   └── page.tsx               # Home/Stock overview page
 │   ├── components/
 │   │   ├── diner/                 # Themed components
@@ -705,14 +722,26 @@ food-wars/
 │   │   │   └── WelcomeModal.tsx   # First-visit onboarding modal
 │   │   ├── inventory/             # Stock management components
 │   │   │   ├── AddStockEntryModal.tsx
+│   │   │   ├── ConsumeModal.tsx   # Product-level consume dialog
+│   │   │   ├── CorrectionModal.tsx # Inventory correction dialog
 │   │   │   ├── DesktopStockTable.tsx
 │   │   │   ├── EditStockEntryModal.tsx
 │   │   │   ├── InventoryStats.tsx
 │   │   │   ├── MobileStockList.tsx
+│   │   │   ├── ProductConversionsClient.tsx
 │   │   │   ├── ProductDetailModal.tsx
 │   │   │   ├── ProductForm.tsx
 │   │   │   ├── StockFilters.tsx
-│   │   │   └── StockOverviewClient.tsx
+│   │   │   ├── StockOverviewClient.tsx
+│   │   │   └── TransferModal.tsx  # Transfer between locations dialog
+│   │   ├── journal/               # Stock journal components
+│   │   │   ├── DesktopJournalTable.tsx
+│   │   │   ├── JournalClient.tsx  # Journal page client wrapper
+│   │   │   ├── JournalFilters.tsx # Product, type, date range filters
+│   │   │   ├── JournalPagination.tsx
+│   │   │   ├── JournalSummary.tsx # Aggregated summary view
+│   │   │   ├── MobileJournalList.tsx
+│   │   │   └── journal-constants.ts # Shared labels, colors, formatters
 │   │   ├── master-data/           # Master data components
 │   │   │   ├── MasterDataForm.tsx # Reusable add/edit modal
 │   │   │   ├── MasterDataList.tsx # Reusable list with CRUD
@@ -724,7 +753,9 @@ food-wars/
 │   │       ├── image-upload.tsx
 │   │       ├── input.tsx
 │   │       ├── label.tsx
+│   │       ├── popover.tsx
 │   │       ├── select.tsx
+│   │       ├── sonner.tsx         # Toast notifications (undo toasts)
 │   │       └── tabs.tsx
 │   ├── hooks/
 │   │   └── useGuestStorage.ts     # localStorage hook (legacy)
@@ -738,7 +769,8 @@ food-wars/
 │   │   ├── __tests__/
 │   │   │   └── inventory-utils.test.ts # Inventory utils unit tests
 │   │   ├── constants.ts           # Shared constants (GUEST_HOUSEHOLD_ID)
-│   │   ├── inventory-utils.ts     # Stock aggregation & expiry helpers
+│   │   ├── inventory-utils.ts     # Stock aggregation, expiry & FIFO helpers
+│   │   ├── stock-actions.ts       # Stock actions (consume, open, transfer, correct, undo)
 │   │   └── utils.ts               # cn() and general utilities
 │   └── types/
 │       └── database.ts            # Supabase generated types
@@ -749,7 +781,8 @@ food-wars/
 │   │   ├── 003_guest_mode.sql     # Guest household + RLS updates
 │   │   ├── 004_guest_seed_data.sql    # Demo data for guest
 │   │   ├── 005_seed_guest_function.sql # Re-seed function for admin
-│   │   └── 006_fix_anon_trigger.sql   # Skip anon users in trigger
+│   │   ├── 006_fix_anon_trigger.sql   # Skip anon users in trigger
+│   │   └── 007_drop_qu_factor.sql     # Remove deprecated qu_factor column
 │   └── scripts/
 │       └── cleanup_orphan_households.sql  # Manual cleanup script
 ├── BRANDING.md                    # Design system & color palette

@@ -1,4 +1,4 @@
-import { StockEntryWithProduct } from '@/types/database';
+import { StockEntryWithProduct, StockTransactionType } from '@/types/database';
 import { computeConsumePlan, computeOpenPlan } from '@/lib/inventory-utils';
 import { createClient } from '@/lib/supabase/client';
 import { GUEST_HOUSEHOLD_ID } from '@/lib/constants';
@@ -884,5 +884,28 @@ export async function undoTransfer(
       success: false,
       error: err instanceof Error ? err.message : 'Failed to undo transfer',
     };
+  }
+}
+
+/**
+ * Dispatcher: undo any transaction by its correlation_id and type.
+ * Routes to the correct undo function based on transaction_type.
+ */
+export async function undoTransaction(
+  correlationId: string,
+  transactionType: StockTransactionType
+): Promise<{ success: boolean; error?: string }> {
+  switch (transactionType) {
+    case 'consume':
+    case 'spoiled':
+      return undoConsume(correlationId);
+    case 'product-opened':
+      return undoOpen(correlationId);
+    case 'transfer-from':
+      return undoTransfer(correlationId);
+    case 'inventory-correction':
+      return undoCorrectInventory(correlationId);
+    default:
+      return { success: false, error: 'Cannot undo this transaction type' };
   }
 }

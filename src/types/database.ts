@@ -284,8 +284,10 @@ export type StockEntryWithProduct = StockEntry & {
 };
 
 export type StockLogWithRelations = StockLog & {
-  product: Product;
-  location?: Location | null;
+  product: Pick<Product, 'id' | 'name'> & {
+    qu_stock?: Pick<QuantityUnit, 'name' | 'name_plural'> | null;
+  };
+  location?: Pick<Location, 'id' | 'name'> | null;
 };
 
 // ============================================

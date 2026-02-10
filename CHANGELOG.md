@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.6.X] - In Progress
 
 ### Added
+- **Stock Journal UI** (v0.6.7)
+  - New `/journal` page showing all stock transactions in reverse chronological order
+  - Desktop table + mobile card layout (responsive `sm:` breakpoint)
+  - Filters: product search, product select, transaction type select, date range (from/to)
+  - Mobile collapsible filter panel with active filter badge count
+  - Undo button per row — dispatches to correct undo function via `undoTransaction()`
+  - Undone rows shown with muted opacity + strikethrough + "Undone" badge
+  - Type badges: Consumed, Spoiled, Opened, Transferred, Corrected, Purchased
+  - Relative timestamps (Just now, Xm ago, Xh ago, Xd ago, then date)
+  - `transfer-to`, `stock-edit-old`, `stock-edit-new` rows filtered from display
+  - "Journal" link added to user menu dropdown (BookOpen icon)
+  - Works for both authenticated and guest mode (same Supabase RLS)
 - **Inventory correction action** (v0.6.6)
   - Grocy-style correction: user enters new total amount, system computes delta
   - `correctInventory()` in `stock-actions.ts`

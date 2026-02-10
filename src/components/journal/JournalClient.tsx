@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { StockLogWithRelations, Product } from "@/types/database";
 import { DesktopJournalTable } from "./DesktopJournalTable";
 import { MobileJournalList } from "./MobileJournalList";
@@ -10,6 +10,9 @@ import {
   INITIAL_JOURNAL_FILTERS,
   hasActiveJournalFilters,
 } from "./JournalFilters";
+import { JournalPagination } from "./JournalPagination";
+import { JournalSummary } from "./JournalSummary";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -39,33 +42,30 @@ type JournalClientProps = {
 export function JournalClient({ logs, products }: JournalClientProps) {
   const [filters, setFilters] = useState<JournalFilterState>(INITIAL_JOURNAL_FILTERS);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   const filteredLogs = useMemo(() => {
     return logs.filter((log) => {
-      // Search filter
       if (filters.search) {
         const searchLower = filters.search.toLowerCase();
         const name = log.product?.name?.toLowerCase() ?? "";
         if (!name.includes(searchLower)) return false;
       }
 
-      // Product filter
       if (filters.product !== "all") {
         if (log.product_id !== filters.product) return false;
       }
 
-      // Transaction type filter
       if (filters.transactionType !== "all") {
         if (log.transaction_type !== filters.transactionType) return false;
       }
 
-      // Date from filter
       if (filters.dateFrom) {
         const logDate = log.created_at.slice(0, 10);
         if (logDate < filters.dateFrom) return false;
       }
 
-      // Date to filter
       if (filters.dateTo) {
         const logDate = log.created_at.slice(0, 10);
         if (logDate > filters.dateTo) return false;
@@ -74,6 +74,21 @@ export function JournalClient({ logs, products }: JournalClientProps) {
       return true;
     });
   }, [logs, filters]);
+
+  const paginatedLogs = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return filteredLogs.slice(start, start + pageSize);
+  }, [filteredLogs, page, pageSize]);
+
+  const handleFiltersChange = useCallback((next: JournalFilterState) => {
+    setFilters(next);
+    setPage(1);
+  }, []);
+
+  const handlePageSizeChange = useCallback((size: number) => {
+    setPageSize(size);
+    setPage(1);
+  }, []);
 
   const activeFilterCount = [
     filters.product !== "all",
@@ -94,7 +109,7 @@ export function JournalClient({ logs, products }: JournalClientProps) {
               placeholder="Search products..."
               value={filters.search}
               onChange={(e) =>
-                setFilters((prev) => ({ ...prev, search: e.target.value }))
+                handleFiltersChange({ ...filters, search: e.target.value })
               }
               className="pl-9"
             />
@@ -116,11 +131,10 @@ export function JournalClient({ logs, products }: JournalClientProps) {
 
         {showMobileFilters && (
           <div className="bg-white rounded-lg p-3 shadow-sm space-y-2">
-            {/* Product */}
             <Select
               value={filters.product}
               onValueChange={(v) =>
-                setFilters((prev) => ({ ...prev, product: v }))
+                handleFiltersChange({ ...filters, product: v })
               }
             >
               <SelectTrigger>
@@ -136,11 +150,10 @@ export function JournalClient({ logs, products }: JournalClientProps) {
               </SelectContent>
             </Select>
 
-            {/* Transaction type */}
             <Select
               value={filters.transactionType}
               onValueChange={(v) =>
-                setFilters((prev) => ({ ...prev, transactionType: v }))
+                handleFiltersChange({ ...filters, transactionType: v })
               }
             >
               <SelectTrigger>
@@ -155,13 +168,12 @@ export function JournalClient({ logs, products }: JournalClientProps) {
               </SelectContent>
             </Select>
 
-            {/* Date range */}
             <div className="flex gap-2">
               <Input
                 type="date"
                 value={filters.dateFrom}
                 onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, dateFrom: e.target.value }))
+                  handleFiltersChange({ ...filters, dateFrom: e.target.value })
                 }
                 className="flex-1"
                 aria-label="From date"
@@ -170,7 +182,7 @@ export function JournalClient({ logs, products }: JournalClientProps) {
                 type="date"
                 value={filters.dateTo}
                 onChange={(e) =>
-                  setFilters((prev) => ({ ...prev, dateTo: e.target.value }))
+                  handleFiltersChange({ ...filters, dateTo: e.target.value })
                 }
                 className="flex-1"
                 aria-label="To date"
@@ -181,7 +193,7 @@ export function JournalClient({ logs, products }: JournalClientProps) {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setFilters(INITIAL_JOURNAL_FILTERS)}
+                onClick={() => handleFiltersChange(INITIAL_JOURNAL_FILTERS)}
                 className="w-full text-gray-500"
               >
                 <X className="h-4 w-4 mr-1" />
@@ -196,20 +208,42 @@ export function JournalClient({ logs, products }: JournalClientProps) {
       <div className="hidden sm:block">
         <JournalFilters
           filters={filters}
-          onFiltersChange={setFilters}
+          onFiltersChange={handleFiltersChange}
           products={products}
         />
       </div>
 
-      {/* Mobile view */}
-      <div className="sm:hidden">
-        <MobileJournalList logs={filteredLogs} />
-      </div>
+      {/* Tabs: Journal / Summary */}
+      <Tabs defaultValue="journal">
+        <TabsList className="mb-4">
+          <TabsTrigger value="journal">Journal</TabsTrigger>
+          <TabsTrigger value="summary">Summary</TabsTrigger>
+        </TabsList>
 
-      {/* Desktop view */}
-      <div className="hidden sm:block">
-        <DesktopJournalTable logs={filteredLogs} />
-      </div>
+        <TabsContent value="journal">
+          {/* Mobile view */}
+          <div className="sm:hidden">
+            <MobileJournalList logs={paginatedLogs} />
+          </div>
+
+          {/* Desktop view */}
+          <div className="hidden sm:block">
+            <DesktopJournalTable logs={paginatedLogs} />
+          </div>
+
+          <JournalPagination
+            page={page}
+            pageSize={pageSize}
+            totalItems={filteredLogs.length}
+            onPageChange={setPage}
+            onPageSizeChange={handlePageSizeChange}
+          />
+        </TabsContent>
+
+        <TabsContent value="summary">
+          <JournalSummary logs={filteredLogs} />
+        </TabsContent>
+      </Tabs>
     </>
   );
 }

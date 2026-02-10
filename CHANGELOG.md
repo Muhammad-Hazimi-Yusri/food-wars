@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.6.X] - In Progress
 
 ### Added
+- **Journal pagination & summary** (v0.6.8)
+  - Client-side pagination for journal entries
+    - Page size selector (10 / 25 / 50), default 25
+    - Previous / Next navigation with "Page X of Y" display
+    - Total entry count shown alongside controls
+    - Page resets to 1 when filters or page size change
+  - Journal summary tab (Grocy-style aggregated view)
+    - Toggle between "Journal" and "Summary" tabs (Radix Tabs)
+    - Groups transactions by product + type, sums amounts, counts transactions
+    - Undone entries excluded from summary totals
+    - Respects all active filters (product, type, date range, search)
+    - Responsive: desktop table + mobile cards
+  - Extracted shared constants (`TYPE_LABELS`, `TYPE_COLORS`, `formatTimestamp`, `formatAmount`) to `journal-constants.ts` to eliminate duplication between desktop/mobile components
 - **Stock Journal UI** (v0.6.7)
   - New `/journal` page showing all stock transactions in reverse chronological order
   - Desktop table + mobile card layout (responsive `sm:` breakpoint)

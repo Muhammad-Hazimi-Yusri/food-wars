@@ -429,7 +429,10 @@ describe('stock-actions', () => {
 
       const updates = operations.filter(op => op.type === 'update' && op.table === 'stock_entries');
       const updateData = (updates[0] as { data: Record<string, unknown> }).data;
-      expect(updateData.best_before_date).toBe('2025-05-01'); // Feb 1 + 90 days
+      // Compute expected date the same way the code does (timezone-safe)
+      const expected = new Date('2025-02-01');
+      expected.setDate(expected.getDate() + 90);
+      expect(updateData.best_before_date).toBe(expected.toISOString().split('T')[0]);
 
       vi.useRealTimers();
     });

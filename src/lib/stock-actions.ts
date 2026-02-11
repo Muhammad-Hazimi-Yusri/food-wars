@@ -1,7 +1,7 @@
 import { StockEntryWithProduct, StockTransactionType } from '@/types/database';
 import { computeConsumePlan, computeOpenPlan } from '@/lib/inventory-utils';
 import { createClient } from '@/lib/supabase/client';
-import { GUEST_HOUSEHOLD_ID } from '@/lib/constants';
+import { getHouseholdId } from '@/lib/supabase/get-household';
 
 type ConsumeOptions = {
   spoiled?: boolean;
@@ -34,23 +34,9 @@ export async function consumeStock(
     const spoiled = options?.spoiled ?? false;
     const supabase = createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { success: false, error: 'Not authenticated', consumed: 0 };
-
-    const isGuest = user.is_anonymous === true;
-    let householdId: string;
-
-    if (isGuest) {
-      householdId = GUEST_HOUSEHOLD_ID;
-    } else {
-      const { data: household } = await supabase
-        .from('households')
-        .select('id')
-        .eq('owner_id', user.id)
-        .single();
-      if (!household) return { success: false, error: 'No household found', consumed: 0 };
-      householdId = household.id;
-    }
+    const household = await getHouseholdId(supabase);
+    if (!household.success) return { success: false, error: household.error, consumed: 0 };
+    const { householdId, userId } = household;
 
     const correlationId = crypto.randomUUID();
     const usedDate = new Date().toISOString().split('T')[0];
@@ -95,11 +81,14 @@ export async function consumeStock(
         correlation_id: correlationId,
         transaction_id: crypto.randomUUID(),
         undone: false,
-        user_id: user.id,
+        user_id: userId,
         note: entry.note ?? null,
       });
       if (logError) throw logError;
     }
+
+    // Auto-add to shopping list if below min stock (fire-and-forget)
+    checkAutoAddToShoppingList(productId, entries, plan.totalConsumed, householdId, supabase).catch(() => {});
 
     return { success: true, consumed: plan.totalConsumed, correlationId };
   } catch (err) {
@@ -280,23 +269,9 @@ export async function openStock(
 
     const supabase = createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { success: false, error: 'Not authenticated', opened: 0 };
-
-    const isGuest = user.is_anonymous === true;
-    let householdId: string;
-
-    if (isGuest) {
-      householdId = GUEST_HOUSEHOLD_ID;
-    } else {
-      const { data: household } = await supabase
-        .from('households')
-        .select('id')
-        .eq('owner_id', user.id)
-        .single();
-      if (!household) return { success: false, error: 'No household found', opened: 0 };
-      householdId = household.id;
-    }
+    const household = await getHouseholdId(supabase);
+    if (!household.success) return { success: false, error: household.error, opened: 0 };
+    const { householdId, userId } = household;
 
     const correlationId = crypto.randomUUID();
     const today = new Date().toISOString().split('T')[0];
@@ -362,7 +337,7 @@ export async function openStock(
         correlation_id: correlationId,
         transaction_id: crypto.randomUUID(),
         undone: false,
-        user_id: user.id,
+        user_id: userId,
         note: entry.note ?? null,
       });
       if (logError) throw logError;
@@ -462,23 +437,9 @@ export async function transferStock(
 
     const supabase = createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { success: false, error: 'Not authenticated' };
-
-    const isGuest = user.is_anonymous === true;
-    let householdId: string;
-
-    if (isGuest) {
-      householdId = GUEST_HOUSEHOLD_ID;
-    } else {
-      const { data: household } = await supabase
-        .from('households')
-        .select('id')
-        .eq('owner_id', user.id)
-        .single();
-      if (!household) return { success: false, error: 'No household found' };
-      householdId = household.id;
-    }
+    const household = await getHouseholdId(supabase);
+    if (!household.success) return { success: false, error: household.error };
+    const { householdId, userId } = household;
 
     const correlationId = crypto.randomUUID();
     const today = new Date().toISOString().split('T')[0];
@@ -534,7 +495,7 @@ export async function transferStock(
       stock_entry_id: entry.id,
       correlation_id: correlationId,
       undone: false,
-      user_id: user.id,
+      user_id: userId,
       note: entry.note ?? null,
     };
 
@@ -603,23 +564,9 @@ export async function correctInventory(
 
     const supabase = createClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { success: false, error: 'Not authenticated', delta: 0 };
-
-    const isGuest = user.is_anonymous === true;
-    let householdId: string;
-
-    if (isGuest) {
-      householdId = GUEST_HOUSEHOLD_ID;
-    } else {
-      const { data: household } = await supabase
-        .from('households')
-        .select('id')
-        .eq('owner_id', user.id)
-        .single();
-      if (!household) return { success: false, error: 'No household found', delta: 0 };
-      householdId = household.id;
-    }
+    const household = await getHouseholdId(supabase);
+    if (!household.success) return { success: false, error: household.error, delta: 0 };
+    const { householdId, userId } = household;
 
     const correlationId = crypto.randomUUID();
     const today = new Date().toISOString().split('T')[0];
@@ -667,7 +614,7 @@ export async function correctInventory(
           correlation_id: correlationId,
           transaction_id: crypto.randomUUID(),
           undone: false,
-          user_id: user.id,
+          user_id: userId,
           note: JSON.stringify({ direction: 'decrease' }),
         });
         if (logError) throw logError;
@@ -704,7 +651,7 @@ export async function correctInventory(
         correlation_id: correlationId,
         transaction_id: crypto.randomUUID(),
         undone: false,
-        user_id: user.id,
+        user_id: userId,
         note: JSON.stringify({ direction: 'increase' }),
       });
       if (logError) throw logError;
@@ -907,5 +854,82 @@ export async function undoTransaction(
       return undoCorrectInventory(correlationId);
     default:
       return { success: false, error: 'Cannot undo this transaction type' };
+  }
+}
+
+// ============================================
+// AUTO-ADD TO SHOPPING LIST
+// ============================================
+
+/**
+ * Check if a product has fallen below min stock after consumption,
+ * and automatically add it to the household's auto-target shopping list.
+ * This is fire-and-forget — failures are silently caught at the call site.
+ */
+async function checkAutoAddToShoppingList(
+  productId: string,
+  entries: StockEntryWithProduct[],
+  totalConsumed: number,
+  householdId: string,
+  supabase: ReturnType<typeof createClient>
+): Promise<void> {
+  const product = entries[0]?.product;
+  if (!product || !product.min_stock_amount || product.min_stock_amount <= 0) return;
+
+  // Compute new total stock after consumption
+  const currentTotal = entries
+    .filter((e) => e.product_id === productId)
+    .reduce((sum, e) => sum + e.amount, 0);
+  const newTotal = currentTotal - totalConsumed;
+
+  if (newTotal >= product.min_stock_amount) return;
+
+  const missingAmount = product.min_stock_amount - newTotal;
+
+  // Find the household's auto-target shopping list
+  const { data: autoList } = await supabase
+    .from('shopping_lists')
+    .select('id')
+    .eq('household_id', householdId)
+    .eq('is_auto_target', true)
+    .single();
+
+  if (!autoList) return;
+
+  // Fetch existing undone items on that list for duplicate detection
+  const { data: existingItems } = await supabase
+    .from('shopping_list_items')
+    .select('*')
+    .eq('shopping_list_id', autoList.id)
+    .eq('done', false);
+
+  const existing = (existingItems ?? []).find(
+    (item: { product_id: string | null }) => item.product_id === productId
+  );
+
+  if (existing) {
+    // Increment existing item's amount
+    await supabase
+      .from('shopping_list_items')
+      .update({ amount: (existing as { amount: number }).amount + missingAmount })
+      .eq('id', (existing as { id: string }).id);
+  } else {
+    // Add new item at the end
+    const maxSort = (existingItems ?? []).reduce(
+      (max: number, item: { sort_order: number }) => Math.max(max, item.sort_order),
+      -1
+    );
+
+    await supabase
+      .from('shopping_list_items')
+      .insert({
+        household_id: householdId,
+        shopping_list_id: autoList.id,
+        product_id: productId,
+        note: null,
+        amount: missingAmount,
+        qu_id: product.qu_id_purchase ?? null,
+        sort_order: maxSort + 1,
+      });
   }
 }

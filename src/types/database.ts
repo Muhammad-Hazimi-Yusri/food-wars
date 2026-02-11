@@ -265,6 +265,32 @@ export type StockLog = {
 };
 
 // ============================================
+// SHOPPING LISTS
+// ============================================
+
+export type ShoppingList = {
+  id: string;
+  household_id: string;
+  name: string;
+  description: string | null;
+  is_auto_target: boolean;
+  created_at: string;
+};
+
+export type ShoppingListItem = {
+  id: string;
+  household_id: string;
+  shopping_list_id: string;
+  product_id: string | null;
+  note: string | null;
+  amount: number;
+  qu_id: string | null;
+  done: boolean;
+  sort_order: number;
+  created_at: string;
+};
+
+// ============================================
 // JOINED TYPES (for UI display)
 // ============================================
 
@@ -281,6 +307,15 @@ export type ProductWithRelations = Product & {
 export type StockEntryWithProduct = StockEntry & {
   product: ProductWithRelations;
   location?: Location | null;
+};
+
+export type ShoppingListItemWithRelations = ShoppingListItem & {
+  product?: (Pick<Product, 'id' | 'name' | 'product_group_id' | 'shopping_location_id' | 'qu_id_purchase' | 'qu_id_stock' | 'min_stock_amount' | 'location_id' | 'default_due_days'> & {
+    product_group?: Pick<ProductGroup, 'id' | 'name'> | null;
+    shopping_location?: Pick<ShoppingLocation, 'id' | 'name'> | null;
+    qu_purchase?: Pick<QuantityUnit, 'id' | 'name' | 'name_plural'> | null;
+  }) | null;
+  qu?: Pick<QuantityUnit, 'id' | 'name' | 'name_plural'> | null;
 };
 
 export type StockLogWithRelations = StockLog & {

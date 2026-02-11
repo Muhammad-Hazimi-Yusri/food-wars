@@ -5,6 +5,50 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.X] - 2026-02-11
+
+### Added
+- **Shopping lists** (v0.7.1)
+  - New `/shopping-lists` page with list CRUD (create, edit, delete)
+  - List detail page with full item management
+  - Product-linked items: search products, inherit name/unit, show current stock
+  - Freeform items: custom note + amount with optional unit
+  - Checkbox to mark items done, with progress bar (% complete)
+  - Drag-and-drop reordering via @dnd-kit
+  - Group by product group (aisle optimization) or store
+  - Grouping preference persisted to localStorage
+  - Amount adjustment (increment/decrement buttons)
+  - Clear all done items button
+  - "Shopping Lists" link added to UserMenu (ShoppingCart icon)
+  - `shopping_lists` and `shopping_list_items` database tables (migration 008)
+  - Full RLS policies for authenticated + guest mode
+  - **Purchase workflow**: checking off a product item auto-creates a stock entry
+    - Converts item unit to stock unit via `quantity_unit_conversions`
+    - Applies product defaults (location, due days, store)
+    - Removes item from list after stock entry created
+  - **Deduplication**: adding an existing product increments amount instead of duplicating
+  - **Auto-generation buttons**:
+    - "Below min stock" — adds products where current stock < min_stock_amount
+    - "Expired" — adds products with expired stock entries (due_type=2)
+    - "Overdue" — adds products with overdue stock entries (due_type=1)
+    - Calculates missing amount: `min_stock - current_stock`
+  - **Auto-add to shopping list** on consume below min stock
+    - `checkAutoAddToShoppingList()` in `stock-actions.ts` (fire-and-forget)
+    - `is_auto_target` flag on shopping lists to designate auto-add target
+  - `getHouseholdId()` helper (`src/lib/supabase/get-household.ts`)
+    - Resolves household ID for both authenticated and guest users
+    - Shared by shopping list actions and stock actions
+  - Unit tests for shopping list actions (14 tests)
+    - addItemToList: auth, dedup, freeform, sort order, guest mode
+    - removeItemFromList, toggleItemDone, updateItemAmount, clearDoneItems, reorderItems
+  - Unit tests for shopping list utils (18 tests)
+    - findExistingItem, computeBelowMinStock, computeExpiredProducts, computeOverdueProducts
+
+### Changed
+- `stock-actions.ts` — `consumeStock()` now calls `checkAutoAddToShoppingList()` after consumption
+- `UserMenu` — added "Shopping Lists" navigation link
+- Extracted `getHouseholdId()` into shared module (was inline in stock-actions)
+
 ## [0.6.X] - 2026-02-10
 
 ### Added

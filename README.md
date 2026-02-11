@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.7.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.7.1-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.7.0
+Current version is v0.7.1
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -47,6 +47,10 @@ Current version is v0.7.0
 - **Quick Actions** — One-tap Consume/Open buttons using product defaults
 - **Undo Toasts** — Every destructive action is reversible with an 8-second undo window
 - **Stock Journal** — Full transaction history with filters, pagination, and summary view
+- **Shopping Lists** — Create lists, add product-linked or freeform items, group by aisle/store, drag-and-drop reorder
+- **Purchase from List** — Check off items to auto-add to stock with unit conversion and product defaults
+- **Auto-Generate Lists** — One-click buttons for below-min-stock, expired, and overdue products
+- **Auto-Add to List** — Consuming below min stock auto-adds to designated shopping list
 - **Freezer Intelligence** — Auto-adjusts due dates on freeze/thaw, warns for freeze-sensitive products
 - **Authentication** — Google Sign-in with household isolation + guest mode with demo data
 
@@ -297,62 +301,39 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Journal summary view (aggregated by product/type)
 - [x] Uses `correlation_id` to group related transactions
 </details>
----
 
-### In Progress
-
-#### v0.7 - Shopping Lists
+<details>
+<summary><strong>v0.7 - Shopping Lists ✓</strong></summary>
 
 **Goal:** Manual and auto-generated shopping lists
 
-**Schema to add:**
-```sql
--- Shopping lists
-CREATE TABLE shopping_lists (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  household_id UUID NOT NULL REFERENCES households(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  description TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Shopping list items
-CREATE TABLE shopping_list_items (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  household_id UUID NOT NULL REFERENCES households(id) ON DELETE CASCADE,
-  shopping_list_id UUID NOT NULL REFERENCES shopping_lists(id) ON DELETE CASCADE,
-  product_id UUID REFERENCES products(id) ON DELETE SET NULL,
-  note TEXT,
-  amount DECIMAL NOT NULL DEFAULT 1,
-  qu_id UUID REFERENCES quantity_units(id) ON DELETE SET NULL,
-  done BOOLEAN NOT NULL DEFAULT FALSE,
-  sort_order INTEGER NOT NULL DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
 **Core features:**
-- [ ] Multiple shopping lists
-- [ ] Add product-linked items (inherit name, unit)
-- [ ] Add freeform items (just text + amount)
-- [ ] Checkbox to mark done
-- [ ] Group by product group (aisle optimization)
-- [ ] Group by store (`shopping_location_id`)
+- [x] Multiple shopping lists (create, edit, delete)
+- [x] Add product-linked items (inherit name, unit)
+- [x] Add freeform items (just text + amount)
+- [x] Checkbox to mark done
+- [x] Group by product group (aisle optimization)
+- [x] Group by store (`shopping_location_id`)
+- [x] Drag-and-drop reordering
+- [x] Progress bar (% items done)
 
 **Inventory integration:**
-- [ ] "Add to stock" from shopping list item
-- [ ] Pre-fills purchase form with product, amount, unit
-- [ ] Auto-remove from list when added to stock
-- [ ] Amount increments if product already on list
+- [x] "Add to stock" from shopping list item (purchase workflow)
+- [x] Pre-fills stock entry with product defaults, amount, unit
+- [x] Auto-remove from list when added to stock
+- [x] Amount increments if product already on list (deduplication)
+- [x] Auto-add to designated list when stock consumed below min
 
 **Auto-generation:**
-- [ ] "Add all below min stock" button
-- [ ] "Add all expired" button
-- [ ] "Add all overdue" button
-- [ ] Setting: auto-add products below min stock
-- [ ] Calculates missing amount: `min_stock - current_stock`
+- [x] "Add all below min stock" button
+- [x] "Add all expired" button
+- [x] "Add all overdue" button
+- [x] Auto-target list setting (`is_auto_target` flag)
+- [x] Calculates missing amount: `min_stock - current_stock`
+</details>
+---
 
-### Planned
+### In Progress
 
 #### v0.8 - Barcodes & Smart Input
 
@@ -389,6 +370,8 @@ CREATE TABLE shopping_list_items (
 - [ ] Recently used products list
 - [ ] Default values from product settings
 - [ ] Keyboard shortcuts for common actions
+
+### Planned
 
 #### v0.9 - Recipes
 
@@ -709,6 +692,10 @@ food-wars/
 │   │   │       │   └── page.tsx   # Edit product page
 │   │   │       └── conversions/
 │   │   │           └── page.tsx   # QU conversions page
+│   │   ├── shopping-lists/
+│   │   │   ├── page.tsx           # Shopping lists overview
+│   │   │   └── [id]/
+│   │   │       └── page.tsx       # Shopping list detail
 │   │   ├── test/
 │   │   │   └── page.tsx           # Color palette test page
 │   │   ├── globals.css            # Tailwind + theme CSS variables
@@ -746,6 +733,9 @@ food-wars/
 │   │   │   ├── MasterDataForm.tsx # Reusable add/edit modal
 │   │   │   ├── MasterDataList.tsx # Reusable list with CRUD
 │   │   │   └── ProductsListClient.tsx # Products table with filters/sorting
+│   │   ├── shopping/              # Shopping list components
+│   │   │   ├── ShoppingListsClient.tsx    # Lists overview (CRUD)
+│   │   │   └── ShoppingListDetailClient.tsx # List detail (items, grouping, purchase)
 │   │   └── ui/                    # shadcn/ui components
 │   │       ├── button.tsx
 │   │       ├── dialog.tsx
@@ -764,12 +754,18 @@ food-wars/
 │   │   │   ├── client.ts          # Browser Supabase client
 │   │   │   ├── inventory.ts       # Stock CRUD operations
 │   │   │   ├── middleware.ts      # Auth middleware helpers
+│   │   │   ├── get-household.ts   # Household ID resolver (auth + guest)
 │   │   │   ├── server.ts          # Server-side Supabase client
 │   │   │   └── storage.ts         # File upload utilities
 │   │   ├── __tests__/
-│   │   │   └── inventory-utils.test.ts # Inventory utils unit tests
+│   │   │   ├── inventory-utils.test.ts    # Inventory utils unit tests
+│   │   │   ├── shopping-list-actions.test.ts  # Shopping list action tests
+│   │   │   ├── shopping-list-utils.test.ts    # Gap calculation tests
+│   │   │   └── stock-actions.test.ts      # Stock action tests
 │   │   ├── constants.ts           # Shared constants (GUEST_HOUSEHOLD_ID)
 │   │   ├── inventory-utils.ts     # Stock aggregation, expiry & FIFO helpers
+│   │   ├── shopping-list-actions.ts # Shopping list server actions
+│   │   ├── shopping-list-utils.ts   # Auto-generation gap calculators
 │   │   ├── stock-actions.ts       # Stock actions (consume, open, transfer, correct, undo)
 │   │   └── utils.ts               # cn() and general utilities
 │   └── types/
@@ -782,7 +778,8 @@ food-wars/
 │   │   ├── 004_guest_seed_data.sql    # Demo data for guest
 │   │   ├── 005_seed_guest_function.sql # Re-seed function for admin
 │   │   ├── 006_fix_anon_trigger.sql   # Skip anon users in trigger
-│   │   └── 007_drop_qu_factor.sql     # Remove deprecated qu_factor column
+│   │   ├── 007_drop_qu_factor.sql     # Remove deprecated qu_factor column
+│   │   └── 008_shopping_lists.sql     # Shopping lists + items tables
 │   └── scripts/
 │       └── cleanup_orphan_households.sql  # Manual cleanup script
 ├── BRANDING.md                    # Design system & color palette
@@ -817,7 +814,8 @@ Food Wars uses a Grocy-compatible database schema designed for comprehensive kit
 | `recipes` | Recipe definitions | 🔮 v0.9 |
 | `recipe_ingredients` | Recipe ingredients | 🔮 v0.9 |
 | `meal_plan` | Meal planning calendar | 🔮 v0.10 |
-| `shopping_lists` | Shopping list management | 🔮 v0.7 |
+| `shopping_lists` | Shopping list management | ✅ v0.7 |
+| `shopping_list_items` | Items within shopping lists | ✅ v0.7 |
 
 ### Products Table (complete Grocy fields)
 

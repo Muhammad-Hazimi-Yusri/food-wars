@@ -37,23 +37,42 @@ type QuantityUnitConversion = {
   factor: number;
 };
 
+type Prefill = {
+  productId?: string;
+  amount?: number;
+  quId?: string;
+};
+
 type Props = {
   products: ProductWithUnits[];
   locations: Location[];
   quantityUnits: QuantityUnit[];
   shoppingLocations: ShoppingLocation[];
   conversions: QuantityUnitConversion[];
+  prefill?: Prefill | null;
+  externalOpen?: boolean;
+  onExternalOpenChange?: (open: boolean) => void;
+  onSuccess?: () => void;
 };
 
-export function AddStockEntryModal({ 
-  products = [], 
-  locations = [], 
-  quantityUnits = [], 
+export function AddStockEntryModal({
+  products = [],
+  locations = [],
+  quantityUnits = [],
   shoppingLocations = [],
   conversions = [],
+  prefill,
+  externalOpen,
+  onExternalOpenChange,
+  onSuccess,
 }: Props) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen ?? internalOpen;
+  const setOpen = (val: boolean) => {
+    if (onExternalOpenChange) onExternalOpenChange(val);
+    else setInternalOpen(val);
+  };
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -68,6 +87,15 @@ export function AddStockEntryModal({
   const [price, setPrice] = useState("");
   const [priceType, setPriceType] = useState<"unit" | "total">("unit");
   const [note, setNote] = useState("");
+
+  // Apply prefill when dialog opens with prefill data
+  useEffect(() => {
+    if (open && prefill) {
+      if (prefill.productId) setProductId(prefill.productId);
+      if (prefill.amount) setAmount(String(prefill.amount));
+      if (prefill.quId) setSelectedQuId(prefill.quId);
+    }
+  }, [open, prefill]);
 
   // Selected product
   const selectedProduct = products.find((p) => p.id === productId);
@@ -263,6 +291,7 @@ export function AddStockEntryModal({
 
       setOpen(false);
       router.refresh();
+      onSuccess?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add stock");
     } finally {
@@ -272,12 +301,14 @@ export function AddStockEntryModal({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <button className="inline-flex items-center justify-center gap-2 bg-megumi text-white px-4 py-3 sm:py-2 rounded-lg hover:bg-megumi/90 transition-colors font-medium">
-          <Plus className="h-5 w-5 sm:h-4 sm:w-4" />
-          <span>Add Stock</span>
-        </button>
-      </DialogTrigger>
+      {externalOpen === undefined && (
+        <DialogTrigger asChild>
+          <button className="inline-flex items-center justify-center gap-2 bg-megumi text-white px-4 py-3 sm:py-2 rounded-lg hover:bg-megumi/90 transition-colors font-medium">
+            <Plus className="h-5 w-5 sm:h-4 sm:w-4" />
+            <span>Add Stock</span>
+          </button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add Stock Entry</DialogTitle>

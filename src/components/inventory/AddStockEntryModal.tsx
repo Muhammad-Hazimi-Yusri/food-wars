@@ -41,6 +41,8 @@ type Prefill = {
   productId?: string;
   amount?: number;
   quId?: string;
+  shoppingLocationId?: string;
+  price?: number;
 };
 
 type Props = {
@@ -94,6 +96,8 @@ export function AddStockEntryModal({
       if (prefill.productId) setProductId(prefill.productId);
       if (prefill.amount) setAmount(String(prefill.amount));
       if (prefill.quId) setSelectedQuId(prefill.quId);
+      if (prefill.shoppingLocationId) setStoreId(prefill.shoppingLocationId);
+      if (prefill.price) setPrice(String(prefill.price));
     }
   }, [open, prefill]);
 

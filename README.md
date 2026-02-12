@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.8.1-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.8.2-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.8.1
+Current version is v0.8.2
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -356,9 +356,9 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] `/products/new?barcode=XXX` route for pre-filled product creation
 
 **Scan-to-add-stock workflow (v0.8.2):**
-- [ ] Scan button on stock overview page
-- [ ] Known barcode: open AddStockEntryModal pre-filled with product + barcode defaults
-- [ ] Unknown barcode: OFF lookup, quick-create product, then add stock
+- [x] Scan button on stock overview page
+- [x] Known barcode: open AddStockEntryModal pre-filled with product + barcode defaults
+- [x] Unknown barcode: OFF lookup, quick-create product, then add stock
 
 **Shopping list scan workflow (v0.8.3):**
 - [ ] Floating scan button on shopping list detail page
@@ -737,7 +737,8 @@ food-wars/
 │   │   ├── barcode/               # Barcode scanning components
 │   │   │   ├── BarcodeScanner.tsx  # Camera scanner (react-zxing)
 │   │   │   ├── BarcodesSection.tsx # Barcode CRUD for products
-│   │   │   └── ScannerDialog.tsx   # Reusable scan dialog with manual fallback
+│   │   │   ├── ScannerDialog.tsx   # Reusable scan dialog with manual fallback
+│   │   │   └── ScanToStockFlow.tsx # Scan-to-add-stock orchestration
 │   │   ├── diner/                 # Themed components
 │   │   │   ├── GuestBanner.tsx    # Guest mode warning banner
 │   │   │   ├── Noren.tsx          # Header with lantern decorations

@@ -4,6 +4,7 @@ import { WelcomeModal } from "@/components/diner/WelcomeModal";
 import { AddStockEntryModal } from "@/components/inventory/AddStockEntryModal";
 import { StockOverviewClient } from "@/components/inventory/StockOverviewClient";
 import { StockEntryWithProduct, Location, ProductGroup, Product, QuantityUnit, ShoppingLocation } from "@/types/database";
+import { ScanToStockFlow } from "@/components/barcode/ScanToStockFlow";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 
@@ -136,8 +137,15 @@ export default async function Home() {
         <h1 className="text-2xl font-bold text-megumi mb-1">Stock Overview</h1>
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <AddStockEntryModal 
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <AddStockEntryModal
+            products={products}
+            locations={locations}
+            quantityUnits={quantityUnits}
+            shoppingLocations={shoppingLocations}
+            conversions={conversions}
+          />
+          <ScanToStockFlow
             products={products}
             locations={locations}
             quantityUnits={quantityUnits}

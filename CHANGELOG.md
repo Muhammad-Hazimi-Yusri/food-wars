@@ -32,6 +32,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `/products/new?barcode=XXX` route pre-fills from OFF on mount
   - Auto-saves barcode to `product_barcodes` after product creation
   - Unit tests for OFF client (6 tests: found, fallback name, not found, 404, network error, timeout)
+- **Scan-to-add-stock workflow** (v0.8.2)
+  - `ScanToStockFlow` orchestration component on stock overview page
+  - Scan button (amber) in action bar alongside Add Stock and Add Product
+  - Known barcode: opens AddStockEntryModal pre-filled with product, amount, unit, store, price from barcode metadata
+  - Unknown barcode: OFF lookup then redirect to `/products/new?barcode=XXX`
+  - `AddStockEntryModal` Prefill type extended with `shoppingLocationId` and `price`
 
 ### Changed
 - **README roadmap restructured:**
@@ -46,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Conversions page — fetches product barcodes and shopping locations
 - `ProductForm` — accepts `initialBarcode` prop, includes barcode scan button and OFF lookup
 - `/products/new` page — accepts `?barcode=` search param
+- Stock overview page — 3-column action button grid (Add Stock, Scan, Add Product)
 
 ### Dependencies
 - Added `react-zxing` ^2.1.0

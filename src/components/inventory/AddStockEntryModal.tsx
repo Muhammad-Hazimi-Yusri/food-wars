@@ -23,6 +23,8 @@ import { Plus, ChevronUp, ChevronDown, AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Product, Location, QuantityUnit, ShoppingLocation } from "@/types/database";
 import { GUEST_HOUSEHOLD_ID } from "@/lib/constants";
+import { parseDateShorthand } from "@/lib/date-shorthands";
+import { useRecentProducts } from "@/hooks/useRecentProducts";
 
 type ProductWithUnits = Product & {
   qu_stock?: QuantityUnit | null;
@@ -77,6 +79,10 @@ export function AddStockEntryModal({
   };
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { recentIds, addRecent } = useRecentProducts();
+
+  // Date shorthand state
+  const [dateShorthand, setDateShorthand] = useState("");
 
   // Form state
   const [productId, setProductId] = useState("");
@@ -230,6 +236,7 @@ export function AddStockEntryModal({
       setPrice("");
       setPriceType("unit");
       setNote("");
+      setDateShorthand("");
       setError(null);
     }
   }, [open]);
@@ -293,6 +300,7 @@ export function AddStockEntryModal({
 
       if (insertError) throw insertError;
 
+      addRecent(productId);
       setOpen(false);
       router.refresh();
       onSuccess?.();
@@ -345,6 +353,24 @@ export function AddStockEntryModal({
                     <SelectValue placeholder="Select product" />
                   </SelectTrigger>
                   <SelectContent>
+                    {/* Recent products first */}
+                    {recentIds.length > 0 && (() => {
+                      const recentProducts = recentIds
+                        .map((id) => products.find((p) => p.id === id))
+                        .filter(Boolean) as typeof products;
+                      if (recentProducts.length === 0) return null;
+                      return (
+                        <>
+                          <div className="px-2 py-1.5 text-xs font-medium text-gray-400">Recent</div>
+                          {recentProducts.map((product) => (
+                            <SelectItem key={`recent-${product.id}`} value={product.id}>
+                              {product.name}
+                            </SelectItem>
+                          ))}
+                          <div className="px-2 py-1.5 text-xs font-medium text-gray-400 border-t mt-1 pt-1">All products</div>
+                        </>
+                      );
+                    })()}
                     {products.map((product) => (
                       <SelectItem key={product.id} value={product.id}>
                         {product.name}
@@ -436,6 +462,43 @@ export function AddStockEntryModal({
                     The given date is earlier than today, are you sure?
                   </p>
                 )}
+                <Input
+                  type="text"
+                  value={dateShorthand}
+                  onChange={(e) => setDateShorthand(e.target.value)}
+                  onBlur={() => {
+                    const parsed = parseDateShorthand(dateShorthand);
+                    if (parsed) {
+                      if (parsed === "2999-12-31") {
+                        setNeverExpires(true);
+                        setBestBeforeDate("");
+                      } else {
+                        setNeverExpires(false);
+                        setBestBeforeDate(parsed);
+                      }
+                      setDateShorthand("");
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const parsed = parseDateShorthand(dateShorthand);
+                      if (parsed) {
+                        if (parsed === "2999-12-31") {
+                          setNeverExpires(true);
+                          setBestBeforeDate("");
+                        } else {
+                          setNeverExpires(false);
+                          setBestBeforeDate(parsed);
+                        }
+                        setDateShorthand("");
+                      }
+                    }
+                  }}
+                  placeholder="Quick: +7, +1m, x"
+                  disabled={neverExpires}
+                  className="mt-1 text-sm"
+                />
               </div>
 
               {/* Price */}

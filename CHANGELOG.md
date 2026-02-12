@@ -45,6 +45,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Scan product not on list: add to list then purchase
   - Scan unknown barcode: OFF lookup then redirect to product creation
   - `ScannerDialog` extended with `continuous` prop for rapid scanning
+- **Input productivity & polish** (v0.8.4)
+  - `parseDateShorthand()`: `+7`/`+7d` (days), `+1m` (months), `+1y` (years), `0517` (MMDD), `x`/`never` (never expires)
+  - Quick-entry text input below due date field in AddStockEntryModal (expands on Enter/blur)
+  - `useRecentProducts` hook: tracks recently used product IDs in localStorage
+  - Recent products shown at top of product selector in AddStockEntryModal
+  - Recent products shown in shopping list add-item dialog (when search is empty)
+  - Haptic feedback (`navigator.vibrate(100)`) on successful barcode scan
+  - Unit tests for date shorthands (27 tests)
 
 ### Changed
 - **README roadmap restructured:**
@@ -61,6 +69,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `/products/new` page — accepts `?barcode=` search param
 - Stock overview page — 3-column action button grid (Add Stock, Scan, Add Product)
 - Shopping list detail page — floating barcode scan button for scan-to-purchase
+- `AddStockEntryModal` — date shorthand input, recent products in selector
+- `BarcodeScanner` — haptic feedback on successful scan
+- Shopping list add-item dialog — recent products shown when search is empty
 
 ### Dependencies
 - Added `react-zxing` ^2.1.0

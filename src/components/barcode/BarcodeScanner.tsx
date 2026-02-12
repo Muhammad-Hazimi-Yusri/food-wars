@@ -26,6 +26,10 @@ export function BarcodeScanner({
       const text = result.getText();
       if (text && text !== lastScanned) {
         setLastScanned(text);
+        // Haptic feedback on successful scan
+        if (typeof navigator !== "undefined" && navigator.vibrate) {
+          navigator.vibrate(100);
+        }
         onScan(text);
         // Reset after 2s to allow re-scanning same code
         setTimeout(() => setLastScanned(null), 2000);

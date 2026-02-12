@@ -78,6 +78,7 @@ import {
   computeOverdueProducts,
 } from "@/lib/shopping-list-utils";
 import { ScanToShoppingFlow } from "@/components/barcode/ScanToShoppingFlow";
+import { useRecentProducts } from "@/hooks/useRecentProducts";
 import type {
   ShoppingList,
   ShoppingListItemWithRelations,
@@ -292,6 +293,8 @@ export function ShoppingListDetailClient({
   useEffect(() => {
     setItems(initialItems);
   }, [initialItems]);
+
+  const { recentIds } = useRecentProducts();
 
   // Add product form state
   const [selectedProductId, setSelectedProductId] = useState("");
@@ -955,6 +958,32 @@ export function ShoppingListDetailClient({
                     placeholder="Search products..."
                     autoFocus
                   />
+                  {/* Recent products (when search is empty) */}
+                  {!productSearch.trim() && !selectedProductId && recentIds.length > 0 && (() => {
+                    const recentProducts = recentIds
+                      .map((id) => products.find((p) => p.id === id))
+                      .filter(Boolean) as typeof products;
+                    if (recentProducts.length === 0) return null;
+                    return (
+                      <div className="mt-1 max-h-40 overflow-y-auto border rounded-md bg-white">
+                        <div className="px-3 py-1.5 text-xs font-medium text-gray-400">Recent</div>
+                        {recentProducts.map((p) => (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => {
+                              handleProductSelect(p.id);
+                              setProductSearch(p.name);
+                            }}
+                            className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 border-b last:border-b-0"
+                          >
+                            {p.name}
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                  {/* Search results */}
                   {productSearch.trim() && filteredProducts.length > 0 && !selectedProductId && (
                     <div className="mt-1 max-h-40 overflow-y-auto border rounded-md bg-white">
                       {filteredProducts.slice(0, 10).map((p) => (

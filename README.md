@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.8.3-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.8.4-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.8.3
+Current version is v0.8.4
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -346,8 +346,8 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Supports 1D (Code128, EAN-8, EAN-13, UPC-A) and 2D (QR, DataMatrix)
 - [x] Barcode CRUD on product conversions page (add/edit/delete via `product_barcodes` table)
 - [x] Camera scan or manual text entry for barcodes
-- [ ] Barcode icon on product picker fields across the app
-- [ ] Scan auto-fills: product, amount, unit, store from barcode metadata
+- [x] Barcode icon on product picker fields across the app
+- [x] Scan auto-fills: product, amount, unit, store from barcode metadata
 
 **Open Food Facts integration (v0.8.1):**
 - [x] Lookup unknown barcode via OFF API (`world.openfoodfacts.org`)
@@ -368,10 +368,10 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Continuous scanning mode (scanner stays open between scans)
 
 **Input productivity (v0.8.4):**
-- [ ] Date field shorthands (e.g., `0517` → `2025-05-17`, `+1m` → next month, `x` → never expires)
-- [ ] Recently used products list in product selectors
-- [ ] Manual barcode entry fallback for camera-less devices
-- [ ] Haptic feedback on successful scan
+- [x] Date field shorthands (e.g., `0517` → `2025-05-17`, `+1m` → next month, `x` → never expires)
+- [x] Recently used products list in product selectors
+- [x] Manual barcode entry fallback for camera-less devices
+- [x] Haptic feedback on successful scan
 
 ### Planned
 
@@ -786,7 +786,8 @@ food-wars/
 │   │       ├── sonner.tsx         # Toast notifications (undo toasts)
 │   │       └── tabs.tsx
 │   ├── hooks/
-│   │   └── useGuestStorage.ts     # localStorage hook (legacy)
+│   │   ├── useGuestStorage.ts     # localStorage hook (legacy)
+│   │   └── useRecentProducts.ts   # Recently used products (localStorage)
 │   ├── lib/
 │   │   ├── supabase/
 │   │   │   ├── client.ts          # Browser Supabase client
@@ -797,6 +798,7 @@ food-wars/
 │   │   │   └── storage.ts         # File upload utilities
 │   │   ├── __tests__/
 │   │   │   ├── barcode-actions.test.ts    # Barcode CRUD tests
+│   │   │   ├── date-shorthands.test.ts   # Date shorthand tests
 │   │   │   ├── inventory-utils.test.ts    # Inventory utils unit tests
 │   │   │   ├── openfoodfacts.test.ts      # OFF API client tests
 │   │   │   ├── shopping-list-actions.test.ts  # Shopping list action tests
@@ -804,6 +806,7 @@ food-wars/
 │   │   │   └── stock-actions.test.ts      # Stock action tests
 │   │   ├── barcode-actions.ts     # Barcode CRUD + local lookup
 │   │   ├── constants.ts           # Shared constants (GUEST_HOUSEHOLD_ID)
+│   │   ├── date-shorthands.ts    # Date input shorthand parser
 │   │   ├── inventory-utils.ts     # Stock aggregation, expiry & FIFO helpers
 │   │   ├── openfoodfacts.ts      # Open Food Facts API client
 │   │   ├── shopping-list-actions.ts # Shopping list server actions

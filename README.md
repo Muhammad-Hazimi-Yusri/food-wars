@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.8.2-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.8.3-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.8.2
+Current version is v0.8.3
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -361,11 +361,11 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Unknown barcode: OFF lookup, quick-create product, then add stock
 
 **Shopping list scan workflow (v0.8.3):**
-- [ ] Floating scan button on shopping list detail page
-- [ ] Scan product on list: purchase and add to stock
-- [ ] Scan product not on list: add to list then purchase
-- [ ] Scan unknown barcode: OFF lookup, create product, add to list
-- [ ] Continuous scanning mode (scanner stays open between scans)
+- [x] Floating scan button on shopping list detail page
+- [x] Scan product on list: purchase and add to stock
+- [x] Scan product not on list: add to list then purchase
+- [x] Scan unknown barcode: OFF lookup, create product, add to list
+- [x] Continuous scanning mode (scanner stays open between scans)
 
 **Input productivity (v0.8.4):**
 - [ ] Date field shorthands (e.g., `0517` → `2025-05-17`, `+1m` → next month, `x` → never expires)
@@ -738,7 +738,8 @@ food-wars/
 │   │   │   ├── BarcodeScanner.tsx  # Camera scanner (react-zxing)
 │   │   │   ├── BarcodesSection.tsx # Barcode CRUD for products
 │   │   │   ├── ScannerDialog.tsx   # Reusable scan dialog with manual fallback
-│   │   │   └── ScanToStockFlow.tsx # Scan-to-add-stock orchestration
+│   │   │   ├── ScanToStockFlow.tsx # Scan-to-add-stock orchestration
+│   │   │   └── ScanToShoppingFlow.tsx # Scan-to-purchase on shopping lists
 │   │   ├── diner/                 # Themed components
 │   │   │   ├── GuestBanner.tsx    # Guest mode warning banner
 │   │   │   ├── Noren.tsx          # Header with lantern decorations

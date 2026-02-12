@@ -77,6 +77,7 @@ import {
   computeExpiredProducts,
   computeOverdueProducts,
 } from "@/lib/shopping-list-utils";
+import { ScanToShoppingFlow } from "@/components/barcode/ScanToShoppingFlow";
 import type {
   ShoppingList,
   ShoppingListItemWithRelations,
@@ -895,6 +896,14 @@ export function ShoppingListDetailClient({
           )}
         </DndContext>
       )}
+
+      {/* Barcode scan-to-purchase flow */}
+      <ScanToShoppingFlow
+        listId={list.id}
+        items={items}
+        conversions={conversions}
+        onRefresh={() => router.refresh()}
+      />
 
       {/* Add Item Dialog */}
       <Dialog

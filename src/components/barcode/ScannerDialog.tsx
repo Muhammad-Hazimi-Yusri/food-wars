@@ -17,6 +17,8 @@ type ScannerDialogProps = {
   onOpenChange: (open: boolean) => void;
   onScan: (barcode: string) => void;
   title?: string;
+  /** Keep dialog open after each scan (for rapid scanning). */
+  continuous?: boolean;
 };
 
 export function ScannerDialog({
@@ -24,13 +26,16 @@ export function ScannerDialog({
   onOpenChange,
   onScan,
   title = "Scan barcode",
+  continuous = false,
 }: ScannerDialogProps) {
   const [manualValue, setManualValue] = useState("");
   const [showManual, setShowManual] = useState(false);
 
   const handleScan = (barcode: string) => {
     onScan(barcode);
-    onOpenChange(false);
+    if (!continuous) {
+      onOpenChange(false);
+    }
     setManualValue("");
     setShowManual(false);
   };
@@ -85,6 +90,16 @@ export function ScannerDialog({
             <Keyboard className="h-4 w-4" />
             Type barcode manually
           </button>
+        )}
+
+        {continuous && (
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => onOpenChange(false)}
+          >
+            Done
+          </Button>
         )}
       </DialogContent>
     </Dialog>

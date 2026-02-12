@@ -38,6 +38,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Known barcode: opens AddStockEntryModal pre-filled with product, amount, unit, store, price from barcode metadata
   - Unknown barcode: OFF lookup then redirect to `/products/new?barcode=XXX`
   - `AddStockEntryModal` Prefill type extended with `shoppingLocationId` and `price`
+- **Shopping list scan workflow** (v0.8.3)
+  - `ScanToShoppingFlow` orchestration component with floating scan button (FAB)
+  - Continuous scanning mode: scanner stays open between scans, "Done" button to close
+  - Scan product on list: auto-purchase and add to stock
+  - Scan product not on list: add to list then purchase
+  - Scan unknown barcode: OFF lookup then redirect to product creation
+  - `ScannerDialog` extended with `continuous` prop for rapid scanning
 
 ### Changed
 - **README roadmap restructured:**
@@ -53,6 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ProductForm` — accepts `initialBarcode` prop, includes barcode scan button and OFF lookup
 - `/products/new` page — accepts `?barcode=` search param
 - Stock overview page — 3-column action button grid (Add Stock, Scan, Add Product)
+- Shopping list detail page — floating barcode scan button for scan-to-purchase
 
 ### Dependencies
 - Added `react-zxing` ^2.1.0

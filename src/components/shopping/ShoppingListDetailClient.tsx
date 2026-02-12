@@ -504,8 +504,10 @@ export function ShoppingListDetailClient({
 
     // Product-linked item being checked off → purchase & add to stock
     if (markingDone && item.product) {
-      // Optimistic: remove from list immediately
-      setItems((prev) => prev.filter((i) => i.id !== item.id));
+      // Optimistic: mark as done
+      setItems((prev) =>
+        prev.map((i) => (i.id === item.id ? { ...i, done: true } : i))
+      );
 
       const result = await purchaseItem(
         item.id,
@@ -524,8 +526,10 @@ export function ShoppingListDetailClient({
       if (result.success) {
         toast("Purchased & added to stock");
       } else {
-        // Revert
-        setItems((prev) => [...prev, item].sort((a, b) => a.sort_order - b.sort_order));
+        // Revert: mark as undone
+        setItems((prev) =>
+          prev.map((i) => (i.id === item.id ? { ...i, done: false } : i))
+        );
         toast.error(result.error ?? "Failed to purchase");
       }
       return;
@@ -1054,11 +1058,21 @@ export function ShoppingListDetailClient({
                     >
                       <ChevronUp className="h-4 w-4" />
                     </Button>
-                    {selectedQuId && (
-                      <span className="text-sm text-gray-500">
-                        {quantityUnits.find((q) => q.id === selectedQuId)?.name}
-                      </span>
-                    )}
+                    <Select
+                      value={selectedQuId}
+                      onValueChange={setSelectedQuId}
+                    >
+                      <SelectTrigger className="w-[120px]">
+                        <SelectValue placeholder="Unit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {quantityUnits.map((qu) => (
+                          <SelectItem key={qu.id} value={qu.id}>
+                            {qu.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </>

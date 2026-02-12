@@ -73,6 +73,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `BarcodeScanner` — haptic feedback on successful scan
 - Shopping list add-item dialog — recent products shown when search is empty
 
+### Fixed
+- **Shopping list: purchased items now stay visible** (v0.8.5)
+  - Checking off a product item marks it as done (crossed out) instead of deleting it
+  - Item remains in the "Done" section so users can see what was already bought
+  - Use "Clear done" button to remove purchased items when no longer needed
+  - Unchecking a purchased item moves it back to the active list (stock entry is kept)
+  - Progress bar, duplicate detection, and barcode scan purchase all work correctly
+- **Shopping list: unit is now choosable when adding product items** (v0.8.5)
+  - Product items now show a unit dropdown instead of a static label
+  - Defaults to the product's purchase unit, but can be changed to any available unit
+
 ### Dependencies
 - Added `react-zxing` ^2.1.0
 

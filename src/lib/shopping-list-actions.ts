@@ -269,12 +269,12 @@ export async function purchaseItem(
     });
     if (stockError) throw stockError;
 
-    // Remove item from list
-    const { error: deleteError } = await supabase
+    // Mark item as done (purchased)
+    const { error: updateError } = await supabase
       .from('shopping_list_items')
-      .delete()
+      .update({ done: true })
       .eq('id', itemId);
-    if (deleteError) throw deleteError;
+    if (updateError) throw updateError;
 
     return { success: true };
   } catch (err) {

@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.8.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.8.1-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.8.0
+Current version is v0.8.1
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -91,7 +91,7 @@ Food Wars targets a different audience: people who want Grocy-like features with
 | **Hosting** | Self-host (PHP/SQLite) | Self-host (Python) | Self-host (Django) | Hosted or self-host |
 | **Setup** | Docker required | Docker required | Docker required | Sign in (hosted) or Vercel + Supabase (self-host) |
 | **Maturity** | Battle-tested since 2017 | Established | Established | Early development |
-| **Barcode scanning** | ✅ | ❌ | ❌ | 🔜 Planned |
+| **Barcode scanning** | ✅ | ❌ | ❌ | ✅ v0.8 (camera + OFF lookup) |
 | **Offline support** | ✅ Full | ✅ Full | ✅ Full | ❌ Online only |
 | **Multi-user** | ✅ | ✅ | ✅ | 🔜 Planned |
 | **Chores/Tasks** | ✅ | ❌ | ❌ | ❌ Not planned |
@@ -350,10 +350,10 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [ ] Scan auto-fills: product, amount, unit, store from barcode metadata
 
 **Open Food Facts integration (v0.8.1):**
-- [ ] Lookup unknown barcode via OFF API (`world.openfoodfacts.org`)
-- [ ] Auto-fill: product name, image, barcode
-- [ ] Opens product form pre-populated for user to complete
-- [ ] `/products/new?barcode=XXX` route for pre-filled product creation
+- [x] Lookup unknown barcode via OFF API (`world.openfoodfacts.org`)
+- [x] Auto-fill: product name, image, barcode
+- [x] Opens product form pre-populated for user to complete
+- [x] `/products/new?barcode=XXX` route for pre-filled product creation
 
 **Scan-to-add-stock workflow (v0.8.2):**
 - [ ] Scan button on stock overview page
@@ -665,6 +665,7 @@ Already happy with Grocy/Mealie/Tandoor? Stick with them — they're battle-test
 - [Tailwind CSS](https://tailwindcss.com) — Utility-first CSS
 - [shadcn/ui](https://ui.shadcn.com) — Accessible components
 - [Supabase](https://supabase.com) — Auth & PostgreSQL database
+- [react-zxing](https://github.com/nicoleahmed/react-zxing) — Barcode scanning (camera)
 - [Lucide](https://lucide.dev) — Icons
 - [Vercel](https://vercel.com) — Hosting
 
@@ -733,6 +734,10 @@ food-wars/
 │   │   ├── layout.tsx             # Root layout with fonts + Toaster
 │   │   └── page.tsx               # Home/Stock overview page
 │   ├── components/
+│   │   ├── barcode/               # Barcode scanning components
+│   │   │   ├── BarcodeScanner.tsx  # Camera scanner (react-zxing)
+│   │   │   ├── BarcodesSection.tsx # Barcode CRUD for products
+│   │   │   └── ScannerDialog.tsx   # Reusable scan dialog with manual fallback
 │   │   ├── diner/                 # Themed components
 │   │   │   ├── GuestBanner.tsx    # Guest mode warning banner
 │   │   │   ├── Noren.tsx          # Header with lantern decorations
@@ -789,12 +794,16 @@ food-wars/
 │   │   │   ├── server.ts          # Server-side Supabase client
 │   │   │   └── storage.ts         # File upload utilities
 │   │   ├── __tests__/
+│   │   │   ├── barcode-actions.test.ts    # Barcode CRUD tests
 │   │   │   ├── inventory-utils.test.ts    # Inventory utils unit tests
+│   │   │   ├── openfoodfacts.test.ts      # OFF API client tests
 │   │   │   ├── shopping-list-actions.test.ts  # Shopping list action tests
 │   │   │   ├── shopping-list-utils.test.ts    # Gap calculation tests
 │   │   │   └── stock-actions.test.ts      # Stock action tests
+│   │   ├── barcode-actions.ts     # Barcode CRUD + local lookup
 │   │   ├── constants.ts           # Shared constants (GUEST_HOUSEHOLD_ID)
 │   │   ├── inventory-utils.ts     # Stock aggregation, expiry & FIFO helpers
+│   │   ├── openfoodfacts.ts      # Open Food Facts API client
 │   │   ├── shopping-list-actions.ts # Shopping list server actions
 │   │   ├── shopping-list-utils.ts   # Auto-generation gap calculators
 │   │   ├── stock-actions.ts       # Stock actions (consume, open, transfer, correct, undo)
@@ -810,7 +819,8 @@ food-wars/
 │   │   ├── 005_seed_guest_function.sql # Re-seed function for admin
 │   │   ├── 006_fix_anon_trigger.sql   # Skip anon users in trigger
 │   │   ├── 007_drop_qu_factor.sql     # Remove deprecated qu_factor column
-│   │   └── 008_shopping_lists.sql     # Shopping lists + items tables
+│   │   ├── 008_shopping_lists.sql     # Shopping lists + items tables
+│   │   └── 009_barcode_index.sql     # Compound index for barcode lookups
 │   └── scripts/
 │       └── cleanup_orphan_households.sql  # Manual cleanup script
 ├── BRANDING.md                    # Design system & color palette
@@ -842,9 +852,9 @@ Food Wars uses a Grocy-compatible database schema designed for comprehensive kit
 | `product_barcodes` | Multiple barcodes per product | ✅ v0.4 (UI in v0.8) |
 | `stock_entries` | Individual batches in stock | ✅ v0.4 |
 | `stock_log` | Transaction history for undo | ✅ v0.4 (UI in v0.6) |
-| `recipes` | Recipe definitions | 🔮 v0.9 |
-| `recipe_ingredients` | Recipe ingredients | 🔮 v0.9 |
-| `meal_plan` | Meal planning calendar | 🔮 v0.10 |
+| `recipes` | Recipe definitions | 🔮 v1.0 |
+| `recipe_ingredients` | Recipe ingredients | 🔮 v1.0 |
+| `meal_plan` | Meal planning calendar | 🔮 v1.1 |
 | `shopping_lists` | Shopping list management | ✅ v0.7 |
 | `shopping_list_items` | Items within shopping lists | ✅ v0.7 |
 

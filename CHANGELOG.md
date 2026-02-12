@@ -22,6 +22,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - All functions use `getHouseholdId()` for dual auth/guest mode
   - Compound database index `(household_id, barcode)` for fast scan resolution (migration 009)
   - Unit tests for barcode actions (8 tests)
+- **Open Food Facts integration & product form scan** (v0.8.1)
+  - `lookupBarcodeOFF()` client for Open Food Facts API (`world.openfoodfacts.org/api/v2`)
+  - 5-second timeout, graceful null on any error, never blocks UI
+  - Extracts: product name, image URL, brands, quantity
+  - `ScannerDialog` reusable dialog wrapping `BarcodeScanner` with manual text entry fallback
+  - Barcode scan button (ScanBarcode icon) on product form next to name field
+  - Scan flow: check local DB first, then OFF lookup, pre-fill name + image
+  - `/products/new?barcode=XXX` route pre-fills from OFF on mount
+  - Auto-saves barcode to `product_barcodes` after product creation
+  - Unit tests for OFF client (6 tests: found, fallback name, not found, 404, network error, timeout)
 
 ### Changed
 - **README roadmap restructured:**
@@ -34,6 +44,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - v1.4: PWA & Polish (was v1.0)
 - `ProductConversionsClient` — accepts `barcodes` and `shoppingLocations` props
 - Conversions page — fetches product barcodes and shopping locations
+- `ProductForm` — accepts `initialBarcode` prop, includes barcode scan button and OFF lookup
+- `/products/new` page — accepts `?barcode=` search param
 
 ### Dependencies
 - Added `react-zxing` ^2.1.0

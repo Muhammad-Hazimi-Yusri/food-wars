@@ -3,10 +3,15 @@ import { redirect } from "next/navigation";
 import { Noren } from "@/components/diner/Noren";
 import { ProductForm } from "@/components/inventory/ProductForm";
 
-export default async function NewProductPage() {
+type Props = {
+  searchParams: Promise<{ barcode?: string }>;
+};
+
+export default async function NewProductPage({ searchParams }: Props) {
+  const { barcode } = await searchParams;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  
+
   if (!user) {
     redirect("/");
   }
@@ -36,6 +41,7 @@ export default async function NewProductPage() {
           productGroups={productGroups ?? []}
           quantityUnits={quantityUnits ?? []}
           mode="create"
+          initialBarcode={barcode ?? null}
         />
       </main>
     </div>

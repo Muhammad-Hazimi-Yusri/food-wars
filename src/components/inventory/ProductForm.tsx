@@ -27,8 +27,12 @@ import {
   ProductGroup,
   QuantityUnit,
 } from "@/types/database";
-import { Info, ArrowLeft } from "lucide-react";
+import { Info, ArrowLeft, ScanBarcode } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { ScannerDialog } from "@/components/barcode/ScannerDialog";
+import { lookupBarcodeLocal } from "@/lib/barcode-actions";
+import { lookupBarcodeOFF } from "@/lib/openfoodfacts";
 
 type Product = {
   id: string;
@@ -73,6 +77,7 @@ type ProductFormProps = {
   productGroups: ProductGroup[];
   quantityUnits: QuantityUnit[];
   mode: "create" | "edit";
+  initialBarcode?: string | null;
 };
 
 function Tooltip({ text }: { text: string }) {
@@ -140,6 +145,7 @@ export function ProductForm({
   productGroups,
   quantityUnits,
   mode,
+  initialBarcode,
 }: ProductFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -150,12 +156,68 @@ export function ProductForm({
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [removeImage, setRemoveImage] = useState(false);
 
+  // Barcode state
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [pendingBarcode, setPendingBarcode] = useState<string | null>(
+    initialBarcode ?? null
+  );
+  const [scanLoading, setScanLoading] = useState(false);
+
   // Load existing product picture on mount (edit mode)
   useEffect(() => {
     if (product?.picture_file_name && !imageFile) {
       getProductPictureSignedUrl(product.picture_file_name).then(setImagePreviewUrl);
     }
   }, [product?.picture_file_name, imageFile]);
+
+  // Resolve barcode: check local DB, then OFF, then pre-fill form
+  const resolveBarcode = async (barcode: string) => {
+    setScanLoading(true);
+    try {
+      // 1. Check local product_barcodes
+      const localMatch = await lookupBarcodeLocal(barcode);
+      if (localMatch) {
+        toast(`Barcode already linked to "${localMatch.product.name}"`);
+        setPendingBarcode(null);
+        setScanLoading(false);
+        return;
+      }
+
+      // 2. Look up on Open Food Facts
+      const offResult = await lookupBarcodeOFF(barcode);
+      if (offResult) {
+        if (offResult.name) {
+          setFormData((prev) => ({
+            ...prev,
+            name: prev.name || offResult.name,
+          }));
+        }
+        if (offResult.imageUrl && !imagePreviewUrl) {
+          setImagePreviewUrl(offResult.imageUrl);
+        }
+        toast("Found on Open Food Facts");
+      } else {
+        toast("Barcode not found online — fill in details manually");
+      }
+      setPendingBarcode(barcode);
+    } catch {
+      setPendingBarcode(barcode);
+    } finally {
+      setScanLoading(false);
+    }
+  };
+
+  // Auto-resolve initialBarcode on mount (from ?barcode= query param)
+  useEffect(() => {
+    if (initialBarcode && mode === "create") {
+      resolveBarcode(initialBarcode);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialBarcode]);
+
+  const handleBarcodeScan = (barcode: string) => {
+    resolveBarcode(barcode);
+  };
 
   // Form state
   const [formData, setFormData] = useState(() => ({
@@ -318,6 +380,15 @@ export function ProductForm({
         throw new Error(saveError.message || "Failed to save product");
       }
 
+      // Auto-save pending barcode to product_barcodes
+      if (pendingBarcode && productId) {
+        await supabase.from("product_barcodes").insert({
+          household_id: householdId,
+          product_id: productId,
+          barcode: pendingBarcode,
+        });
+      }
+
      if (returnToList) {
       router.push("/master-data/products");
     } else {
@@ -377,15 +448,35 @@ export function ProductForm({
               <TabsContent value="basic" className="space-y-4">
                 <div>
                   <Label htmlFor="name">Name *</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => updateField("name", e.target.value)}
-                    placeholder="Product name"
-                    className={!formData.name ? "border-red-300" : ""}
-                    autoFocus
-                  />
-                  {!formData.name && (
+                  <div className="flex gap-2">
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => updateField("name", e.target.value)}
+                      placeholder="Product name"
+                      className={cn("flex-1", !formData.name && "border-red-300")}
+                      autoFocus
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setScannerOpen(true)}
+                      disabled={scanLoading}
+                      title="Scan barcode to look up product"
+                    >
+                      <ScanBarcode className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {scanLoading && (
+                    <p className="text-sm text-gray-500 mt-1">Looking up barcode...</p>
+                  )}
+                  {pendingBarcode && !scanLoading && (
+                    <p className="text-sm text-gray-500 mt-1">
+                      Barcode: {pendingBarcode}
+                    </p>
+                  )}
+                  {!formData.name && !scanLoading && (
                     <p className="text-sm text-red-500 mt-1">A name is required</p>
                   )}
                 </div>
@@ -946,6 +1037,14 @@ export function ProductForm({
           </div>
         </div>
       </form>
+
+      {/* Barcode Scanner Dialog */}
+      <ScannerDialog
+        open={scannerOpen}
+        onOpenChange={setScannerOpen}
+        onScan={handleBarcodeScan}
+        title="Scan barcode to look up product"
+      />
     </div>
   );
 }

@@ -12,9 +12,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, Pencil, Trash2, Barcode } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { GUEST_HOUSEHOLD_ID } from "@/lib/constants";
+import { BarcodesSection } from "@/components/barcode/BarcodesSection";
+import type { ProductBarcode } from "@/types/database";
 
 type QuantityUnit = {
   id: string;
@@ -38,16 +40,25 @@ type Product = {
   qu_stock?: { name: string }[] | { name: string } | null;
 };
 
+type ShoppingLocation = {
+  id: string;
+  name: string;
+};
+
 type Props = {
   product: Product;
   conversions: Conversion[];
   quantityUnits: QuantityUnit[];
+  barcodes: ProductBarcode[];
+  shoppingLocations: ShoppingLocation[];
 };
 
 export function ProductConversionsClient({
   product,
   conversions: initialConversions,
   quantityUnits,
+  barcodes,
+  shoppingLocations,
 }: Props) {
   const [conversions, setConversions] = useState(initialConversions);
   const [showForm, setShowForm] = useState(false);
@@ -305,16 +316,13 @@ export function ProductConversionsClient({
         )}
       </div>
 
-      {/* Barcodes Section (Placeholder) */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Barcode className="h-5 w-5 text-gray-400" />
-          <h2 className="text-lg font-semibold">Barcodes</h2>
-        </div>
-        <p className="text-gray-500 text-sm">
-          Barcode management coming in v0.8
-        </p>
-      </div>
+      {/* Barcodes Section */}
+      <BarcodesSection
+        productId={product.id}
+        barcodes={barcodes}
+        quantityUnits={quantityUnits}
+        shoppingLocations={shoppingLocations}
+      />
 
       {/* Footer */}
       <div className="flex justify-end">

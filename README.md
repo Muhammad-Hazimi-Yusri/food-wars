@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.7.1-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.8.0-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.7.1
+Current version is v0.8.0
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -337,43 +337,59 @@ Food Wars targets a different audience: people who want Grocy-like features with
 
 #### v0.8 - Barcodes & Smart Input
 
-**Goal:** Fast, error-free product entry
+**Goal:** Fast, error-free product entry via barcode scanning and smart defaults
 
-> Schema ready: `product_barcodes` table already in place
+> Schema ready: `product_barcodes` table already in place. Uses `react-zxing` + `@zxing/library`.
 
-**Barcode scanning:**
-- [ ] Camera barcode scanning (html5-qrcode or ZXing)
-- [ ] Supports 1D (Code128, EAN-8, EAN-13) and 2D (QR, DataMatrix)
-- [ ] Multiple barcodes per product (via `product_barcodes` table)
-- [ ] Barcode icon on product picker fields
-- [ ] Scan auto-fills: product, amount (`product_barcodes.amount`), unit (`product_barcodes.qu_id`), store (`product_barcodes.shopping_location_id`)
+**Barcode scanning (v0.8.0):**
+- [x] `BarcodeScanner` reusable component with live camera feed (react-zxing)
+- [x] Supports 1D (Code128, EAN-8, EAN-13, UPC-A) and 2D (QR, DataMatrix)
+- [x] Barcode CRUD on product conversions page (add/edit/delete via `product_barcodes` table)
+- [x] Camera scan or manual text entry for barcodes
+- [ ] Barcode icon on product picker fields across the app
+- [ ] Scan auto-fills: product, amount, unit, store from barcode metadata
 
-**Open Food Facts integration:**
-- [ ] Lookup unknown barcode via OFF API
+**Open Food Facts integration (v0.8.1):**
+- [ ] Lookup unknown barcode via OFF API (`world.openfoodfacts.org`)
 - [ ] Auto-fill: product name, image, barcode
-- [ ] Opens product form to complete setup
-- [ ] Configurable: enable/disable lookup
+- [ ] Opens product form pre-populated for user to complete
+- [ ] `/products/new?barcode=XXX` route for pre-filled product creation
 
-**Grocycode (internal barcodes):**
-- [ ] Format: `grcy:p:{product_id}` or `grcy:s:{stock_id}`
-- [ ] Generate printable DataMatrix/Code128 codes
-- [ ] Scan to quick-consume or quick-open
-- [ ] Print labels (webhook or browser print)
+**Scan-to-add-stock workflow (v0.8.2):**
+- [ ] Scan button on stock overview page
+- [ ] Known barcode: open AddStockEntryModal pre-filled with product + barcode defaults
+- [ ] Unknown barcode: OFF lookup, quick-create product, then add stock
 
-**Label printing:** (uses `default_stock_label_type` and `auto_reprint_stock_label` fields)
-- [ ] Print Grocycode labels for products
-- [ ] Print Grocycode labels for stock entries
-- [ ] Auto-print on purchase if enabled
+**Shopping list scan workflow (v0.8.3):**
+- [ ] Floating scan button on shopping list detail page
+- [ ] Scan product on list: purchase and add to stock
+- [ ] Scan product not on list: add to list then purchase
+- [ ] Scan unknown barcode: OFF lookup, create product, add to list
+- [ ] Continuous scanning mode (scanner stays open between scans)
 
-**Input productivity:**
+**Input productivity (v0.8.4):**
 - [ ] Date field shorthands (e.g., `0517` → `2025-05-17`, `+1m` → next month, `x` → never expires)
-- [ ] Recently used products list
-- [ ] Default values from product settings
-- [ ] Keyboard shortcuts for common actions
+- [ ] Recently used products list in product selectors
+- [ ] Manual barcode entry fallback for camera-less devices
+- [ ] Haptic feedback on successful scan
 
 ### Planned
 
-#### v0.9 - Recipes
+#### v0.9 - AI Smart Input
+
+**Goal:** VLM-powered pantry photo scanning and text-prompt product entry
+
+**AI pantry scanning:**
+- [ ] Take photo of pantry shelf / fridge contents
+- [ ] VLM identifies products in image
+- [ ] Auto-populate product list from photo
+- [ ] User reviews and confirms detected items
+
+**Text prompt guidance:**
+- [ ] Natural language product entry (e.g., "2 cans of tomatoes, expiring next week")
+- [ ] AI parses into structured product + stock entries
+
+#### v1.0 - Recipes (was v0.9)
 
 **Goal:** Recipe database with inventory integration
 
@@ -448,7 +464,7 @@ CREATE TABLE recipe_nestings (
 - [ ] On consume, adds produced product to stock
 - [ ] Useful for batch cooking, meal prep
 
-#### v0.10 - Meal Planning
+#### v1.1 - Meal Planning (was v0.10)
 
 **Goal:** Calendar-based meal organization
 
@@ -505,7 +521,7 @@ CREATE TABLE meal_plan (
 - [ ] Based on product `calories` field
 - [ ] Visual charts
 
-#### v0.11 - Product Analytics
+#### v1.2 - Product Analytics (was v0.11)
 
 **Goal:** Rich insights per product
 
@@ -538,7 +554,22 @@ CREATE TABLE meal_plan (
 - [ ] Stock value report (total inventory value)
 - [ ] Expiring soon report (printable)
 
-#### v1.0 - PWA & Polish
+#### v1.3 - Grocycode & Label Printing (deferred from v0.8)
+
+**Goal:** Internal barcodes for stock tracking and label generation
+
+**Grocycode (internal barcodes):**
+- [ ] Format: `grcy:p:{product_id}` or `grcy:s:{stock_id}`
+- [ ] Generate printable DataMatrix/Code128 codes
+- [ ] Scan to quick-consume or quick-open
+- [ ] Print labels (webhook or browser print)
+
+**Label printing:** (uses `default_stock_label_type` and `auto_reprint_stock_label` fields)
+- [ ] Print Grocycode labels for products
+- [ ] Print Grocycode labels for stock entries
+- [ ] Auto-print on purchase if enabled
+
+#### v1.4 - PWA & Polish (was v1.0)
 
 **Goal:** Production-ready release
 

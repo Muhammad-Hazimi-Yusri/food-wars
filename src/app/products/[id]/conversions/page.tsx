@@ -20,6 +20,8 @@ export default async function ProductConversionsPage({ params }: Props) {
     { data: product },
     { data: conversions },
     { data: quantityUnits },
+    { data: barcodes },
+    { data: shoppingLocations },
   ] = await Promise.all([
     supabase
       .from("products")
@@ -36,6 +38,16 @@ export default async function ProductConversionsPage({ params }: Props) {
       .select("*")
       .eq("active", true)
       .order("name"),
+    supabase
+      .from("product_barcodes")
+      .select("*")
+      .eq("product_id", id)
+      .order("created_at"),
+    supabase
+      .from("shopping_locations")
+      .select("id, name")
+      .eq("active", true)
+      .order("name"),
   ]);
 
   if (!product) {
@@ -50,6 +62,8 @@ export default async function ProductConversionsPage({ params }: Props) {
           product={product}
           conversions={conversions ?? []}
           quantityUnits={quantityUnits ?? []}
+          barcodes={barcodes ?? []}
+          shoppingLocations={shoppingLocations ?? []}
         />
       </main>
     </div>

@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.X] - 2026-02-12
+
+### Added
+- **Barcode scanner & CRUD** (v0.8.0)
+  - `BarcodeScanner` reusable component with live camera feed (`react-zxing`)
+  - Supports 1D (EAN-8, EAN-13, UPC-A, Code128) and 2D (QR, DataMatrix)
+  - Inline rendering (aspect-4/3, not full-page takeover)
+  - Targeting reticle overlay, 2s debounce, rear camera preferred
+  - Graceful error states: camera denied, no camera found, camera in use
+  - `BarcodesSection` replaces placeholder on `/products/[id]/conversions`
+  - Add barcodes via camera scan or manual text entry
+  - Edit and delete existing barcodes with inline form
+  - Per-barcode metadata: quantity unit, amount, store, last price, note
+  - `barcode-actions.ts`: `addBarcode()`, `updateBarcode()`, `deleteBarcode()`, `lookupBarcodeLocal()`
+  - All functions use `getHouseholdId()` for dual auth/guest mode
+  - Compound database index `(household_id, barcode)` for fast scan resolution (migration 009)
+  - Unit tests for barcode actions (8 tests)
+
+### Changed
+- **README roadmap restructured:**
+  - v0.8: Barcodes & Smart Input (removed Grocycode/labels from scope)
+  - v0.9: AI Smart Input (NEW — VLM pantry scanning)
+  - v1.0: Recipes (was v0.9)
+  - v1.1: Meal Planning (was v0.10)
+  - v1.2: Product Analytics (was v0.11)
+  - v1.3: Grocycode & Label Printing (deferred from v0.8)
+  - v1.4: PWA & Polish (was v1.0)
+- `ProductConversionsClient` — accepts `barcodes` and `shoppingLocations` props
+- Conversions page — fetches product barcodes and shopping locations
+
+### Dependencies
+- Added `react-zxing` ^2.1.0
+
 ## [0.7.X] - 2026-02-11
 
 ### Added

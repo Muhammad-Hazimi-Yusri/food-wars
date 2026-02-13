@@ -375,9 +375,37 @@ Food Wars targets a different audience: people who want Grocy-like features with
 
 ### Planned
 
-#### v0.9 - AI Smart Input
+#### v0.9 - Enhanced OFF & Product Data
 
-**Goal:** VLM-powered pantry photo scanning and text-prompt product entry
+**Goal:** Maximise Open Food Facts data, add brand tracking, nutrition facts, and store-brand detection
+
+**Enhanced OFF integration (v0.9.0):**
+- [ ] Fix broken product image fetching from OFF
+- [ ] Expand OFF fields fetched: `brands`, `nutriments`, `nutrition_grades`, `categories`, `ingredients_text`, `stores`
+- [ ] Auto-populate brand from OFF response
+
+**Brand & store-brand detection (v0.9.1):**
+- [ ] Add `brand` field to products schema
+- [ ] Add `is_store_brand` boolean flag to products
+- [ ] Store-brand mapping: known store brands (Aldi, Tesco, M&S) → suggest default store
+- [ ] UI: brand field on product form, auto-filled from OFF
+
+**Nutrition facts (v0.9.2):**
+- [ ] `product_nutrition` table (per-100g: energy_kj, energy_kcal, fat, saturated_fat, carbohydrates, sugars, fibre, protein, salt)
+- [ ] Auto-populate from OFF `nutriments` object
+- [ ] Nutrition display on product detail
+- [ ] Manual entry form for products not in OFF
+- [ ] Nutri-Score badge display (from OFF `nutrition_grades`)
+
+#### v1.0 - AI Smart Input (was v0.9)
+
+**Goal:** AI-powered input — receipt scanning, pantry photo scanning, natural language entry
+
+**Receipt scanning:**
+- [ ] Camera capture or photo upload of receipt
+- [ ] CV/VLM extracts: product names, quantities, prices, store
+- [ ] Auto-match to existing products or create new
+- [ ] Populate price history from receipt data
 
 **AI pantry scanning:**
 - [ ] Take photo of pantry shelf / fridge contents
@@ -389,7 +417,7 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [ ] Natural language product entry (e.g., "2 cans of tomatoes, expiring next week")
 - [ ] AI parses into structured product + stock entries
 
-#### v1.0 - Recipes (was v0.9)
+#### v1.1 - Recipes (was v1.0)
 
 **Goal:** Recipe database with inventory integration
 
@@ -464,7 +492,7 @@ CREATE TABLE recipe_nestings (
 - [ ] On consume, adds produced product to stock
 - [ ] Useful for batch cooking, meal prep
 
-#### v1.1 - Meal Planning (was v0.10)
+#### v1.2 - Meal Planning (was v1.1)
 
 **Goal:** Calendar-based meal organization
 
@@ -521,7 +549,7 @@ CREATE TABLE meal_plan (
 - [ ] Based on product `calories` field
 - [ ] Visual charts
 
-#### v1.2 - Product Analytics (was v0.11)
+#### v1.3 - Product Analytics (was v1.2)
 
 **Goal:** Rich insights per product
 
@@ -554,7 +582,7 @@ CREATE TABLE meal_plan (
 - [ ] Stock value report (total inventory value)
 - [ ] Expiring soon report (printable)
 
-#### v1.3 - Grocycode & Label Printing (deferred from v0.8)
+#### v1.4 - Grocycode & Label Printing (was v1.3)
 
 **Goal:** Internal barcodes for stock tracking and label generation
 
@@ -569,7 +597,7 @@ CREATE TABLE meal_plan (
 - [ ] Print Grocycode labels for stock entries
 - [ ] Auto-print on purchase if enabled
 
-#### v1.4 - PWA & Polish (was v1.0)
+#### v1.5 - PWA & Polish (was v1.4)
 
 **Goal:** Production-ready release
 
@@ -611,7 +639,7 @@ CREATE TABLE meal_plan (
 
 ### Future Ideas
 
-> Post-v1.0 features, no timeline commitment.
+> Post-v1.5 features, no timeline commitment.
 
 **Advanced product features:**
 - [ ] Parent/child products (product hierarchies)
@@ -636,6 +664,13 @@ CREATE TABLE meal_plan (
 - [ ] Smart expiry predictions based on history
 - [ ] Recipe suggestions from current stock
 - [ ] Chalkboard component for AI suggestions
+
+**AI Platform (v2.0):**
+- [ ] Self-hosted Ollama server support
+- [ ] User-provided API keys (OpenAI, Anthropic, etc.)
+- [ ] On-device mobile inference option
+- [ ] Tool calling framework with Zod schema validation
+- [ ] Unified AI provider abstraction (cloud / self-hosted / on-device)
 
 **Other:**
 - [ ] Multi-language support (i18n)
@@ -857,11 +892,12 @@ Food Wars uses a Grocy-compatible database schema designed for comprehensive kit
 | `product_barcodes` | Multiple barcodes per product | ✅ v0.4 (UI in v0.8) |
 | `stock_entries` | Individual batches in stock | ✅ v0.4 |
 | `stock_log` | Transaction history for undo | ✅ v0.4 (UI in v0.6) |
-| `recipes` | Recipe definitions | 🔮 v1.0 |
-| `recipe_ingredients` | Recipe ingredients | 🔮 v1.0 |
-| `meal_plan` | Meal planning calendar | 🔮 v1.1 |
+| `recipes` | Recipe definitions | 🔮 v1.1 |
+| `recipe_ingredients` | Recipe ingredients | 🔮 v1.1 |
+| `meal_plan` | Meal planning calendar | 🔮 v1.2 |
 | `shopping_lists` | Shopping list management | ✅ v0.7 |
 | `shopping_list_items` | Items within shopping lists | ✅ v0.7 |
+| `product_nutrition` | Nutrition facts per 100g | 🔮 v0.9 |
 
 ### Products Table (complete Grocy fields)
 

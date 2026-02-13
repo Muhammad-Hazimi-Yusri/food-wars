@@ -56,13 +56,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **README roadmap restructured:**
-  - v0.8: Barcodes & Smart Input (removed Grocycode/labels from scope)
-  - v0.9: AI Smart Input (NEW — VLM pantry scanning)
-  - v1.0: Recipes (was v0.9)
-  - v1.1: Meal Planning (was v0.10)
-  - v1.2: Product Analytics (was v0.11)
-  - v1.3: Grocycode & Label Printing (deferred from v0.8)
-  - v1.4: PWA & Polish (was v1.0)
+  - v0.9: Enhanced OFF & Product Data (NEW — brand, nutrition, store-brand detection)
+  - v1.0: AI Smart Input (was v0.9 — added receipt scanning)
+  - v1.1: Recipes (was v1.0)
+  - v1.2: Meal Planning (was v1.1)
+  - v1.3: Product Analytics (was v1.2)
+  - v1.4: Grocycode & Label Printing (was v1.3)
+  - v1.5: PWA & Polish (was v1.4)
+  - v2.0: AI Platform added to Future Ideas
 - `ProductConversionsClient` — accepts `barcodes` and `shoppingLocations` props
 - Conversions page — fetches product barcodes and shopping locations
 - `ProductForm` — accepts `initialBarcode` prop, includes barcode scan button and OFF lookup

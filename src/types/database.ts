@@ -1,5 +1,5 @@
 // ============================================
-// FOOD WARS DATABASE TYPES v0.5.0
+// FOOD WARS DATABASE TYPES v0.9.2
 // Complete types matching Grocy schema
 // ============================================
 
@@ -117,6 +117,10 @@ export type Product = {
   // Freezing
   should_not_be_frozen: boolean;
   
+  // Brand
+  brand: string | null;
+  is_store_brand: boolean;
+
   // Nutrition
   calories: number | null;
   
@@ -140,6 +144,31 @@ export type Product = {
   hide_on_stock_overview: boolean;
   
   // Timestamps
+  created_at: string;
+  updated_at: string;
+};
+
+// ============================================
+// PRODUCT NUTRITION
+// ============================================
+
+export type NutritionDataSource = 'off' | 'manual' | 'cv';
+
+export type ProductNutrition = {
+  id: string;
+  household_id: string;
+  product_id: string;
+  energy_kj: number | null;
+  energy_kcal: number | null;
+  fat: number | null;
+  saturated_fat: number | null;
+  carbohydrates: number | null;
+  sugars: number | null;
+  fibre: number | null;
+  protein: number | null;
+  salt: number | null;
+  nutrition_grade: string | null;
+  data_source: NutritionDataSource;
   created_at: string;
   updated_at: string;
 };

@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ImageIcon, Pencil, Trash2, Utensils, AlertTriangle, ArrowRightLeft, Check, X } from "lucide-react";
-import { StockEntryWithProduct, Location, ShoppingLocation } from "@/types/database";
+import { StockEntryWithProduct, Location, ShoppingLocation, ProductNutrition } from "@/types/database";
 import { getExpiryStatus, getExpiryLabel } from "@/lib/inventory-utils";
 import { getProductPictureSignedUrl } from "@/lib/supabase/storage";
 import { consumeStock, undoConsume, undoDeleteEntry } from "@/lib/stock-actions";
@@ -21,6 +21,8 @@ import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import { EditStockEntryModal } from "./EditStockEntryModal";
 import { TransferModal } from "./TransferModal";
+import { NutritionLabel } from "./NutritionLabel";
+import { NutriScoreBadge } from "./NutriScoreBadge";
 
 type ProductDetailModalProps = {
   entries: StockEntryWithProduct[];
@@ -42,6 +44,7 @@ export function ProductDetailModal({
   const [transferringEntry, setTransferringEntry] = useState<StockEntryWithProduct | null>(null);
   const [consumingEntry, setConsumingEntry] = useState<{ id: string; amount: string } | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [nutrition, setNutrition] = useState<ProductNutrition | null>(null);
 
   const product = entries[0]?.product;
 
@@ -78,8 +81,20 @@ export function ProductDetailModal({
         .then(({ data }) => {
           if (data) setShoppingLocations(data);
         });
+
+      // Fetch nutrition data
+      if (product?.id) {
+        supabase
+          .from("product_nutrition")
+          .select("*")
+          .eq("product_id", product.id)
+          .maybeSingle()
+          .then(({ data }) => {
+            setNutrition(data);
+          });
+      }
     }
-  }, [open]);
+  }, [open, product?.id]);
 
   const handleDeleteEntry = async (entry: StockEntryWithProduct) => {
     setDeleting(entry.id);
@@ -218,7 +233,10 @@ export function ProductDetailModal({
       <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{product.name}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              {product.name}
+              <NutriScoreBadge grade={nutrition?.nutrition_grade ?? null} />
+            </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -267,6 +285,9 @@ export function ProductDetailModal({
                 </div>
               </div>
             </div>
+
+            {/* Nutrition */}
+            <NutritionLabel nutrition={nutrition} />
 
             {/* Stock Entries */}
             <div>

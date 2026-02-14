@@ -5,6 +5,53 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.X] - 2026-02-14
+
+### Added
+- **Enhanced OFF integration** (v0.9.0)
+  - Added `images.openfoodfacts.org` to Next.js `remotePatterns` (fixes broken OFF product images)
+  - OFF images now downloaded to Supabase storage on product save for persistent display
+  - `downloadOffImage()` helper in `openfoodfacts.ts` — fetches OFF image as File for upload
+  - Added `?fields=` parameter to OFF API requests for efficient data fetching
+  - Expanded `OFFProduct` type with: `nutriments`, `nutritionGrade`, `categories`, `ingredientsText`, `stores`
+  - New `OFFNutriments` type with 9 per-100g nutrition fields
+  - `parseNutriments()` helper maps OFF hyphenated keys (`energy-kcal_100g`) to camelCase
+  - Updated OFF tests: new field assertions, `?fields=` URL verification, missing/partial nutriments handling (8 tests)
+- **Brand & store-brand detection** (v0.9.1)
+  - `brand` (TEXT) and `is_store_brand` (BOOLEAN) columns added to products table (migration 010)
+  - `store-brand-map.ts`: ordered tuple array of 15+ UK supermarket brand prefixes with `detectStoreBrand()` function
+  - Longest-prefix-first matching (e.g., "Tesco Finest" matches before "Tesco")
+  - Covers: Aldi, Lidl, Tesco, Sainsbury's, Asda, Morrisons, M&S, Waitrose, Co-op, Iceland, Spar
+  - Brand auto-filled from OFF `brands` field during barcode scan
+  - Store-brand detection triggers toast suggesting matching shopping location
+  - Brand input field and "Store brand" checkbox on product form (Basic tab)
+  - Unit tests for store-brand detection (15 tests)
+- **Nutrition facts** (v0.9.2)
+  - `product_nutrition` table with EU Big 8 per-100g values, Nutri-Score grade, and data source tracking (migration 011)
+  - Full RLS policies (dual-mode: auth + guest) matching existing table patterns
+  - `ProductNutrition` and `NutritionDataSource` TypeScript types in `database.ts`
+  - `mapOFFNutrimentsToNutrition()` maps OFF API data to database schema
+  - `NutritionLabel` component — EU-style nutrition facts table (Energy kJ/kcal, Fat, Saturates, Carbohydrate, Sugars, Fibre, Protein, Salt)
+  - `NutriScoreBadge` component — color-coded A–E grade pill (official Nutri-Score colors)
+  - Nutrition auto-populated from OFF on product creation (inserted into `product_nutrition` table)
+  - Nutrition display on `ProductDetailModal` (label + Nutri-Score badge in header)
+  - New "Nutrition" tab on `ProductForm` with 9 per-100g number inputs in 2-column grid
+  - Manual nutrition entry/edit with upsert logic (supports both OFF-sourced and manual data)
+  - Existing nutrition data loaded on product edit
+  - Unit tests for OFF→nutrition mapping (4 tests)
+
+### Changed
+- `ProductForm` — 6 tabs (Basic, Stock Defaults, Locations, QU Conversions, Barcodes, Nutrition) instead of 5
+- `ProductForm` — standalone `calories` field removed in favour of full nutrition tab
+- `ProductDetailModal` — fetches and displays `product_nutrition` row alongside stock entries
+- `openfoodfacts.ts` — API URL now includes `?fields=` for selective field fetching
+- `database.ts` — version comment updated to v0.9.2
+- `package.json` — version bumped to 0.9.2
+
+### Database Migrations
+- `010_brand_fields.sql` — `ALTER TABLE products ADD COLUMN brand TEXT; ADD COLUMN is_store_brand BOOLEAN NOT NULL DEFAULT FALSE`
+- `011_product_nutrition.sql` — `CREATE TABLE product_nutrition` with EU Big 8 columns, Nutri-Score, data_source, UNIQUE(product_id), indexes, full RLS
+
 ## [0.8.X] - 2026-02-12
 
 ### Added

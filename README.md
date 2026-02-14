@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.8.5-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.9.2-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.8.5
+Current version is v0.9.2
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -53,10 +53,15 @@ Current version is v0.8.5
 - **Auto-Add to List** — Consuming below min stock auto-adds to designated shopping list
 - **Freezer Intelligence** — Auto-adjusts due dates on freeze/thaw, warns for freeze-sensitive products
 - **Authentication** — Google Sign-in with household isolation + guest mode with demo data
+- **Brand Tracking** — Auto-detect brand from OFF, store-brand detection for UK supermarkets
+- **Nutrition Facts** — EU Big 8 per-100g nutrition label, auto-populated from Open Food Facts
+- **Nutri-Score Badge** — Color-coded A–E grade display from OFF data
+- **Enhanced OFF Integration** — Expanded fields: brands, nutriments, nutrition grades, categories, ingredients, stores
+- **OFF Image Persistence** — Product images downloaded from OFF to Supabase storage for reliable display
 
 ### For Contributors
 - **Documentation** — README, BRANDING.md, CONTRIBUTING.md, CHANGELOG.md
-- **Database Schema** — Grocy-compatible with 40+ product fields, full RLS
+- **Database Schema** — Grocy-compatible with 40+ product fields, full RLS, nutrition table
 - **Design System** — Shokugeki color palette, Japanese diner aesthetic
 - **Testing** — Vitest unit tests + Playwright E2E
 - **CI/CD** — GitHub Actions, Vercel deployment
@@ -92,6 +97,7 @@ Food Wars targets a different audience: people who want Grocy-like features with
 | **Setup** | Docker required | Docker required | Docker required | Sign in (hosted) or Vercel + Supabase (self-host) |
 | **Maturity** | Battle-tested since 2017 | Established | Established | Early development |
 | **Barcode scanning** | ✅ | ❌ | ❌ | ✅ v0.8 (camera + OFF lookup) |
+| **Nutrition facts** | ❌ | ✅ (recipe-level) | ✅ (recipe-level) | ✅ v0.9 (per-product, OFF auto-fill, Nutri-Score) |
 | **Offline support** | ✅ Full | ✅ Full | ✅ Full | ❌ Online only |
 | **Multi-user** | ✅ | ✅ | ✅ | 🔜 Planned |
 | **Chores/Tasks** | ✅ | ❌ | ❌ | ❌ Not planned |
@@ -331,15 +337,11 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Auto-target list setting (`is_auto_target` flag)
 - [x] Calculates missing amount: `min_stock - current_stock`
 </details>
----
 
-### In Progress
-
-#### v0.8 - Barcodes & Smart Input
+<details>
+<summary><strong>v0.8 - Barcodes & Smart Input ✓</strong></summary>
 
 **Goal:** Fast, error-free product entry via barcode scanning and smart defaults
-
-> Schema ready: `product_barcodes` table already in place. Uses `react-zxing` + `@zxing/library`.
 
 **Barcode scanning (v0.8.0):**
 - [x] `BarcodeScanner` reusable component with live camera feed (react-zxing)
@@ -372,30 +374,39 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Recently used products list in product selectors
 - [x] Manual barcode entry fallback for camera-less devices
 - [x] Haptic feedback on successful scan
+</details>
 
-### Planned
-
-#### v0.9 - Enhanced OFF & Product Data
+<details>
+<summary><strong>v0.9 - Enhanced OFF & Product Data ✓</strong></summary>
 
 **Goal:** Maximise Open Food Facts data, add brand tracking, nutrition facts, and store-brand detection
 
 **Enhanced OFF integration (v0.9.0):**
-- [ ] Fix broken product image fetching from OFF
-- [ ] Expand OFF fields fetched: `brands`, `nutriments`, `nutrition_grades`, `categories`, `ingredients_text`, `stores`
-- [ ] Auto-populate brand from OFF response
+- [x] Fix broken product image fetching from OFF (added `images.openfoodfacts.org` to Next.js `remotePatterns`)
+- [x] Persist OFF images to Supabase storage (download on product save)
+- [x] Expand OFF fields fetched: `brands`, `nutriments`, `nutrition_grades`, `categories`, `ingredients_text`, `stores`
+- [x] Add `?fields=` parameter to OFF API for efficient requests
+- [x] Auto-populate brand from OFF response
 
 **Brand & store-brand detection (v0.9.1):**
-- [ ] Add `brand` field to products schema
-- [ ] Add `is_store_brand` boolean flag to products
-- [ ] Store-brand mapping: known store brands (Aldi, Tesco, M&S) → suggest default store
-- [ ] UI: brand field on product form, auto-filled from OFF
+- [x] Add `brand` and `is_store_brand` fields to products schema (migration 010)
+- [x] Store-brand mapping config for 15+ UK supermarket brands
+- [x] Auto-detect store brands (Aldi, Tesco, Sainsbury's, M&S, etc.) from OFF data
+- [x] Suggest matching shopping location via toast action
+- [x] Brand input field and store-brand toggle on product form
 
 **Nutrition facts (v0.9.2):**
-- [ ] `product_nutrition` table (per-100g: energy_kj, energy_kcal, fat, saturated_fat, carbohydrates, sugars, fibre, protein, salt)
-- [ ] Auto-populate from OFF `nutriments` object
-- [ ] Nutrition display on product detail
-- [ ] Manual entry form for products not in OFF
-- [ ] Nutri-Score badge display (from OFF `nutrition_grades`)
+- [x] `product_nutrition` table with EU Big 8 per-100g values (migration 011)
+- [x] Auto-populate nutrition from OFF `nutriments` on product creation
+- [x] `NutritionLabel` component — EU-style nutrition facts table
+- [x] `NutriScoreBadge` component — color-coded A–E grade pill
+- [x] Nutrition display on product detail modal
+- [x] Manual nutrition entry form (new "Nutrition" tab on product form)
+- [x] Nutri-Score badge on product detail modal header
+</details>
+---
+
+### Planned
 
 #### v1.0 - AI Smart Input (was v0.9)
 
@@ -546,7 +557,7 @@ CREATE TABLE meal_plan (
 
 **Nutritional overview:**
 - [ ] Daily/weekly calorie totals
-- [ ] Based on product `calories` field
+- [ ] Based on `product_nutrition` table (energy_kcal per 100g)
 - [ ] Visual charts
 
 #### v1.3 - Product Analytics (was v1.2)
@@ -788,6 +799,8 @@ food-wars/
 │   │   │   ├── EditStockEntryModal.tsx
 │   │   │   ├── InventoryStats.tsx
 │   │   │   ├── MobileStockList.tsx
+│   │   │   ├── NutriScoreBadge.tsx # Color-coded A–E grade pill
+│   │   │   ├── NutritionLabel.tsx  # EU-style nutrition facts table
 │   │   │   ├── ProductConversionsClient.tsx
 │   │   │   ├── ProductDetailModal.tsx
 │   │   │   ├── ProductForm.tsx
@@ -835,15 +848,18 @@ food-wars/
 │   │   │   ├── barcode-actions.test.ts    # Barcode CRUD tests
 │   │   │   ├── date-shorthands.test.ts   # Date shorthand tests
 │   │   │   ├── inventory-utils.test.ts    # Inventory utils unit tests
+│   │   │   ├── nutrition-mapping.test.ts  # OFF→nutrition mapping tests
 │   │   │   ├── openfoodfacts.test.ts      # OFF API client tests
 │   │   │   ├── shopping-list-actions.test.ts  # Shopping list action tests
 │   │   │   ├── shopping-list-utils.test.ts    # Gap calculation tests
-│   │   │   └── stock-actions.test.ts      # Stock action tests
+│   │   │   ├── stock-actions.test.ts      # Stock action tests
+│   │   │   └── store-brand-map.test.ts    # Store-brand detection tests
 │   │   ├── barcode-actions.ts     # Barcode CRUD + local lookup
 │   │   ├── constants.ts           # Shared constants (GUEST_HOUSEHOLD_ID)
 │   │   ├── date-shorthands.ts    # Date input shorthand parser
 │   │   ├── inventory-utils.ts     # Stock aggregation, expiry & FIFO helpers
 │   │   ├── openfoodfacts.ts      # Open Food Facts API client
+│   │   ├── store-brand-map.ts    # UK store-brand detection config
 │   │   ├── shopping-list-actions.ts # Shopping list server actions
 │   │   ├── shopping-list-utils.ts   # Auto-generation gap calculators
 │   │   ├── stock-actions.ts       # Stock actions (consume, open, transfer, correct, undo)
@@ -860,7 +876,9 @@ food-wars/
 │   │   ├── 006_fix_anon_trigger.sql   # Skip anon users in trigger
 │   │   ├── 007_drop_qu_factor.sql     # Remove deprecated qu_factor column
 │   │   ├── 008_shopping_lists.sql     # Shopping lists + items tables
-│   │   └── 009_barcode_index.sql     # Compound index for barcode lookups
+│   │   ├── 009_barcode_index.sql     # Compound index for barcode lookups
+│   │   ├── 010_brand_fields.sql     # Add brand + is_store_brand to products
+│   │   └── 011_product_nutrition.sql # Nutrition facts table with RLS
 │   └── scripts/
 │       └── cleanup_orphan_households.sql  # Manual cleanup script
 ├── BRANDING.md                    # Design system & color palette
@@ -897,7 +915,7 @@ Food Wars uses a Grocy-compatible database schema designed for comprehensive kit
 | `meal_plan` | Meal planning calendar | 🔮 v1.2 |
 | `shopping_lists` | Shopping list management | ✅ v0.7 |
 | `shopping_list_items` | Items within shopping lists | ✅ v0.7 |
-| `product_nutrition` | Nutrition facts per 100g | 🔮 v0.9 |
+| `product_nutrition` | Nutrition facts per 100g | ✅ v0.9.2 |
 
 ### Products Table (complete Grocy fields)
 
@@ -924,7 +942,9 @@ Food Wars uses a Grocy-compatible database schema designed for comprehensive kit
 | `default_due_days_after_freezing` | int | 0 | New expiry when frozen |
 | `default_due_days_after_thawing` | int | 0 | New expiry when thawed |
 | `should_not_be_frozen` | boolean | false | Warn if moved to freezer |
-| `calories` | int | null | kcal per stock unit |
+| `brand` | string | null | Brand name (auto-filled from OFF) |
+| `is_store_brand` | boolean | false | Whether this is a supermarket own-brand product |
+| `calories` | int | null | kcal per stock unit (legacy — see `product_nutrition`) |
 | `enable_tare_weight_handling` | boolean | false | For weighing containers |
 | `tare_weight` | decimal | 0 | Weight of empty container |
 | `parent_product_id` | FK | null | Parent product for hierarchies |
@@ -976,6 +996,23 @@ Food Wars uses a Grocy-compatible database schema designed for comprehensive kit
 | `shopping_location_id` | FK | Pre-fill store on scan |
 | `last_price` | decimal | Auto-tracked from purchases |
 | `note` | text | Per-barcode notes |
+
+### Product Nutrition Table (per 100g, EU Big 8)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `product_id` | FK | Linked product (unique — one row per product) |
+| `energy_kj` | decimal | Energy in kilojoules |
+| `energy_kcal` | decimal | Energy in kilocalories |
+| `fat` | decimal | Total fat (g) |
+| `saturated_fat` | decimal | Saturated fat (g) |
+| `carbohydrates` | decimal | Total carbohydrates (g) |
+| `sugars` | decimal | Sugars (g) |
+| `fibre` | decimal | Dietary fibre (g) |
+| `protein` | decimal | Protein (g) |
+| `salt` | decimal | Salt (g) |
+| `nutrition_grade` | text | Nutri-Score grade (a–e) from OFF |
+| `data_source` | text | `off` (Open Food Facts), `manual`, or `cv` |
 
 ## Run Locally
 

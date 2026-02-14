@@ -32,7 +32,13 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ScannerDialog } from "@/components/barcode/ScannerDialog";
 import { lookupBarcodeLocal } from "@/lib/barcode-actions";
-import { lookupBarcodeOFF } from "@/lib/openfoodfacts";
+import {
+  lookupBarcodeOFF,
+  downloadOffImage,
+  type OFFNutriments,
+} from "@/lib/openfoodfacts";
+import { detectStoreBrand } from "@/lib/store-brand-map";
+import type { ProductNutrition } from "@/types/database";
 
 type Product = {
   id: string;
@@ -57,6 +63,8 @@ type Product = {
   should_not_be_frozen: boolean;
   qu_id_stock: string | null;
   qu_id_purchase: string | null;
+  brand: string | null;
+  is_store_brand: boolean;
   enable_tare_weight_handling: boolean;
   tare_weight: number;
   calories: number | null;
@@ -163,12 +171,56 @@ export function ProductForm({
   );
   const [scanLoading, setScanLoading] = useState(false);
 
+  // Nutrition state (from OFF or existing DB row)
+  const [offNutrition, setOffNutrition] = useState<OFFNutriments | null>(null);
+  const [offNutritionGrade, setOffNutritionGrade] = useState<string | null>(null);
+  const [existingNutrition, setExistingNutrition] = useState<ProductNutrition | null>(null);
+  const [nutritionForm, setNutritionForm] = useState({
+    energy_kj: "",
+    energy_kcal: "",
+    fat: "",
+    saturated_fat: "",
+    carbohydrates: "",
+    sugars: "",
+    fibre: "",
+    protein: "",
+    salt: "",
+  });
+
   // Load existing product picture on mount (edit mode)
   useEffect(() => {
     if (product?.picture_file_name && !imageFile) {
       getProductPictureSignedUrl(product.picture_file_name).then(setImagePreviewUrl);
     }
   }, [product?.picture_file_name, imageFile]);
+
+  // Load existing nutrition data on mount (edit mode)
+  useEffect(() => {
+    if (product?.id && mode === "edit") {
+      const supabase = createClient();
+      supabase
+        .from("product_nutrition")
+        .select("*")
+        .eq("product_id", product.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) {
+            setExistingNutrition(data);
+            setNutritionForm({
+              energy_kj: data.energy_kj?.toString() ?? "",
+              energy_kcal: data.energy_kcal?.toString() ?? "",
+              fat: data.fat?.toString() ?? "",
+              saturated_fat: data.saturated_fat?.toString() ?? "",
+              carbohydrates: data.carbohydrates?.toString() ?? "",
+              sugars: data.sugars?.toString() ?? "",
+              fibre: data.fibre?.toString() ?? "",
+              protein: data.protein?.toString() ?? "",
+              salt: data.salt?.toString() ?? "",
+            });
+          }
+        });
+    }
+  }, [product?.id, mode]);
 
   // Resolve barcode: check local DB, then OFF, then pre-fill form
   const resolveBarcode = async (barcode: string) => {
@@ -194,6 +246,48 @@ export function ProductForm({
         }
         if (offResult.imageUrl && !imagePreviewUrl) {
           setImagePreviewUrl(offResult.imageUrl);
+        }
+        if (offResult.brands) {
+          setFormData((prev) => ({
+            ...prev,
+            brand: prev.brand || offResult.brands || "",
+          }));
+          const storeName = detectStoreBrand(offResult.brands);
+          if (storeName) {
+            setFormData((prev) => ({ ...prev, is_store_brand: true }));
+            const match = shoppingLocations.find((sl) =>
+              sl.name.toLowerCase().includes(storeName.toLowerCase())
+            );
+            if (match) {
+              setFormData((prev) => {
+                if (prev.shopping_location_id) return prev;
+                toast(`Store brand detected — buy at ${match.name}?`, {
+                  action: {
+                    label: "Set store",
+                    onClick: () => updateField("shopping_location_id", match.id),
+                  },
+                });
+                return prev;
+              });
+            }
+          }
+        }
+        if (offResult.nutriments) {
+          setOffNutrition(offResult.nutriments);
+          setNutritionForm({
+            energy_kj: offResult.nutriments.energy_kj_100g?.toString() ?? "",
+            energy_kcal: offResult.nutriments.energy_kcal_100g?.toString() ?? "",
+            fat: offResult.nutriments.fat_100g?.toString() ?? "",
+            saturated_fat: offResult.nutriments.saturated_fat_100g?.toString() ?? "",
+            carbohydrates: offResult.nutriments.carbohydrates_100g?.toString() ?? "",
+            sugars: offResult.nutriments.sugars_100g?.toString() ?? "",
+            fibre: offResult.nutriments.fiber_100g?.toString() ?? "",
+            protein: offResult.nutriments.proteins_100g?.toString() ?? "",
+            salt: offResult.nutriments.salt_100g?.toString() ?? "",
+          });
+        }
+        if (offResult.nutritionGrade) {
+          setOffNutritionGrade(offResult.nutritionGrade);
         }
         toast("Found on Open Food Facts");
       } else {
@@ -223,6 +317,8 @@ export function ProductForm({
   const [formData, setFormData] = useState(() => ({
     // Basic
     name: product?.name ?? "",
+    brand: product?.brand ?? "",
+    is_store_brand: product?.is_store_brand ?? false,
     description: product?.description ?? "",
     active: product?.active ?? true,
     picture_file_name: product?.picture_file_name ?? null,
@@ -319,10 +415,24 @@ export function ProductForm({
         }
       } else if (removeImage && formData.picture_file_name) {
         pictureName = null;
+      } else if (
+        !pictureName &&
+        imagePreviewUrl?.startsWith("https://images.openfoodfacts.org")
+      ) {
+        // Download OFF image to Supabase storage so it persists
+        const offFile = await downloadOffImage(imagePreviewUrl);
+        if (offFile) {
+          const uploadResult = await uploadProductPicture(offFile, householdId);
+          if (uploadResult) {
+            pictureName = uploadResult;
+          }
+        }
       }
 
       const productData = {
         name: formData.name.trim(),
+        brand: formData.brand.trim() || null,
+        is_store_brand: formData.is_store_brand,
         description: formData.description.trim() || null,
         active: formData.active,
         picture_file_name: pictureName,
@@ -389,6 +499,40 @@ export function ProductForm({
         });
       }
 
+      // Upsert nutrition data
+      if (productId) {
+        const hasNutritionValues = Object.values(nutritionForm).some((v) => v !== "");
+        if (hasNutritionValues) {
+          const numOrNull = (v: string) => (v !== "" ? parseFloat(v) : null);
+          const nutritionData = {
+            household_id: householdId,
+            product_id: productId,
+            energy_kj: numOrNull(nutritionForm.energy_kj),
+            energy_kcal: numOrNull(nutritionForm.energy_kcal),
+            fat: numOrNull(nutritionForm.fat),
+            saturated_fat: numOrNull(nutritionForm.saturated_fat),
+            carbohydrates: numOrNull(nutritionForm.carbohydrates),
+            sugars: numOrNull(nutritionForm.sugars),
+            fibre: numOrNull(nutritionForm.fibre),
+            protein: numOrNull(nutritionForm.protein),
+            salt: numOrNull(nutritionForm.salt),
+            nutrition_grade: offNutritionGrade,
+            data_source: offNutrition ? "off" : existingNutrition?.data_source ?? "manual",
+          };
+
+          if (existingNutrition) {
+            await supabase
+              .from("product_nutrition")
+              .update(nutritionData)
+              .eq("id", existingNutrition.id);
+          } else {
+            await supabase
+              .from("product_nutrition")
+              .insert(nutritionData);
+          }
+        }
+      }
+
      if (returnToList) {
       router.push("/master-data/products");
     } else {
@@ -441,6 +585,7 @@ export function ProductForm({
                   <TabsTrigger value="basic">Basic</TabsTrigger>
                   <TabsTrigger value="locations">Locations</TabsTrigger>
                   <TabsTrigger value="duedates">Due dates</TabsTrigger>
+                  <TabsTrigger value="nutrition">Nutrition</TabsTrigger>
                   <TabsTrigger value="units">Units</TabsTrigger>
                 </TabsList>
 
@@ -479,6 +624,30 @@ export function ProductForm({
                   {!formData.name && !scanLoading && (
                     <p className="text-sm text-red-500 mt-1">A name is required</p>
                   )}
+                </div>
+
+                <div>
+                  <Label htmlFor="brand">Brand</Label>
+                  <Input
+                    id="brand"
+                    value={formData.brand}
+                    onChange={(e) => updateField("brand", e.target.value)}
+                    placeholder="e.g. Heinz, Tesco Finest"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="is_store_brand"
+                    checked={formData.is_store_brand}
+                    onChange={(e) => updateField("is_store_brand", e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300"
+                  />
+                  <Label htmlFor="is_store_brand" className="font-normal">
+                    Store brand
+                  </Label>
+                  <Tooltip text="Own-label product from a specific store (e.g. Tesco, Aldi)" />
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -543,18 +712,6 @@ export function ProductForm({
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="calories">Energy (kcal)</Label>
-                  <Input
-                    id="calories"
-                    type="number"
-                    min="0"
-                    value={formData.calories}
-                    onChange={(e) => updateField("calories", e.target.value)}
-                    placeholder="per stock unit"
-                  />
                 </div>
 
                 {/* Misc options */}
@@ -820,6 +977,118 @@ export function ProductForm({
                     Should not be frozen
                     <Tooltip text="Warn if this product is moved to a freezer" />
                   </Label>
+                </div>
+              </TabsContent>
+
+              {/* Nutrition Tab */}
+              <TabsContent value="nutrition" className="space-y-4">
+                <p className="text-sm text-gray-500">
+                  All values per 100g.
+                  {offNutrition && (
+                    <span className="ml-1 text-green-600">Pre-filled from Open Food Facts.</span>
+                  )}
+                </p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="energy_kj">Energy (kJ)</Label>
+                    <Input
+                      id="energy_kj"
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={nutritionForm.energy_kj}
+                      onChange={(e) => setNutritionForm((prev) => ({ ...prev, energy_kj: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="energy_kcal">Energy (kcal)</Label>
+                    <Input
+                      id="energy_kcal"
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={nutritionForm.energy_kcal}
+                      onChange={(e) => setNutritionForm((prev) => ({ ...prev, energy_kcal: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="fat">Fat (g)</Label>
+                    <Input
+                      id="fat"
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={nutritionForm.fat}
+                      onChange={(e) => setNutritionForm((prev) => ({ ...prev, fat: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="saturated_fat">Saturates (g)</Label>
+                    <Input
+                      id="saturated_fat"
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={nutritionForm.saturated_fat}
+                      onChange={(e) => setNutritionForm((prev) => ({ ...prev, saturated_fat: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="carbohydrates">Carbohydrate (g)</Label>
+                    <Input
+                      id="carbohydrates"
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={nutritionForm.carbohydrates}
+                      onChange={(e) => setNutritionForm((prev) => ({ ...prev, carbohydrates: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="sugars">Sugars (g)</Label>
+                    <Input
+                      id="sugars"
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={nutritionForm.sugars}
+                      onChange={(e) => setNutritionForm((prev) => ({ ...prev, sugars: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="fibre">Fibre (g)</Label>
+                    <Input
+                      id="fibre"
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={nutritionForm.fibre}
+                      onChange={(e) => setNutritionForm((prev) => ({ ...prev, fibre: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="protein">Protein (g)</Label>
+                    <Input
+                      id="protein"
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={nutritionForm.protein}
+                      onChange={(e) => setNutritionForm((prev) => ({ ...prev, protein: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="salt">Salt (g)</Label>
+                    <Input
+                      id="salt"
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={nutritionForm.salt}
+                      onChange={(e) => setNutritionForm((prev) => ({ ...prev, salt: e.target.value }))}
+                    />
+                  </div>
                 </div>
               </TabsContent>
 

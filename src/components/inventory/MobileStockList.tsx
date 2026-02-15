@@ -257,7 +257,7 @@ export function MobileStockList({ entries, locations, zeroStockProducts = [] }: 
     none: "border-l-gray-300 bg-white",
   };
 
-  if (aggregated.length === 0) {
+  if (aggregated.length === 0 && zeroStockProducts.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
         No items in stock. Add a product first, then add stock.

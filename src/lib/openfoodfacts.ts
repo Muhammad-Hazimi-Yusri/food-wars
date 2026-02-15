@@ -49,7 +49,7 @@ function parseNutriments(
     return typeof v === "number" ? v : null;
   };
 
-  return {
+  const result = {
     energy_kj_100g: num("energy-kj_100g"),
     energy_kcal_100g: num("energy-kcal_100g"),
     fat_100g: num("fat_100g"),
@@ -60,6 +60,10 @@ function parseNutriments(
     proteins_100g: num("proteins_100g"),
     salt_100g: num("salt_100g"),
   };
+
+  // If every value is null the product has no real nutrition data
+  const hasAnyValue = Object.values(result).some((v) => v !== null);
+  return hasAnyValue ? result : null;
 }
 
 /**

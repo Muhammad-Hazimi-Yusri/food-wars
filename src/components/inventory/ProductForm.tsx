@@ -34,9 +34,9 @@ import { ScannerDialog } from "@/components/barcode/ScannerDialog";
 import { lookupBarcodeLocal } from "@/lib/barcode-actions";
 import {
   lookupBarcodeOFF,
-  downloadOffImage,
   type OFFNutriments,
 } from "@/lib/openfoodfacts";
+import { downloadAndUploadOffImage } from "@/lib/product-actions";
 import { detectStoreBrand } from "@/lib/store-brand-map";
 import type { ProductNutrition } from "@/types/database";
 
@@ -285,6 +285,8 @@ export function ProductForm({
             protein: offResult.nutriments.proteins_100g?.toString() ?? "",
             salt: offResult.nutriments.salt_100g?.toString() ?? "",
           });
+        } else {
+          toast("No nutrition data available from Open Food Facts");
         }
         if (offResult.nutritionGrade) {
           setOffNutritionGrade(offResult.nutritionGrade);
@@ -417,15 +419,20 @@ export function ProductForm({
         pictureName = null;
       } else if (
         !pictureName &&
-        imagePreviewUrl?.startsWith("https://images.openfoodfacts.org")
+        imagePreviewUrl &&
+        !imagePreviewUrl.startsWith("blob:") &&
+        !imagePreviewUrl.startsWith("data:")
       ) {
-        // Download OFF image to Supabase storage so it persists
-        const offFile = await downloadOffImage(imagePreviewUrl);
-        if (offFile) {
-          const uploadResult = await uploadProductPicture(offFile, householdId);
-          if (uploadResult) {
-            pictureName = uploadResult;
-          }
+        // Download external image (e.g. from OFF) server-side and upload to Supabase
+        const uploadResult = await downloadAndUploadOffImage(
+          imagePreviewUrl,
+          householdId
+        );
+        if (uploadResult) {
+          pictureName = uploadResult;
+        } else {
+          console.error("Failed to download/upload external image:", imagePreviewUrl);
+          toast.error("Couldn't download product image");
         }
       }
 

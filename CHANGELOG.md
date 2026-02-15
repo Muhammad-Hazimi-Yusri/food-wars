@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.3] - 2026-02-14
+
+### Added
+- **Refetch from OFF button** on product detail modal
+  - Fetches fresh data from Open Food Facts for products with linked barcodes
+  - Shows comparison panel with checkboxes: update image, brand, nutrition
+  - Server-side image download and upload via `product-actions.ts`
+
+### Fixed
+- **Product image from OFF now reliably persists after save** — moved image download server-side to avoid CORS issues; broadened URL detection to catch all external image sources
+- **Nutrition data feedback** — `parseNutriments()` now returns null when OFF provides an empty nutriments object; toast shown when no nutrition data is available
+- **Below-min-stock filter** — products with zero stock entries now correctly appear in the "below min stock" view (fixed early-return empty state check in both desktop and mobile tables)
+
+---
+
 ## [0.9.X] - 2026-02-14
 
 ### Added

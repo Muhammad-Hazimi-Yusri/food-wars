@@ -255,7 +255,7 @@ export function DesktopStockTable({ entries, locations, zeroStockProducts = [] }
     }
   };
 
-  if (aggregated.length === 0) {
+  if (aggregated.length === 0 && zeroStockProducts.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
         No items in stock. Add a product first, then add stock.

@@ -155,6 +155,26 @@ describe("openfoodfacts", () => {
     });
   });
 
+  it("returns null nutriments when nutriments object is empty", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          status: 1,
+          product: {
+            product_name: "Empty Nutrition Product",
+            nutriments: {},
+          },
+        }),
+    });
+
+    const result = await lookupBarcodeOFF("2222222222222");
+
+    expect(result).not.toBeNull();
+    expect(result!.name).toBe("Empty Nutrition Product");
+    expect(result!.nutriments).toBeNull();
+  });
+
   it("returns null when barcode is not found (status 0)", async () => {
     mockFetch.mockResolvedValue({
       ok: true,

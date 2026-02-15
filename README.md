@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.9.2-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.9.3-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.9.2
+Current version is v0.9.3
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -58,6 +58,7 @@ Current version is v0.9.2
 - **Nutri-Score Badge** — Color-coded A–E grade display from OFF data
 - **Enhanced OFF Integration** — Expanded fields: brands, nutriments, nutrition grades, categories, ingredients, stores
 - **OFF Image Persistence** — Product images downloaded from OFF to Supabase storage for reliable display
+- **Refetch from OFF** — Re-fetch product data (image, brand, nutrition) from Open Food Facts on demand
 
 ### For Contributors
 - **Documentation** — README, BRANDING.md, CONTRIBUTING.md, CHANGELOG.md
@@ -403,6 +404,12 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Nutrition display on product detail modal
 - [x] Manual nutrition entry form (new "Nutrition" tab on product form)
 - [x] Nutri-Score badge on product detail modal header
+
+**Bug fixes & refetch (v0.9.3):**
+- [x] Fix OFF product images not persisting after save (server-side download)
+- [x] Fix empty nutrition data from OFF reported as valid (all-null guard)
+- [x] Fix below-min-stock filter hiding products with zero stock entries
+- [x] "Refetch from OFF" button on product detail modal (image, brand, nutrition)
 </details>
 ---
 
@@ -862,6 +869,7 @@ food-wars/
 │   │   ├── store-brand-map.ts    # UK store-brand detection config
 │   │   ├── shopping-list-actions.ts # Shopping list server actions
 │   │   ├── shopping-list-utils.ts   # Auto-generation gap calculators
+│   │   ├── product-actions.ts     # Product server actions (OFF refetch, image download)
 │   │   ├── stock-actions.ts       # Stock actions (consume, open, transfer, correct, undo)
 │   │   └── utils.ts               # cn() and general utilities
 │   └── types/

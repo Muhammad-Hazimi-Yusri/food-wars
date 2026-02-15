@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ImageIcon, Pencil, Trash2, Utensils, AlertTriangle, ArrowRightLeft, Check, X } from "lucide-react";
+import { ImageIcon, Pencil, Trash2, Utensils, AlertTriangle, ArrowRightLeft, Check, X, RefreshCw, Loader2 } from "lucide-react";
 import { StockEntryWithProduct, Location, ShoppingLocation, ProductNutrition } from "@/types/database";
 import { getExpiryStatus, getExpiryLabel } from "@/lib/inventory-utils";
 import { getProductPictureSignedUrl } from "@/lib/supabase/storage";
@@ -23,6 +23,8 @@ import { EditStockEntryModal } from "./EditStockEntryModal";
 import { TransferModal } from "./TransferModal";
 import { NutritionLabel } from "./NutritionLabel";
 import { NutriScoreBadge } from "./NutriScoreBadge";
+import { refetchProductFromOFF, applyOFFUpdates } from "@/lib/product-actions";
+import type { OFFProduct } from "@/lib/openfoodfacts";
 
 type ProductDetailModalProps = {
   entries: StockEntryWithProduct[];
@@ -45,6 +47,14 @@ export function ProductDetailModal({
   const [consumingEntry, setConsumingEntry] = useState<{ id: string; amount: string } | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [nutrition, setNutrition] = useState<ProductNutrition | null>(null);
+  const [refetching, setRefetching] = useState(false);
+  const [offData, setOffData] = useState<OFFProduct | null>(null);
+  const [refetchFlags, setRefetchFlags] = useState({
+    updateImage: true,
+    updateBrand: true,
+    updateNutrition: true,
+  });
+  const [applying, setApplying] = useState(false);
 
   const product = entries[0]?.product;
 
@@ -211,6 +221,38 @@ export function ProductDetailModal({
     }
   };
 
+  const handleRefetch = async () => {
+    if (!product?.id) return;
+    setRefetching(true);
+    setOffData(null);
+    const result = await refetchProductFromOFF(product.id);
+    setRefetching(false);
+    if (result.success && result.offData) {
+      setOffData(result.offData);
+      setRefetchFlags({
+        updateImage: !!result.offData.imageUrl,
+        updateBrand: !!result.offData.brands,
+        updateNutrition: !!result.offData.nutriments,
+      });
+    } else {
+      toast.error(result.error ?? "Failed to fetch from OFF");
+    }
+  };
+
+  const handleApplyUpdates = async () => {
+    if (!product?.id || !offData) return;
+    setApplying(true);
+    const result = await applyOFFUpdates(product.id, offData, refetchFlags);
+    setApplying(false);
+    if (result.success) {
+      toast("Product updated from Open Food Facts");
+      setOffData(null);
+      router.refresh();
+    } else {
+      toast.error(result.error ?? "Failed to apply updates");
+    }
+  };
+
   if (!open || entries.length === 0 || !product) {
     return null;
   }
@@ -236,6 +278,20 @@ export function ProductDetailModal({
             <DialogTitle className="flex items-center gap-2">
               {product.name}
               <NutriScoreBadge grade={nutrition?.nutrition_grade ?? null} />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 ml-auto text-gray-400 hover:text-megumi"
+                onClick={handleRefetch}
+                disabled={refetching}
+                title="Refetch from Open Food Facts"
+              >
+                {refetching ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+              </Button>
             </DialogTitle>
           </DialogHeader>
 
@@ -285,6 +341,95 @@ export function ProductDetailModal({
                 </div>
               </div>
             </div>
+
+            {/* OFF Refetch Panel */}
+            {offData && (
+              <div className="rounded-lg border border-megumi/30 bg-megumi/5 p-3 space-y-2">
+                <p className="text-sm font-medium text-megumi">
+                  Data from Open Food Facts
+                </p>
+                <div className="space-y-1.5 text-sm">
+                  {offData.imageUrl && (
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={refetchFlags.updateImage}
+                        onChange={(e) =>
+                          setRefetchFlags((f) => ({
+                            ...f,
+                            updateImage: e.target.checked,
+                          }))
+                        }
+                      />
+                      <span>Update image</span>
+                    </label>
+                  )}
+                  {offData.brands && (
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={refetchFlags.updateBrand}
+                        onChange={(e) =>
+                          setRefetchFlags((f) => ({
+                            ...f,
+                            updateBrand: e.target.checked,
+                          }))
+                        }
+                      />
+                      <span>
+                        Brand: {product.brand ?? "—"} &rarr; {offData.brands}
+                      </span>
+                    </label>
+                  )}
+                  {offData.nutriments && (
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={refetchFlags.updateNutrition}
+                        onChange={(e) =>
+                          setRefetchFlags((f) => ({
+                            ...f,
+                            updateNutrition: e.target.checked,
+                          }))
+                        }
+                      />
+                      <span>Update nutrition data</span>
+                    </label>
+                  )}
+                  {!offData.imageUrl &&
+                    !offData.brands &&
+                    !offData.nutriments && (
+                      <p className="text-gray-500">
+                        No new data available from OFF.
+                      </p>
+                    )}
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    size="sm"
+                    onClick={handleApplyUpdates}
+                    disabled={
+                      applying ||
+                      (!refetchFlags.updateImage &&
+                        !refetchFlags.updateBrand &&
+                        !refetchFlags.updateNutrition)
+                    }
+                  >
+                    {applying ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                    ) : null}
+                    Apply
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setOffData(null)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* Nutrition */}
             <NutritionLabel nutrition={nutrition} />

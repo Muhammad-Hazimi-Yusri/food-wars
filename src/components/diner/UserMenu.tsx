@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import Image from "next/image";
-import { Settings, BookOpen, ShoppingCart } from "lucide-react";
+import { Settings, BookOpen, ShoppingCart, Bot } from "lucide-react";
 import Link from "next/link";
 
 export function UserMenu() {
@@ -88,6 +88,12 @@ export function UserMenu() {
           <Link href="/journal" className="flex items-center gap-2">
             <BookOpen className="h-4 w-4" />
             Journal
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/settings" className="flex items-center gap-2">
+            <Bot className="h-4 w-4" />
+            Settings
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>

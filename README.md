@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.9.3-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.10.0-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.9.3
+Current version is v0.10.0
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -59,10 +59,13 @@ Current version is v0.9.3
 - **Enhanced OFF Integration** — Expanded fields: brands, nutriments, nutrition grades, categories, ingredients, stores
 - **OFF Image Persistence** — Product images downloaded from OFF to Supabase storage for reliable display
 - **Refetch from OFF** — Re-fetch product data (image, brand, nutrition) from Open Food Facts on demand
+- **AI Smart Input (Ollama)** — Connect your self-hosted Ollama instance for AI-powered stock entry
+- **AI Settings Page** — Configure Ollama URL, test connection, select text and vision models per household
+- **Privacy Warning** — Prominent notice that AI requests are proxied through the server; self-host for full privacy
 
 ### For Contributors
 - **Documentation** — README, BRANDING.md, CONTRIBUTING.md, CHANGELOG.md
-- **Database Schema** — Grocy-compatible with 40+ product fields, full RLS, nutrition table
+- **Database Schema** — Grocy-compatible with 40+ product fields, full RLS, nutrition table, AI settings
 - **Design System** — Shokugeki color palette, Japanese diner aesthetic
 - **Testing** — Vitest unit tests + Playwright E2E
 - **CI/CD** — GitHub Actions, Vercel deployment
@@ -70,7 +73,8 @@ Current version is v0.9.3
 
 ### Technical Highlights
 - **Stack:** Next.js 14, TypeScript, Tailwind CSS, Supabase
-- **Auth:** Google OAuth + guest mode (localStorage)
+- **Auth:** Google OAuth + guest mode (Supabase anonymous auth)
+- **AI:** Self-hosted Ollama integration (optional, proxied via API routes)
 - **Icons:** Lucide
 - **Theming:** Japanese mom & pop diner aesthetic (食堂)
 
@@ -99,6 +103,7 @@ Food Wars targets a different audience: people who want Grocy-like features with
 | **Maturity** | Battle-tested since 2017 | Established | Established | Early development |
 | **Barcode scanning** | ✅ | ❌ | ❌ | ✅ v0.8 (camera + OFF lookup) |
 | **Nutrition facts** | ❌ | ✅ (recipe-level) | ✅ (recipe-level) | ✅ v0.9 (per-product, OFF auto-fill, Nutri-Score) |
+| **AI input** | ❌ | ❌ | ❌ | ✅ v0.10 (self-hosted Ollama, NLP stock entry) |
 | **Offline support** | ✅ Full | ✅ Full | ✅ Full | ❌ Online only |
 | **Multi-user** | ✅ | ✅ | ✅ | 🔜 Planned |
 | **Chores/Tasks** | ✅ | ❌ | ❌ | ❌ Not planned |
@@ -117,6 +122,8 @@ Food Wars targets a different audience: people who want Grocy-like features with
 **Hosted version:** Your data is stored in the developer's Supabase database. While secured with Row Level Security (you can only access your own household's data), if you prefer full data ownership, please use the self-hosting option.
 
 **Self-hosted:** Your data stays in your own Supabase project. See [Self-Hosting](#self-hosting) for setup instructions.
+
+**AI features (Ollama):** If you connect an Ollama instance on the hosted version, your Ollama URL is stored in our database and AI requests are proxied through our server. For full privacy, self-host Food Wars.
 
 ---
 
@@ -411,31 +418,49 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Fix below-min-stock filter hiding products with zero stock entries
 - [x] "Refetch from OFF" button on product detail modal (image, brand, nutrition)
 </details>
+
+<details>
+<summary><strong>v0.10 - AI Smart Input (Ollama) — In Progress</strong></summary>
+
+**Goal:** AI-powered input — Ollama connection, natural language stock entry, receipt scanning
+
+**Ollama connection & settings (v0.10.0):** ✓
+- [x] `household_ai_settings` table with per-household Ollama URL, text model, vision model (migration 012)
+- [x] Full RLS policies (dual-mode: auth + guest) matching existing table patterns
+- [x] Settings page (`/settings`) with AI configuration form
+- [x] "Test Connection" button — hits Ollama's `/api/tags`, returns available models
+- [x] Text model and vision model selection from available models
+- [x] Privacy warning: "Your Ollama URL is stored in our database and AI requests are proxied through our server. For full privacy, self-host Food Wars."
+- [x] Graceful degradation: AI features hidden/disabled when no Ollama configured
+- [x] "Settings" link with Bot icon added to UserMenu dropdown
+- [x] API routes: `GET/PUT /api/ai/settings`, `POST /api/ai/test-connection`, `GET /api/ai/models`
+- [x] `ai-utils.ts`: `getAiSettings()`, `callOllama()`, `isAiConfigured()`, `fetchOllamaModels()`
+- [x] `HouseholdAiSettings` TypeScript type in `database.ts`
+
+**Natural language stock entry (v0.10.1):** planned
+- [ ] Persistent chat bar at bottom of stock overview page
+- [ ] User types e.g. "2 cans of tomatoes, expires march, tesco, £1.50"
+- [ ] Sent to Ollama text model via `/api/ai/parse-stock`
+- [ ] System prompt instructs: parse into structured JSON with product, quantity, unit, best_before, store, price
+- [ ] Response shown in a review/validation UI before saving
+- [ ] Editable fields for each parsed value, highlight low-confidence fields
+- [ ] Fuzzy-match product names to existing products
+- [ ] Support multi-item input ("tomatoes, milk, and 3 eggs")
+
+**Receipt scanning (v0.10.2):** planned
+- [ ] Camera capture or photo upload of receipt image
+- [ ] Tesseract.js runs OCR in-browser (WASM, no server needed)
+- [ ] Extracted text sent to Ollama text model via `/api/ai/parse-receipt`
+- [ ] Same review/validation UI as v0.10.1 but for multiple items
+- [ ] Table of parsed items with checkboxes, each row editable
+- [ ] Auto-match to existing products, "Import selected" bulk-creates stock entries
+</details>
+
 ---
 
 ### Planned
 
-#### v1.0 - AI Smart Input (was v0.9)
-
-**Goal:** AI-powered input — receipt scanning, pantry photo scanning, natural language entry
-
-**Receipt scanning:**
-- [ ] Camera capture or photo upload of receipt
-- [ ] CV/VLM extracts: product names, quantities, prices, store
-- [ ] Auto-match to existing products or create new
-- [ ] Populate price history from receipt data
-
-**AI pantry scanning:**
-- [ ] Take photo of pantry shelf / fridge contents
-- [ ] VLM identifies products in image
-- [ ] Auto-populate product list from photo
-- [ ] User reviews and confirms detected items
-
-**Text prompt guidance:**
-- [ ] Natural language product entry (e.g., "2 cans of tomatoes, expiring next week")
-- [ ] AI parses into structured product + stock entries
-
-#### v1.1 - Recipes (was v1.0)
+#### v0.11 - Recipes (was v1.1)
 
 **Goal:** Recipe database with inventory integration
 
@@ -510,7 +535,7 @@ CREATE TABLE recipe_nestings (
 - [ ] On consume, adds produced product to stock
 - [ ] Useful for batch cooking, meal prep
 
-#### v1.2 - Meal Planning (was v1.1)
+#### v0.12 - Meal Planning (was v1.2)
 
 **Goal:** Calendar-based meal organization
 
@@ -567,7 +592,7 @@ CREATE TABLE meal_plan (
 - [ ] Based on `product_nutrition` table (energy_kcal per 100g)
 - [ ] Visual charts
 
-#### v1.3 - Product Analytics (was v1.2)
+#### v0.13 - Product Analytics (was v1.3)
 
 **Goal:** Rich insights per product
 
@@ -600,7 +625,7 @@ CREATE TABLE meal_plan (
 - [ ] Stock value report (total inventory value)
 - [ ] Expiring soon report (printable)
 
-#### v1.4 - Grocycode & Label Printing (was v1.3)
+#### v0.14 - Grocycode & Label Printing (was v1.4)
 
 **Goal:** Internal barcodes for stock tracking and label generation
 
@@ -615,7 +640,7 @@ CREATE TABLE meal_plan (
 - [ ] Print Grocycode labels for stock entries
 - [ ] Auto-print on purchase if enabled
 
-#### v1.5 - PWA & Polish (was v1.4)
+#### v1.0 - Official Release & PWA (was v1.5)
 
 **Goal:** Production-ready release
 
@@ -657,7 +682,7 @@ CREATE TABLE meal_plan (
 
 ### Future Ideas
 
-> Post-v1.5 features, no timeline commitment.
+> Post-v1.0 features, no timeline commitment.
 
 **Advanced product features:**
 - [ ] Parent/child products (product hierarchies)
@@ -673,18 +698,13 @@ CREATE TABLE meal_plan (
 
 **Integrations:**
 - [ ] Grocery delivery APIs (Tesco, Instacart)
-- [ ] Receipt OCR (Tesseract.js or Google Vision)
 - [ ] Label printer support (Grocycode printing)
 - [ ] Calendar sync (Google Calendar, Apple Calendar)
 
 **AI features:**
-- [ ] Natural language item input ("2 bottles of milk expiring next week")
 - [ ] Smart expiry predictions based on history
 - [ ] Recipe suggestions from current stock
 - [ ] Chalkboard component for AI suggestions
-
-**AI Platform (v2.0):**
-- [ ] Self-hosted Ollama server support
 - [ ] User-provided API keys (OpenAI, Anthropic, etc.)
 - [ ] On-device mobile inference option
 - [ ] Tool calling framework with Zod schema validation
@@ -719,6 +739,7 @@ Already happy with Grocy/Mealie/Tandoor? Stick with them — they're battle-test
 - [shadcn/ui](https://ui.shadcn.com) — Accessible components
 - [Supabase](https://supabase.com) — Auth & PostgreSQL database
 - [react-zxing](https://github.com/nicoleahmed/react-zxing) — Barcode scanning (camera)
+- [Ollama](https://ollama.com) — Self-hosted AI (optional, user-provided)
 - [Lucide](https://lucide.dev) — Icons
 - [Vercel](https://vercel.com) — Hosting
 
@@ -747,6 +768,13 @@ food-wars/
 │   │   │   ├── admin/
 │   │   │   │   └── reset-guest/
 │   │   │   │       └── route.ts   # POST endpoint to reset guest data
+│   │   │   ├── ai/
+│   │   │   │   ├── models/
+│   │   │   │   │   └── route.ts   # GET available Ollama models
+│   │   │   │   ├── settings/
+│   │   │   │   │   └── route.ts   # GET/PUT household AI settings
+│   │   │   │   └── test-connection/
+│   │   │   │       └── route.ts   # POST test Ollama connectivity
 │   │   │   └── test-supabase/
 │   │   │       └── route.ts       # Supabase connection test endpoint
 │   │   ├── auth/
@@ -756,6 +784,8 @@ food-wars/
 │   │   │       └── page.tsx       # Auth error page
 │   │   ├── journal/
 │   │   │   └── page.tsx           # Stock journal page
+│   │   ├── settings/
+│   │   │   └── page.tsx           # AI settings page (Ollama config)
 │   │   ├── master-data/
 │   │   │   ├── layout.tsx         # Master data layout with tab nav
 │   │   │   ├── page.tsx           # Redirects to /products
@@ -793,6 +823,8 @@ food-wars/
 │   │   │   ├── ScannerDialog.tsx   # Reusable scan dialog with manual fallback
 │   │   │   ├── ScanToStockFlow.tsx # Scan-to-add-stock orchestration
 │   │   │   └── ScanToShoppingFlow.tsx # Scan-to-purchase on shopping lists
+│   │   ├── settings/              # Settings components
+│   │   │   └── AiSettingsClient.tsx # Ollama config form (URL, models, test)
 │   │   ├── diner/                 # Themed components
 │   │   │   ├── GuestBanner.tsx    # Guest mode warning banner
 │   │   │   ├── Noren.tsx          # Header with lantern decorations
@@ -861,6 +893,7 @@ food-wars/
 │   │   │   ├── shopping-list-utils.test.ts    # Gap calculation tests
 │   │   │   ├── stock-actions.test.ts      # Stock action tests
 │   │   │   └── store-brand-map.test.ts    # Store-brand detection tests
+│   │   ├── ai-utils.ts            # Ollama helpers (getAiSettings, callOllama, isAiConfigured)
 │   │   ├── barcode-actions.ts     # Barcode CRUD + local lookup
 │   │   ├── constants.ts           # Shared constants (GUEST_HOUSEHOLD_ID)
 │   │   ├── date-shorthands.ts    # Date input shorthand parser
@@ -886,7 +919,8 @@ food-wars/
 │   │   ├── 008_shopping_lists.sql     # Shopping lists + items tables
 │   │   ├── 009_barcode_index.sql     # Compound index for barcode lookups
 │   │   ├── 010_brand_fields.sql     # Add brand + is_store_brand to products
-│   │   └── 011_product_nutrition.sql # Nutrition facts table with RLS
+│   │   ├── 011_product_nutrition.sql # Nutrition facts table with RLS
+│   │   └── 012_household_ai_settings.sql # AI settings table with RLS
 │   └── scripts/
 │       └── cleanup_orphan_households.sql  # Manual cleanup script
 ├── BRANDING.md                    # Design system & color palette
@@ -918,12 +952,13 @@ Food Wars uses a Grocy-compatible database schema designed for comprehensive kit
 | `product_barcodes` | Multiple barcodes per product | ✅ v0.4 (UI in v0.8) |
 | `stock_entries` | Individual batches in stock | ✅ v0.4 |
 | `stock_log` | Transaction history for undo | ✅ v0.4 (UI in v0.6) |
-| `recipes` | Recipe definitions | 🔮 v1.1 |
-| `recipe_ingredients` | Recipe ingredients | 🔮 v1.1 |
-| `meal_plan` | Meal planning calendar | 🔮 v1.2 |
+| `recipes` | Recipe definitions | 🔮 v0.11 |
+| `recipe_ingredients` | Recipe ingredients | 🔮 v0.11 |
+| `meal_plan` | Meal planning calendar | 🔮 v0.12 |
 | `shopping_lists` | Shopping list management | ✅ v0.7 |
 | `shopping_list_items` | Items within shopping lists | ✅ v0.7 |
 | `product_nutrition` | Nutrition facts per 100g | ✅ v0.9.2 |
+| `household_ai_settings` | Per-household Ollama URL, text/vision models | ✅ v0.10.0 |
 
 ### Products Table (complete Grocy fields)
 

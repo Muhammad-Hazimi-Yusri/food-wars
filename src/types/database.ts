@@ -320,6 +320,20 @@ export type ShoppingListItem = {
 };
 
 // ============================================
+// HOUSEHOLD AI SETTINGS
+// ============================================
+
+export type HouseholdAiSettings = {
+  id: string;
+  household_id: string;
+  ollama_url: string | null;
+  text_model: string | null;
+  vision_model: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+// ============================================
 // JOINED TYPES (for UI display)
 // ============================================
 

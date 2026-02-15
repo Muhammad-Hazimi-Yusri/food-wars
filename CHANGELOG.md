@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] - 2026-02-15
+
+### Added
+- **AI Smart Input — Ollama connection & settings** (v0.10.0)
+  - `household_ai_settings` table with per-household Ollama URL, text model, vision model (migration 012)
+  - Full RLS policies (dual-mode: auth + guest) matching existing table patterns
+  - `HouseholdAiSettings` TypeScript type in `database.ts`
+  - New `/settings` page with AI configuration form (`AiSettingsClient`)
+  - "Test Connection" button — hits Ollama's `/api/tags`, returns available models with size display
+  - Text model and vision model selection dropdowns, populated from connected Ollama instance
+  - Privacy warning (amber alert box): "Your Ollama URL is stored in our database and AI requests are proxied through our server. For full privacy, self-host Food Wars."
+  - Saved model values persist in dropdowns even before re-testing connection
+  - API routes:
+    - `GET /api/ai/settings` — fetch household AI settings
+    - `PUT /api/ai/settings` — upsert AI settings with URL validation
+    - `POST /api/ai/test-connection` — test Ollama connectivity, return model list
+    - `GET /api/ai/models` — list models from saved Ollama URL
+  - `src/lib/ai-utils.ts` shared helpers:
+    - `getAiSettings(householdId)` — fetch AI settings from DB
+    - `callOllama(ollamaUrl, model, prompt, system)` — POST to Ollama `/api/generate` with JSON mode, 55s timeout
+    - `isAiConfigured(settings)` — returns true when both URL and text model are set
+    - `fetchOllamaModels(ollamaUrl)` — GET `/api/tags` with 5s timeout
+  - "Settings" link with Bot icon added to UserMenu dropdown
+
+### Changed
+- `UserMenu` — added "Settings" navigation link (Bot icon, routes to `/settings`)
+- `database.ts` — added `HouseholdAiSettings` type
+- README — updated roadmap (v0.10 section), project structure, database schema, tech stack, privacy notice, future ideas, comparison table
+
+### Database Migrations
+- `012_household_ai_settings.sql` — `CREATE TABLE household_ai_settings` with `ollama_url`, `text_model`, `vision_model`, `UNIQUE(household_id)`, index, full RLS (SELECT/INSERT/UPDATE/DELETE)
+
+---
+
 ## [0.9.3] - 2026-02-14
 
 ### Added

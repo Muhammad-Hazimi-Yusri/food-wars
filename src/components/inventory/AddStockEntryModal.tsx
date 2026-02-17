@@ -371,7 +371,7 @@ export function AddStockEntryModal({
                         </>
                       );
                     })()}
-                    {products.map((product) => (
+                    {products.filter((p) => !recentIds.includes(p.id)).map((product) => (
                       <SelectItem key={product.id} value={product.id}>
                         {product.name}
                       </SelectItem>

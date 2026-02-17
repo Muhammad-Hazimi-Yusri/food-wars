@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Bot, Loader2, CheckCircle2, AlertTriangle, ShieldAlert } from "lucide-react";
+import { Bot, Loader2, CheckCircle2, AlertTriangle, ShieldAlert, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { HouseholdAiSettings } from "@/types/database";
 
@@ -23,9 +23,10 @@ type OllamaModel = {
 
 type Props = {
   initialSettings: HouseholdAiSettings | null;
+  isGuest?: boolean;
 };
 
-export function AiSettingsClient({ initialSettings }: Props) {
+export function AiSettingsClient({ initialSettings, isGuest }: Props) {
   const [ollamaUrl, setOllamaUrl] = useState(
     initialSettings?.ollama_url ?? ""
   );
@@ -152,6 +153,37 @@ export function AiSettingsClient({ initialSettings }: Props) {
           </p>
         </div>
       </div>
+
+      {/* Guest hint */}
+      {isGuest && (
+        <div className="flex gap-3 p-4 rounded-lg bg-megumi/5 border border-megumi/20">
+          <Mail className="h-5 w-5 text-megumi shrink-0 mt-0.5" />
+          <div className="text-sm text-gray-700">
+            <p className="font-medium mb-1 text-megumi">Don&apos;t have an Ollama server?</p>
+            <p className="mb-2">
+              Contact me to get access to my personal Ollama server for testing,
+              or for any support regarding Food Wars:
+            </p>
+            <ul className="space-y-1">
+              <li>
+                <a href="mailto:muhammadhazimiyusri@gmail.com" className="text-megumi hover:underline font-medium">
+                  muhammadhazimiyusri@gmail.com
+                </a>
+              </li>
+              <li>
+                <a href="https://www.linkedin.com/in/muhammadhazimiyusri/" target="_blank" rel="noopener noreferrer" className="text-megumi hover:underline font-medium">
+                  LinkedIn
+                </a>
+              </li>
+              <li>
+                <a href="https://github.com/Muhammad-Hazimi-Yusri/eee-roadmap" target="_blank" rel="noopener noreferrer" className="text-megumi hover:underline font-medium">
+                  GitHub
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      )}
 
       {/* Ollama URL */}
       <div className="space-y-2">

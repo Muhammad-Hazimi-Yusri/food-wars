@@ -6,15 +6,18 @@ import { HouseholdAiSettings } from "@/types/database";
 
 async function getSettingsData(): Promise<{
   aiSettings: HouseholdAiSettings | null;
+  isGuest: boolean;
 }> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) return { aiSettings: null };
+  if (!user) return { aiSettings: null, isGuest: false };
 
-  const householdId = user.is_anonymous
+  const isGuest = user.is_anonymous === true;
+
+  const householdId = isGuest
     ? GUEST_HOUSEHOLD_ID
     : (
         await supabase
@@ -24,7 +27,7 @@ async function getSettingsData(): Promise<{
           .single()
       ).data?.id;
 
-  if (!householdId) return { aiSettings: null };
+  if (!householdId) return { aiSettings: null, isGuest };
 
   const { data } = await supabase
     .from("household_ai_settings")
@@ -32,18 +35,18 @@ async function getSettingsData(): Promise<{
     .eq("household_id", householdId)
     .single();
 
-  return { aiSettings: data };
+  return { aiSettings: data, isGuest };
 }
 
 export default async function SettingsPage() {
-  const { aiSettings } = await getSettingsData();
+  const { aiSettings, isGuest } = await getSettingsData();
 
   return (
     <div className="min-h-screen bg-hayama">
       <Noren />
       <main className="p-4 sm:p-6 max-w-3xl mx-auto">
         <h1 className="text-2xl font-bold text-megumi mb-6">Settings</h1>
-        <AiSettingsClient initialSettings={aiSettings} />
+        <AiSettingsClient initialSettings={aiSettings} isGuest={isGuest} />
       </main>
     </div>
   );

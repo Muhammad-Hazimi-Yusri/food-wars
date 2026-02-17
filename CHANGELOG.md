@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.1] - 2026-02-17
+
+### Added
+- **AI Chat Assistant — Floating widget & natural language stock entry** (v0.10.1)
+  - `AiChatWidget` — floating FAB button (bottom-right, z-50) with expandable chat panel (400x500 desktop, fullscreen mobile)
+  - General-purpose AI assistant: cooking suggestions from current inventory, expiry advice, inventory questions, and natural language stock entry
+  - `POST /api/ai/chat` — general chat endpoint with conversation history, tagged `<stock_entry>` format for mixed text/structured responses
+  - `POST /api/ai/parse-stock` — dedicated stock parsing endpoint with forced JSON mode
+  - Stock-aware AI context: system prompt includes current stock inventory (amounts, units, expiry dates) fetched from `stock_entries` with product joins
+  - Explicit prompt instructions: only suggest meals from items actually in stock, not just the product catalog
+  - `src/lib/ai-parse-items.ts` — resilient shared JSON parser with 4 extraction strategies (direct `.items`, raw array, any array in object, markdown code fences)
+  - `src/lib/fuzzy-match.ts` — bigram Dice coefficient for matching AI output to existing products, units, stores, locations (exact → includes → bigram overlap)
+  - `ChatMessage` — presentational component for user/assistant message bubbles (megumi theme)
+  - `StockEntryCard` — inline editable stock entry cards within chat messages (product, amount, unit, date, store, price, location selects with matched/unmatched/added badges)
+  - Purchase-to-stock unit conversion in `StockEntryCard` save flow — product-specific conversions first, then global fallback, with price adjustment
+  - Suggestion chips on welcome screen: "2 cans of tomatoes, aldi, £1", "What's expiring soon?", "What can I cook?"
+  - Clear chat button (Trash2 icon) in header, only shown when messages exist
+  - Typing indicator with bouncing dots animation
+  - FAB auto-slides above sonner undo toasts via `MutationObserver` tracking (smooth 300ms transition)
+  - Self-managing visibility: FAB only renders when AI is configured (checks `/api/ai/settings` on mount)
+  - Lazy household data loading (products, locations, units, stores, conversions) on first chat open
+  - Conversation context: last 10 messages sent as `User:`/`Assistant:` prefixed history
+  - `ParsedStockItem` type added to `database.ts`
+  - `AiChatWidget` mounted globally in root `layout.tsx`
+  - Guest contact hint on Settings page — "Don't have an Ollama server?" with email, LinkedIn, GitHub links for requesting access or support
+  - `isGuest` prop threaded from Settings page to `AiSettingsClient`
+
+### Changed
+- `ai-utils.ts` — `callOllama` format parameter made optional (`OllamaCallOptions.format?: "json"`); format only included in request body when explicitly passed
+- `sonner.tsx` — Toaster z-index set to 45 via `--z-index` CSS variable so chat widget (z-50) layers above toasts
+- `layout.tsx` — added `<AiChatWidget />` after `<Toaster />`
+- `settings/page.tsx` — detects guest mode, passes `isGuest` to `AiSettingsClient`
+- `AiSettingsClient` — accepts optional `isGuest` prop, renders contact hint block for guests
+
+### Fixed
+- **AddStockEntryModal duplicate key error** — recent products filtered from "All products" section in product Select to prevent Radix duplicate `value` props
+- **MobileStockList hydration error** — `zeroStockProducts` `<tr>` elements were outside `<tbody>`; wrapped in conditional `<tbody>` to fix `<tr> cannot be child of <table>` DOM nesting violation
+
+---
+
 ## [0.10.0] - 2026-02-15
 
 ### Added

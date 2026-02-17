@@ -30,28 +30,40 @@ export function isAiConfigured(
  * Call Ollama's /api/generate endpoint and return the parsed response text.
  * Throws on network errors or non-OK status.
  */
+export type OllamaCallOptions = {
+  format?: "json";
+  temperature?: number;
+  numPredict?: number;
+};
+
 export async function callOllama(
   ollamaUrl: string,
   model: string,
   prompt: string,
-  system: string
+  system: string,
+  options?: OllamaCallOptions,
 ): Promise<string> {
   const url = `${ollamaUrl.replace(/\/+$/, "")}/api/generate`;
+
+  const body: Record<string, unknown> = {
+    model,
+    prompt,
+    system,
+    stream: false,
+    options: {
+      temperature: options?.temperature ?? 0.1,
+      num_predict: options?.numPredict ?? 2048,
+    },
+  };
+
+  if (options?.format === "json") {
+    body.format = "json";
+  }
 
   const response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model,
-      prompt,
-      system,
-      stream: false,
-      format: "json",
-      options: {
-        temperature: 0.1,
-        num_predict: 2048,
-      },
-    }),
+    body: JSON.stringify(body),
     signal: AbortSignal.timeout(55_000), // just under Vercel's 60s max
   });
 

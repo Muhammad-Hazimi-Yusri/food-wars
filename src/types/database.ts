@@ -334,6 +334,26 @@ export type HouseholdAiSettings = {
 };
 
 // ============================================
+// NLP PARSED STOCK ITEM (for AI stock entry)
+// ============================================
+
+export type ParsedStockItem = {
+  raw: string;
+  product_id: string | null;
+  product_name: string;
+  amount: number;
+  qu_id: string | null;
+  unit_name: string;
+  best_before_date: string | null;
+  shopping_location_id: string | null;
+  store_name: string;
+  price: number | null;
+  location_id: string | null;
+  location_name: string;
+  note: string;
+};
+
+// ============================================
 // JOINED TYPES (for UI display)
 // ============================================
 

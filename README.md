@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.10.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.10.1-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.10.0
+Current version is v0.10.1
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -60,7 +60,9 @@ Current version is v0.10.0
 - **OFF Image Persistence** — Product images downloaded from OFF to Supabase storage for reliable display
 - **Refetch from OFF** — Re-fetch product data (image, brand, nutrition) from Open Food Facts on demand
 - **AI Smart Input (Ollama)** — Connect your self-hosted Ollama instance for AI-powered stock entry
+- **AI Chat Assistant** — Floating chat widget with natural language stock entry, cooking suggestions from current inventory, and expiry advice
 - **AI Settings Page** — Configure Ollama URL, test connection, select text and vision models per household
+- **Guest Contact Hint** — Settings page shows contact info for guests to request Ollama server access
 - **Privacy Warning** — Prominent notice that AI requests are proxied through the server; self-host for full privacy
 
 ### For Contributors
@@ -74,7 +76,7 @@ Current version is v0.10.0
 ### Technical Highlights
 - **Stack:** Next.js 14, TypeScript, Tailwind CSS, Supabase
 - **Auth:** Google OAuth + guest mode (Supabase anonymous auth)
-- **AI:** Self-hosted Ollama integration (optional, proxied via API routes)
+- **AI:** Self-hosted Ollama integration with floating chat assistant (optional, proxied via API routes)
 - **Icons:** Lucide
 - **Theming:** Japanese mom & pop diner aesthetic (食堂)
 
@@ -437,15 +439,24 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] `ai-utils.ts`: `getAiSettings()`, `callOllama()`, `isAiConfigured()`, `fetchOllamaModels()`
 - [x] `HouseholdAiSettings` TypeScript type in `database.ts`
 
-**Natural language stock entry (v0.10.1):** planned
-- [ ] Persistent chat bar at bottom of stock overview page
-- [ ] User types e.g. "2 cans of tomatoes, expires march, tesco, £1.50"
-- [ ] Sent to Ollama text model via `/api/ai/parse-stock`
-- [ ] System prompt instructs: parse into structured JSON with product, quantity, unit, best_before, store, price
-- [ ] Response shown in a review/validation UI before saving
-- [ ] Editable fields for each parsed value, highlight low-confidence fields
-- [ ] Fuzzy-match product names to existing products
-- [ ] Support multi-item input ("tomatoes, milk, and 3 eggs")
+**AI Chat Assistant & Natural Language Stock Entry (v0.10.1):** ✓
+- [x] Floating AI chat widget (`AiChatWidget`) — FAB button (bottom-right), opens 400x500 desktop / fullscreen mobile panel
+- [x] General-purpose AI assistant — cooking suggestions, expiry advice, inventory questions, and stock entry
+- [x] Natural language stock entry — user types e.g. "2 cans of tomatoes, aldi, £1" and AI parses into structured items
+- [x] Tagged response format — AI responds in plain text, wraps stock entries in `<stock_entry>` XML tags for mixed text/structured output
+- [x] Resilient JSON parser (`ai-parse-items.ts`) — 4 extraction strategies: direct `.items`, raw array, any array value, markdown code fences
+- [x] Fuzzy matching (`fuzzy-match.ts`) — bigram Dice coefficient to match AI output to existing products, units, stores, locations
+- [x] Inline editable stock entry cards (`StockEntryCard`) — product select, amount, unit, date, store, price, location with matched/unmatched badges
+- [x] Purchase-to-stock unit conversion in AI save flow — product-specific conversions first, then global fallback
+- [x] Stock-aware AI context — system prompt includes current stock inventory (amounts, units, expiry dates) for accurate cooking and expiry answers
+- [x] Conversation history — last 10 messages sent as context for multi-turn dialogue
+- [x] Suggestion chips on welcome screen: "2 cans of tomatoes, aldi, £1", "What's expiring soon?", "What can I cook?"
+- [x] Clear chat button (trash icon) in header
+- [x] Typing indicator with bouncing dots
+- [x] FAB auto-slides above sonner undo toasts via MutationObserver tracking
+- [x] Guest contact hint on Settings page — email, LinkedIn, GitHub links for Ollama server access
+- [x] API routes: `POST /api/ai/parse-stock` (JSON mode), `POST /api/ai/chat` (natural language mode)
+- [x] Self-managing visibility — FAB only shown when AI is configured (checks `/api/ai/settings` on mount)
 
 **Receipt scanning (v0.10.2):** planned
 - [ ] Camera capture or photo upload of receipt image
@@ -769,8 +780,12 @@ food-wars/
 │   │   │   │   └── reset-guest/
 │   │   │   │       └── route.ts   # POST endpoint to reset guest data
 │   │   │   ├── ai/
+│   │   │   │   ├── chat/
+│   │   │   │   │   └── route.ts   # POST general AI chat (natural language + stock entry)
 │   │   │   │   ├── models/
 │   │   │   │   │   └── route.ts   # GET available Ollama models
+│   │   │   │   ├── parse-stock/
+│   │   │   │   │   └── route.ts   # POST parse natural language into stock items (JSON mode)
 │   │   │   │   ├── settings/
 │   │   │   │   │   └── route.ts   # GET/PUT household AI settings
 │   │   │   │   └── test-connection/
@@ -814,9 +829,13 @@ food-wars/
 │   │   ├── test/
 │   │   │   └── page.tsx           # Color palette test page
 │   │   ├── globals.css            # Tailwind + theme CSS variables
-│   │   ├── layout.tsx             # Root layout with fonts + Toaster
+│   │   ├── layout.tsx             # Root layout with fonts, Toaster + AiChatWidget
 │   │   └── page.tsx               # Home/Stock overview page
 │   ├── components/
+│   │   ├── ai/                    # AI chat assistant components
+│   │   │   ├── AiChatWidget.tsx   # Floating FAB + chat panel (global)
+│   │   │   ├── ChatMessage.tsx    # User/assistant message bubbles
+│   │   │   └── StockEntryCard.tsx # Inline editable stock entry cards
 │   │   ├── barcode/               # Barcode scanning components
 │   │   │   ├── BarcodeScanner.tsx  # Camera scanner (react-zxing)
 │   │   │   ├── BarcodesSection.tsx # Barcode CRUD for products
@@ -893,9 +912,11 @@ food-wars/
 │   │   │   ├── shopping-list-utils.test.ts    # Gap calculation tests
 │   │   │   ├── stock-actions.test.ts      # Stock action tests
 │   │   │   └── store-brand-map.test.ts    # Store-brand detection tests
+│   │   ├── ai-parse-items.ts       # Resilient JSON parser for AI stock entry responses
 │   │   ├── ai-utils.ts            # Ollama helpers (getAiSettings, callOllama, isAiConfigured)
 │   │   ├── barcode-actions.ts     # Barcode CRUD + local lookup
 │   │   ├── constants.ts           # Shared constants (GUEST_HOUSEHOLD_ID)
+│   │   ├── fuzzy-match.ts        # Bigram Dice coefficient for fuzzy string matching
 │   │   ├── date-shorthands.ts    # Date input shorthand parser
 │   │   ├── inventory-utils.ts     # Stock aggregation, expiry & FIFO helpers
 │   │   ├── openfoodfacts.ts      # Open Food Facts API client

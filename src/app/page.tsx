@@ -31,10 +31,10 @@ async function getStockData(): Promise<{
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    return { 
-      entries: [], 
-      locations: [], 
-      productGroups: [], 
+    return {
+      entries: [],
+      locations: [],
+      productGroups: [],
       productsWithMinStock: [],
       products: [],
       quantityUnits: [],
@@ -44,9 +44,9 @@ async function getStockData(): Promise<{
   }
 
   const [
-    entriesRes, 
-    locationsRes, 
-    productGroupsRes, 
+    entriesRes,
+    locationsRes,
+    productGroupsRes,
     productsWithMinStockRes,
     productsRes,
     quantityUnitsRes,
@@ -118,10 +118,10 @@ async function getStockData(): Promise<{
 }
 
 export default async function Home() {
-  const { 
-    entries, 
-    locations, 
-    productGroups, 
+  const {
+    entries,
+    locations,
+    productGroups,
     productsWithMinStock,
     products,
     quantityUnits,

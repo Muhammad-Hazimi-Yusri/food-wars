@@ -3,6 +3,7 @@ import { Dela_Gothic_One, Zen_Kaku_Gothic_New } from "next/font/google";
 import "./globals.css";
 import { GuestBanner } from "@/components/diner/GuestBanner";
 import { Toaster } from "@/components/ui/sonner";
+import { AiChatWidget } from "@/components/ai/AiChatWidget";
 
 const delaGothic = Dela_Gothic_One({
   weight: "400",
@@ -32,6 +33,7 @@ export default function RootLayout({
         <GuestBanner />
         {children}
         <Toaster />
+        <AiChatWidget />
       </body>
     </html>
   );

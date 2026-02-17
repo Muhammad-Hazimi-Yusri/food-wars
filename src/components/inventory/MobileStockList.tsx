@@ -474,6 +474,7 @@ export function MobileStockList({ entries, locations, zeroStockProducts = [] }: 
         </tbody>
 
         {/* Zero stock products (only shown when filtering by below_min) */}
+        {zeroStockProducts.length > 0 && <tbody>
         {zeroStockProducts.map((product) => (
           <tr key={product.id} className="border-b border-gray-100 bg-red-50">
             <td className="px-1 py-1 border-r border-gray-100 border-l-4 border-l-teal-600">
@@ -538,6 +539,7 @@ export function MobileStockList({ entries, locations, zeroStockProducts = [] }: 
             </td>
           </tr>
         ))}
+        </tbody>}
       </table>
       </div>
       <div className="absolute right-8 top-0 bottom-2 w-4 bg-gradient-to-l from-gray-200/50 to-transparent pointer-events-none" />

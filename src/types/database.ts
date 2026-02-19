@@ -1,5 +1,5 @@
 // ============================================
-// FOOD WARS DATABASE TYPES v0.9.2
+// FOOD WARS DATABASE TYPES v0.10.2
 // Complete types matching Grocy schema
 // ============================================
 

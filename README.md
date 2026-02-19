@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.10.1-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.10.2-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.10.1
+Current version is v0.10.2
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -64,6 +64,10 @@ Current version is v0.10.1
 - **AI Settings Page** — Configure Ollama URL, test connection, select text and vision models per household
 - **Guest Contact Hint** — Settings page shows contact info for guests to request Ollama server access
 - **Privacy Warning** — Prominent notice that AI requests are proxied through the server; self-host for full privacy
+- **Receipt Scanning** — Photograph a receipt, extract items via OCR (Tesseract.js) or Vision AI (Ollama VLM), review in editable table, and bulk-import to stock
+- **Dual OCR/VLM Mode** — Choose between traditional OCR + text AI parsing or direct vision model image analysis, with automatic two-pass fallback for thinking models
+- **Receipt NL Refinement** — Refine parsed receipt items with natural language instructions (e.g. "remove the total row")
+- **Unmatched Product Wizard** — Step through unmatched receipt items, scan barcodes, create new products, and auto-match back
 
 ### For Contributors
 - **Documentation** — README, BRANDING.md, CONTRIBUTING.md, CHANGELOG.md
@@ -458,13 +462,15 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] API routes: `POST /api/ai/parse-stock` (JSON mode), `POST /api/ai/chat` (natural language mode)
 - [x] Self-managing visibility — FAB only shown when AI is configured (checks `/api/ai/settings` on mount)
 
-**Receipt scanning (v0.10.2):** planned
-- [ ] Camera capture or photo upload of receipt image
-- [ ] Tesseract.js runs OCR in-browser (WASM, no server needed)
-- [ ] Extracted text sent to Ollama text model via `/api/ai/parse-receipt`
-- [ ] Same review/validation UI as v0.10.1 but for multiple items
-- [ ] Table of parsed items with checkboxes, each row editable
-- [ ] Auto-match to existing products, "Import selected" bulk-creates stock entries
+**Receipt scanning (v0.10.2):** ✓
+- [x] Camera capture or photo upload of receipt image
+- [x] Tesseract.js runs OCR in-browser (WASM, no server needed)
+- [x] Extracted text sent to Ollama text model via `/api/ai/parse-receipt`
+- [x] Dual mode: OCR + text AI or Vision AI (Ollama VLM) for direct image analysis
+- [x] Table of parsed items with checkboxes, each row editable (product, amount, unit, date, store, price, location)
+- [x] Auto-match to existing products, "Import selected" bulk-creates stock entries with purchase-to-stock conversion
+- [x] Natural language refinement of parsed items (e.g. "remove the total row")
+- [x] Unmatched product wizard: scan barcode → create product → auto-match back to receipt
 </details>
 
 ---

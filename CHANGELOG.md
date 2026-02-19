@@ -5,6 +5,56 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.2] - 2026-02-17
+
+### Fixed
+- **VLM receipt parsing — two-pass fallback for thinking models** (v0.10.2)
+  - Vision models like `qwen3-vl` ignore `think: false` and `format: "json"`, producing chain-of-thought reasoning instead of structured JSON (content field empty, all output in thinking field)
+  - Simplified VLM prompt from ~3000 chars to ~300 chars — vision models work better with concise instructions
+  - Added two-pass fallback: if VLM response yields 0 items, the raw thinking text is sent through the text model to extract structured JSON
+  - Removed `/no_think` text directive from both VLM and OCR prompts (redundant with `think: false` API parameter, may confuse models)
+- **OCR receipt parsing — 502 timeout** (v0.10.2)
+  - `callOllama` had a hardcoded 55s timeout; receipt parsing with `qwen3:14b` took 56s, triggering an abort error returned as 502
+  - Added configurable `timeout` option to `OllamaCallOptions`; receipt parsing now uses 120s timeout for both OCR and VLM second-pass calls
+
+### Added
+- **Receipt Scanning — OCR & Vision AI powered bulk stock import** (v0.10.2)
+  - `ReceiptCaptureDialog` — full receipt scanning flow: capture image → process → review → import
+  - Dual processing modes: "OCR + Text AI" (Tesseract.js WASM → text model) or "Vision AI" (image → Ollama vision model directly)
+  - Default to VLM when vision model is configured, with graceful fallback to OCR
+  - `POST /api/ai/parse-receipt` — receipt parsing endpoint supporting `ocr`, `vlm`, and `refine` modes
+  - Receipt-specific system prompt: understands line items, prices, quantities, store names; ignores totals, tax, payment lines
+  - `ReceiptReviewTable` — editable table with per-row checkboxes, matched/unmatched badges, inline editing (product, amount, unit, date, store, price, location)
+  - "Select all" header checkbox, item count, "Import selected" bulk button with count
+  - Natural language refinement: text input below review table to modify parsed items (e.g. "remove the total row", "change milk to 2 litres") via text model
+  - **Unmatched product wizard** — step-by-step flow to resolve products not in the database:
+    - Shows each unmatched item with "Scan barcode" and "Skip" buttons
+    - Barcode scan → local DB lookup → auto-match if found
+    - If barcode not in DB → navigate to `/products/new?barcode=XXX&returnTo=receipt-scan` for full product creation
+    - Receipt state persisted in `sessionStorage` for round-trip to product creation page
+    - On return: auto-restores receipt review, re-runs fuzzy matching with new product available
+    - Progress dots showing wizard position
+  - `callOllamaVision()` in `ai-utils.ts` — new function for Ollama `/api/chat` endpoint with base64 image support (90s timeout for vision models)
+  - `src/lib/stock-entry-utils.ts` — shared `bulkCreateStockEntries()` and `getStockAmount()` extracted from `StockEntryCard`
+  - Purchase-to-stock unit conversion applied during receipt import (product-specific → global fallback)
+  - Receipt scan button (Receipt icon) added to AI chat widget header
+  - `returnTo` prop support in `ProductForm` — enables post-save redirect back to receipt scanning flow
+  - Tesseract.js progress bar during OCR text extraction
+  - Image preview with remove button during capture step
+  - "Scan another receipt" reset button in review step
+
+### Changed
+- `StockEntryCard` — refactored to use shared `bulkCreateStockEntries()` from `stock-entry-utils.ts`; removed inline save logic
+- `HouseholdData` type exported from `StockEntryCard` for reuse by `ReceiptReviewTable`
+- `AiChatWidget` — tracks `hasVisionModel` from settings; checks `?receiptReturn=1` URL param on mount to restore receipt flow
+- `ProductForm` — accepts optional `returnTo` prop; when `returnTo === "receipt-scan"`, redirects to `/?receiptReturn=1` after save instead of conversions page
+- `src/app/products/new/page.tsx` — extracts `returnTo` from search params, passes to `ProductForm`
+
+### Dependencies
+- Added `tesseract.js` ^7.0.0 — in-browser OCR with WebAssembly
+
+---
+
 ## [0.10.1] - 2026-02-17
 
 ### Added

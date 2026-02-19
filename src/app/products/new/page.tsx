@@ -4,11 +4,11 @@ import { Noren } from "@/components/diner/Noren";
 import { ProductForm } from "@/components/inventory/ProductForm";
 
 type Props = {
-  searchParams: Promise<{ barcode?: string }>;
+  searchParams: Promise<{ barcode?: string; returnTo?: string }>;
 };
 
 export default async function NewProductPage({ searchParams }: Props) {
-  const { barcode } = await searchParams;
+  const { barcode, returnTo } = await searchParams;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -42,6 +42,7 @@ export default async function NewProductPage({ searchParams }: Props) {
           quantityUnits={quantityUnits ?? []}
           mode="create"
           initialBarcode={barcode ?? null}
+          returnTo={returnTo ?? null}
         />
       </main>
     </div>

@@ -11,28 +11,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Check, Loader2, X } from "lucide-react";
+import { Check, Loader2, X, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { ParsedStockItem } from "@/types/database";
 import { bulkCreateStockEntries } from "@/lib/stock-entry-utils";
-
-export type HouseholdData = {
-  products: { id: string; name: string; qu_id_stock: string | null; location_id: string | null; shopping_location_id: string | null }[];
-  locations: { id: string; name: string }[];
-  quantityUnits: { id: string; name: string; name_plural: string | null }[];
-  shoppingLocations: { id: string; name: string }[];
-  conversions: { id: string; product_id: string | null; from_qu_id: string; to_qu_id: string; factor: number }[];
-};
+import type { HouseholdData } from "./StockEntryCard";
 
 type Props = {
   items: ParsedStockItem[];
   householdData: HouseholdData | null;
-  onSaved: () => void;
+  onItemsChange: (items: ParsedStockItem[]) => void;
+  onImported: () => void;
+  onResolveUnmatched?: () => void;
+  /** Raw AI response shown when no items were parsed (debugging aid) */
+  rawResponse?: string | null;
 };
 
-export function StockEntryCard({ items: initialItems, householdData, onSaved }: Props) {
+export function ReceiptReviewTable({
+  items,
+  householdData,
+  onItemsChange,
+  onImported,
+  onResolveUnmatched,
+  rawResponse,
+}: Props) {
   const router = useRouter();
-  const [items, setItems] = useState(initialItems);
+  const [checked, setChecked] = useState<Set<number>>(() => new Set(items.map((_, i) => i)));
   const [savedIndices, setSavedIndices] = useState<Set<number>>(new Set());
   const [saving, setSaving] = useState(false);
 
@@ -41,31 +45,71 @@ export function StockEntryCard({ items: initialItems, householdData, onSaved }: 
   const quantityUnits = householdData?.quantityUnits ?? [];
   const shoppingLocations = householdData?.shoppingLocations ?? [];
 
-  const updateItem = (index: number, updates: Partial<ParsedStockItem>) => {
-    setItems((prev) => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], ...updates };
-      return updated;
+  const unmatchedCount = items.filter((item, i) => !item.product_id && !savedIndices.has(i)).length;
+  const importableItems = items.filter(
+    (item, i) => checked.has(i) && item.product_id && !savedIndices.has(i)
+  );
+
+  const toggleCheck = (index: number) => {
+    setChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
     });
   };
 
-  const removeItem = (index: number) => {
-    setItems((prev) => prev.filter((_, i) => i !== index));
+  const toggleAll = () => {
+    const unsavedIndices = items
+      .map((_, i) => i)
+      .filter((i) => !savedIndices.has(i));
+    const allChecked = unsavedIndices.every((i) => checked.has(i));
+    if (allChecked) {
+      setChecked(new Set());
+    } else {
+      setChecked(new Set(unsavedIndices));
+    }
   };
 
-  const saveableItems = items.filter(
-    (item, index) => item.product_id && !savedIndices.has(index)
-  );
+  const updateItem = (index: number, updates: Partial<ParsedStockItem>) => {
+    const updated = [...items];
+    updated[index] = { ...updated[index], ...updates };
+    onItemsChange(updated);
+  };
 
-  const handleSave = async () => {
-    if (saveableItems.length === 0 || saving || !householdData) return;
+  const removeItem = (index: number) => {
+    const updated = items.filter((_, i) => i !== index);
+    onItemsChange(updated);
+    // Adjust checked and saved indices
+    const newChecked = new Set<number>();
+    const newSaved = new Set<number>();
+    checked.forEach((i) => {
+      if (i < index) newChecked.add(i);
+      else if (i > index) newChecked.add(i - 1);
+    });
+    savedIndices.forEach((i) => {
+      if (i < index) newSaved.add(i);
+      else if (i > index) newSaved.add(i - 1);
+    });
+    setChecked(newChecked);
+    setSavedIndices(newSaved);
+  };
+
+  const handleImport = async () => {
+    if (importableItems.length === 0 || saving || !householdData) return;
 
     setSaving(true);
     try {
+      // Build exclude set: unchecked + already saved
+      const excludeIndices = new Set<number>();
+      items.forEach((_, i) => {
+        if (!checked.has(i) || savedIndices.has(i)) excludeIndices.add(i);
+      });
+
       const { successCount, savedIndices: newlySaved } = await bulkCreateStockEntries(
         items,
         householdData,
-        savedIndices,
+        excludeIndices,
       );
 
       const newSaved = new Set(savedIndices);
@@ -77,32 +121,89 @@ export function StockEntryCard({ items: initialItems, householdData, onSaved }: 
           `Added ${successCount} item${successCount > 1 ? "s" : ""} to stock`
         );
         router.refresh();
-        onSaved();
+        onImported();
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save");
+      toast.error(err instanceof Error ? err.message : "Failed to import");
     } finally {
       setSaving(false);
     }
   };
 
-  if (items.length === 0) return null;
+  if (items.length === 0) {
+    return (
+      <div className="text-center py-6 space-y-3">
+        <p className="text-sm text-gray-500">No items found on receipt.</p>
+        {rawResponse && (
+          <details className="text-left">
+            <summary className="text-[11px] text-gray-400 cursor-pointer hover:text-gray-500">
+              Show raw AI response
+            </summary>
+            <pre className="mt-2 text-[10px] text-gray-500 bg-gray-50 border border-gray-200 rounded-lg p-2 whitespace-pre-wrap break-words max-h-40 overflow-y-auto">
+              {rawResponse}
+            </pre>
+          </details>
+        )}
+      </div>
+    );
+  }
 
   return (
-    <div className="mt-2 space-y-2">
+    <div className="space-y-2">
+      {/* Header bar */}
+      <div className="flex items-center justify-between px-1">
+        <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={items.filter((_, i) => !savedIndices.has(i)).every((_, i) => checked.has(i))}
+            onChange={toggleAll}
+            className="h-3.5 w-3.5 rounded border-gray-300"
+          />
+          Select all
+        </label>
+        <div className="flex items-center gap-2">
+          {unmatchedCount > 0 && onResolveUnmatched && (
+            <button
+              onClick={onResolveUnmatched}
+              className="text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded hover:bg-amber-100 transition-colors flex items-center gap-1"
+            >
+              <AlertTriangle className="h-3 w-3" />
+              {unmatchedCount} unmatched
+            </button>
+          )}
+          <span className="text-[10px] text-gray-400">
+            {items.length} item{items.length !== 1 ? "s" : ""}
+          </span>
+        </div>
+      </div>
+
+      {/* Items */}
       {items.map((item, index) => {
         const isSaved = savedIndices.has(index);
+        const isChecked = checked.has(index);
 
         return (
           <div
             key={index}
             className={`rounded-lg p-2.5 border text-left ${
-              isSaved ? "bg-green-50 border-green-200" : "bg-white border-gray-200"
+              isSaved
+                ? "bg-green-50 border-green-200"
+                : isChecked
+                ? "bg-white border-gray-200"
+                : "bg-gray-50 border-gray-100 opacity-60"
             }`}
           >
-            {/* Header */}
+            {/* Header row */}
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-1.5">
+                {!isSaved && (
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={() => toggleCheck(index)}
+                    className="h-3.5 w-3.5 rounded border-gray-300"
+                  />
+                )}
                 {isSaved ? (
                   <span className="text-[10px] font-medium text-green-700 bg-green-100 px-1.5 py-0.5 rounded">
                     Added
@@ -117,6 +218,11 @@ export function StockEntryCard({ items: initialItems, householdData, onSaved }: 
                   </span>
                 )}
                 <span className="font-medium text-xs">{item.product_name}</span>
+                {item.price != null && (
+                  <span className="text-[10px] text-gray-400">
+                    {"\u00A3"}{item.price.toFixed(2)}
+                  </span>
+                )}
               </div>
               {!isSaved && (
                 <button
@@ -129,7 +235,7 @@ export function StockEntryCard({ items: initialItems, householdData, onSaved }: 
             </div>
 
             {/* Editable fields */}
-            {!isSaved && (
+            {!isSaved && isChecked && (
               <div className="grid grid-cols-2 gap-1.5">
                 <Select
                   value={item.product_id ?? "unmatched"}
@@ -256,19 +362,19 @@ export function StockEntryCard({ items: initialItems, householdData, onSaved }: 
               </div>
             )}
 
-            {!isSaved && !item.product_id && (
+            {!isSaved && !item.product_id && isChecked && (
               <p className="text-[10px] text-amber-600 mt-1">
-                Select a product to save
+                Select a product to import
               </p>
             )}
           </div>
         );
       })}
 
-      {/* Save button */}
-      {saveableItems.length > 0 && (
+      {/* Import button */}
+      {importableItems.length > 0 && (
         <Button
-          onClick={handleSave}
+          onClick={handleImport}
           disabled={saving}
           size="sm"
           className="w-full bg-megumi hover:bg-megumi/90 text-xs h-8"
@@ -279,8 +385,8 @@ export function StockEntryCard({ items: initialItems, householdData, onSaved }: 
             <Check className="h-3 w-3 mr-1" />
           )}
           {saving
-            ? "Saving..."
-            : `Add ${saveableItems.length} item${saveableItems.length !== 1 ? "s" : ""} to stock`}
+            ? "Importing..."
+            : `Import ${importableItems.length} item${importableItems.length !== 1 ? "s" : ""} to stock`}
         </Button>
       )}
     </div>

@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Bot, X, Send, Loader2, MessageSquare, Trash2 } from "lucide-react";
+import { Bot, X, Send, Loader2, MessageSquare, Trash2, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { ChatMessage } from "./ChatMessage";
 import { StockEntryCard } from "./StockEntryCard";
+import { ReceiptCaptureDialog, loadReceiptState } from "./ReceiptCaptureDialog";
 import { ParsedStockItem } from "@/types/database";
 
 type Message = {
@@ -26,29 +27,64 @@ type HouseholdData = {
   conversions: { id: string; product_id: string | null; from_qu_id: string; to_qu_id: string; factor: number }[];
 };
 
+type ReceiptState = {
+  items: ParsedStockItem[];
+  checkedIndices: number[];
+  wizardIndex: number;
+};
+
 export function AiChatWidget() {
   const [aiConfigured, setAiConfigured] = useState(false);
+  const [hasVisionModel, setHasVisionModel] = useState(false);
   const [configChecked, setConfigChecked] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [toastOffset, setToastOffset] = useState(0);
+  const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
+  const [restoredReceiptState, setRestoredReceiptState] = useState<ReceiptState | null>(null);
   const householdDataRef = useRef<HouseholdData | null>(null);
   const dataLoadedRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Check AI config on mount
+  // Check AI config on mount + check for receipt return
   useEffect(() => {
     fetch("/api/ai/settings")
       .then((res) => res.json())
       .then((data) => {
         const settings = data.settings;
         setAiConfigured(!!(settings?.ollama_url && settings?.text_model));
+        setHasVisionModel(!!settings?.vision_model);
       })
       .catch(() => setAiConfigured(false))
       .finally(() => setConfigChecked(true));
+
+    // Check for receipt return from product creation
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("receiptReturn") === "1") {
+      const savedState = loadReceiptState();
+      if (savedState) {
+        setRestoredReceiptState(savedState);
+      }
+      // Clean up URL
+      const url = new URL(window.location.href);
+      url.searchParams.delete("receiptReturn");
+      window.history.replaceState({}, "", url.pathname + url.search);
+    }
   }, []);
+
+  // When restored state is ready and AI is configured, open the receipt dialog
+  useEffect(() => {
+    if (restoredReceiptState && configChecked && aiConfigured) {
+      setIsOpen(true);
+      setReceiptDialogOpen(true);
+      // Refresh household data to pick up newly created products
+      dataLoadedRef.current = false;
+      loadHouseholdData();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restoredReceiptState, configChecked, aiConfigured]);
 
   // Load household data when chat first opens
   const loadHouseholdData = useCallback(async () => {
@@ -205,6 +241,11 @@ export function AiChatWidget() {
     }
   };
 
+  const refreshHouseholdData = () => {
+    dataLoadedRef.current = false;
+    loadHouseholdData();
+  };
+
   // Don't render anything until we've checked config
   if (!configChecked || !aiConfigured) return null;
 
@@ -241,6 +282,17 @@ export function AiChatWidget() {
               <span className="font-semibold text-sm">Food Wars AI</span>
             </div>
             <div className="flex items-center gap-1">
+              <button
+                onClick={() => {
+                  loadHouseholdData();
+                  setReceiptDialogOpen(true);
+                }}
+                className="hover:bg-white/20 rounded-full p-1 transition-colors"
+                aria-label="Scan receipt"
+                title="Scan receipt"
+              >
+                <Receipt className="h-4 w-4" />
+              </button>
               {messages.length > 0 && (
                 <button
                   onClick={() => setMessages([])}
@@ -302,11 +354,7 @@ export function AiChatWidget() {
                   <StockEntryCard
                     items={msg.items}
                     householdData={householdDataRef.current}
-                    onSaved={() => {
-                      // Refresh household data after save
-                      dataLoadedRef.current = false;
-                      loadHouseholdData();
-                    }}
+                    onSaved={refreshHouseholdData}
                   />
                 )}
               </ChatMessage>
@@ -358,6 +406,19 @@ export function AiChatWidget() {
           </form>
         </div>
       )}
+
+      {/* Receipt scanning dialog */}
+      <ReceiptCaptureDialog
+        open={receiptDialogOpen}
+        onOpenChange={(val) => {
+          setReceiptDialogOpen(val);
+          if (!val) setRestoredReceiptState(null);
+        }}
+        householdData={householdDataRef.current}
+        hasVisionModel={hasVisionModel}
+        onImported={refreshHouseholdData}
+        initialState={restoredReceiptState}
+      />
     </>
   );
 }

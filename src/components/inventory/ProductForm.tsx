@@ -86,6 +86,8 @@ type ProductFormProps = {
   quantityUnits: QuantityUnit[];
   mode: "create" | "edit";
   initialBarcode?: string | null;
+  /** When set, overrides the default post-save redirect. */
+  returnTo?: string | null;
 };
 
 function Tooltip({ text }: { text: string }) {
@@ -154,6 +156,7 @@ export function ProductForm({
   quantityUnits,
   mode,
   initialBarcode,
+  returnTo,
 }: ProductFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -540,7 +543,9 @@ export function ProductForm({
         }
       }
 
-     if (returnToList) {
+     if (returnTo === "receipt-scan") {
+      router.push("/?receiptReturn=1");
+    } else if (returnToList) {
       router.push("/master-data/products");
     } else {
       // Save & continue → go to conversions page

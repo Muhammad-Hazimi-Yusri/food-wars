@@ -31,9 +31,13 @@ export function isAiConfigured(
  * Throws on network errors or non-OK status.
  */
 export type OllamaCallOptions = {
-  format?: "json";
+  format?: "json" | Record<string, unknown>;
   temperature?: number;
   numPredict?: number;
+  /** Set to false to disable thinking for reasoning models (e.g. qwen3) */
+  think?: boolean;
+  /** Override the default request timeout in milliseconds */
+  timeout?: number;
 };
 
 export async function callOllama(
@@ -56,15 +60,18 @@ export async function callOllama(
     },
   };
 
-  if (options?.format === "json") {
-    body.format = "json";
+  if (options?.format) {
+    body.format = options.format;
+  }
+  if (options?.think === false) {
+    body.think = false;
   }
 
   const response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(55_000), // just under Vercel's 60s max
+    signal: AbortSignal.timeout(options?.timeout ?? 55_000),
   });
 
   if (!response.ok) {
@@ -75,7 +82,76 @@ export async function callOllama(
   }
 
   const data = await response.json();
-  return data.response;
+  const raw: string = data.response ?? "";
+  // Strip <think> reasoning tags from thinking models (e.g. qwen3)
+  return raw.replace(/<think>[\s\S]*?<\/think>\s*/g, "").trim();
+}
+
+/**
+ * Call Ollama's /api/chat endpoint with a vision model and base64 image.
+ * Used for VLM-based receipt scanning where the model reads the image directly.
+ */
+export async function callOllamaVision(
+  ollamaUrl: string,
+  model: string,
+  prompt: string,
+  system: string,
+  imageBase64: string,
+  options?: OllamaCallOptions,
+): Promise<string> {
+  const url = `${ollamaUrl.replace(/\/+$/, "")}/api/chat`;
+
+  // Build messages — omit system message when empty (vision models often ignore it)
+  const messages: Record<string, unknown>[] = [];
+  if (system) messages.push({ role: "system", content: system });
+  messages.push({ role: "user", content: prompt, images: [imageBase64] });
+
+  const body: Record<string, unknown> = {
+    model,
+    messages,
+    stream: false,
+    options: {
+      temperature: options?.temperature ?? 0.1,
+      num_predict: options?.numPredict ?? 4096,
+    },
+  };
+
+  if (options?.format) {
+    body.format = options.format;
+  }
+  if (options?.think === false) {
+    body.think = false;
+  }
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(options?.timeout ?? 90_000),
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(
+      `Ollama returned ${response.status}: ${text.slice(0, 200)}`
+    );
+  }
+
+  const data = await response.json();
+  const content: string = data.message?.content ?? "";
+  // Thinking models (qwen3-vl) put reasoning in a separate "thinking" field.
+  // When content is empty, the model spent all tokens thinking — fall back to it.
+  const thinking: string =
+    (data.message as Record<string, unknown> | undefined)?.thinking as string ?? "";
+  let raw = content;
+  if (!raw && thinking) {
+    console.log("[callOllamaVision] Content empty, falling back to thinking field. Length:", thinking.length);
+    raw = thinking;
+  } else if (!raw) {
+    console.log("[callOllamaVision] Empty content and no thinking. Response keys:", Object.keys(data));
+  }
+  // Strip <think> reasoning tags from thinking models (e.g. qwen3-vl)
+  return raw.replace(/<think>[\s\S]*?<\/think>\s*/g, "").trim();
 }
 
 /**

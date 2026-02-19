@@ -1,6 +1,12 @@
 import { HouseholdAiSettings } from "@/types/database";
 import { createClient } from "@/lib/supabase/server";
 
+/** Shared headers for all Ollama requests to avoid bot-detection by tunnels/proxies. */
+const OLLAMA_HEADERS = {
+  "Content-Type": "application/json",
+  "User-Agent": "FoodWars/1.0",
+};
+
 /**
  * Fetch AI settings for a household from the database.
  * Uses the server-side Supabase client (cookie-based auth + RLS).
@@ -69,7 +75,7 @@ export async function callOllama(
 
   const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: OLLAMA_HEADERS,
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(options?.timeout ?? 55_000),
   });
@@ -125,7 +131,7 @@ export async function callOllamaVision(
 
   const response = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: OLLAMA_HEADERS,
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(options?.timeout ?? 90_000),
   });
@@ -164,6 +170,7 @@ export async function fetchOllamaModels(
   const url = `${ollamaUrl.replace(/\/+$/, "")}/api/tags`;
 
   const response = await fetch(url, {
+    headers: { "User-Agent": OLLAMA_HEADERS["User-Agent"] },
     signal: AbortSignal.timeout(5_000),
   });
 

@@ -55,6 +55,16 @@ export async function GET() {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to fetch models";
-    return NextResponse.json({ error: message }, { status: 502 });
+
+    const is403 = message.includes("403");
+
+    return NextResponse.json(
+      {
+        error: is403
+          ? "Ollama returned 403 Forbidden. If using a tunnel (e.g. Cloudflare Tunnel), check that access policies allow unauthenticated requests."
+          : message,
+      },
+      { status: 502 }
+    );
   }
 }

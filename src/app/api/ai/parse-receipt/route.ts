@@ -281,11 +281,15 @@ ${rawResponse.slice(0, 4000)}`;
       message.includes("abort") ||
       message.includes("timeout");
 
+    const is403 = message.includes("403");
+
     return NextResponse.json(
       {
         error: isNetworkError
           ? "Could not reach Ollama. Check Settings and ensure Ollama is running."
-          : `AI parse error: ${message}`,
+          : is403
+            ? "Ollama returned 403 Forbidden. If using a tunnel (e.g. Cloudflare Tunnel), check that access policies allow unauthenticated requests."
+            : `AI parse error: ${message}`,
       },
       { status: 502 }
     );

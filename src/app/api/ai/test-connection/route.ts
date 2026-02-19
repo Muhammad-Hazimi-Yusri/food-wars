@@ -44,18 +44,22 @@ export async function POST(request: NextRequest) {
     const message =
       error instanceof Error ? error.message : "Connection failed";
 
-    // Distinguish network errors from other failures
+    // Distinguish network errors and auth errors from other failures
     const isNetworkError =
       message.includes("fetch failed") ||
       message.includes("ECONNREFUSED") ||
       message.includes("abort") ||
       message.includes("timeout");
 
+    const is403 = message.includes("403");
+
     return NextResponse.json(
       {
         error: isNetworkError
           ? "Could not reach Ollama. Check the URL and ensure Ollama is running."
-          : `Ollama error: ${message}`,
+          : is403
+            ? "Ollama returned 403 Forbidden. If using a tunnel (e.g. Cloudflare Tunnel), check that access policies allow unauthenticated requests."
+            : `Ollama error: ${message}`,
       },
       { status: 502 }
     );

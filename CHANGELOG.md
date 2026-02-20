@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.5] - 2026-02-20
+
+### Added
+- **Pantry scanning** — photograph pantry shelves or fridge contents; Ollama Vision AI identifies visible products, estimates quantities, and fuzzy-matches to existing products for review and bulk import to stock
+- `POST /api/ai/scan-pantry` — VLM-only API endpoint with pantry-specific prompt and two-pass fallback (if VLM returns thinking text instead of JSON, extracts via text model)
+- `PantryScanDialog` component — 3-step capture/process/review dialog with side-by-side image reference, reuses `ReceiptReviewTable` and `bulkCreateStockEntries()`
+- Pantry scan button (`ScanEye` icon) in AI chat widget header, alongside existing receipt scan button
+- `emptyMessage` prop on `ReceiptReviewTable` — context-sensitive empty state text (defaults to receipt message, pantry scan passes "No products identified in photo.")
+
+---
+
 ## [0.10.4] - 2026-02-19
 
 ### Fixed

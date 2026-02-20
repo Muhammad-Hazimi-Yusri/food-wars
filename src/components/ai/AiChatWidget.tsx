@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import { Bot, X, Send, Loader2, MessageSquare, Trash2, Receipt } from "lucide-react";
+import { Bot, X, Send, Loader2, MessageSquare, Trash2, Receipt, ScanEye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 import { ChatMessage } from "./ChatMessage";
 import { StockEntryCard } from "./StockEntryCard";
 import { ReceiptCaptureDialog, loadReceiptState } from "./ReceiptCaptureDialog";
+import { PantryScanDialog } from "./PantryScanDialog";
 import { ParsedStockItem } from "@/types/database";
 
 type Message = {
@@ -45,6 +46,7 @@ export function AiChatWidget() {
   const [loading, setLoading] = useState(false);
   const [toastOffset, setToastOffset] = useState(0);
   const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
+  const [pantryDialogOpen, setPantryDialogOpen] = useState(false);
   const [restoredReceiptState, setRestoredReceiptState] = useState<ReceiptState | null>(null);
   const [householdData, setHouseholdData] = useState<HouseholdData | null>(null);
   const dataLoadedRef = useRef(false);
@@ -297,6 +299,17 @@ export function AiChatWidget() {
               >
                 <Receipt className="h-4 w-4" />
               </button>
+              <button
+                onClick={() => {
+                  refreshHouseholdData();
+                  setPantryDialogOpen(true);
+                }}
+                className="hover:bg-white/20 rounded-full p-1 transition-colors"
+                aria-label="Scan pantry"
+                title="Scan pantry"
+              >
+                <ScanEye className="h-4 w-4" />
+              </button>
               {messages.length > 0 && (
                 <button
                   onClick={() => setMessages([])}
@@ -422,6 +435,15 @@ export function AiChatWidget() {
         hasVisionModel={hasVisionModel}
         onImported={refreshHouseholdData}
         initialState={restoredReceiptState}
+      />
+
+      {/* Pantry scanning dialog */}
+      <PantryScanDialog
+        open={pantryDialogOpen}
+        onOpenChange={setPantryDialogOpen}
+        householdData={householdData}
+        hasVisionModel={hasVisionModel}
+        onImported={refreshHouseholdData}
       />
     </>
   );

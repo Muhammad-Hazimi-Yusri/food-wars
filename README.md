@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.10.4-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.10.5-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.10.4
+Current version is v0.10.5
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -68,6 +68,7 @@ Current version is v0.10.4
 - **Dual OCR/VLM Mode** — Choose between traditional OCR + text AI parsing or direct vision model image analysis, with automatic two-pass fallback for thinking models
 - **Receipt Item Editing** — Add, edit, and delete individual receipt items with inline controls; auto-fill product defaults on match
 - **Unmatched Product Wizard** — Step through unmatched receipt items, scan barcodes, create new products, and auto-match back
+- **Pantry Scanning** — Photograph pantry shelves or fridge contents, Vision AI identifies products and estimates quantities, review and bulk-import to stock
 - **Edit Stock Entry Pricing** — Per-unit or total price toggle with unit selector and conversion factor display when editing stock entries
 - **Fractional Quick Consume** — Quick consume supports decimal amounts (e.g. 0.5 kg) for sub-unit consumption
 
@@ -485,6 +486,14 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Fractional quick consume: `quick_consume_amount` accepts decimals (min 0.01, step 0.5)
 - [x] Quick open label clarified: "entries" instead of misleading unit name
 - [x] Receipt price input shows unit suffix (e.g. "/ bottle")
+
+**Pantry scanning (v0.10.5):** ✓
+- [x] Photograph pantry shelves or fridge contents for visual product identification via Ollama VLM
+- [x] `POST /api/ai/scan-pantry` — VLM-only endpoint with pantry-specific prompt, two-pass fallback
+- [x] `PantryScanDialog` — 3-step dialog (capture → processing → review) with side-by-side image + review table
+- [x] Pantry scan button (ScanEye icon) in AI chat widget header
+- [x] Reuses `ReceiptReviewTable` (with new `emptyMessage` prop), `bulkCreateStockEntries()`, fuzzy matching
+- [x] VLM prompt tuned for visual product recognition, quantity estimation, and uncertainty notes
 </details>
 
 ---
@@ -804,8 +813,12 @@ food-wars/
 │   │   │   │   │   └── route.ts   # POST general AI chat (natural language + stock entry)
 │   │   │   │   ├── models/
 │   │   │   │   │   └── route.ts   # GET available Ollama models
+│   │   │   │   ├── parse-receipt/
+│   │   │   │   │   └── route.ts   # POST receipt scanning (OCR/VLM/refine modes)
 │   │   │   │   ├── parse-stock/
 │   │   │   │   │   └── route.ts   # POST parse natural language into stock items (JSON mode)
+│   │   │   │   ├── scan-pantry/
+│   │   │   │   │   └── route.ts   # POST pantry scanning (VLM visual product identification)
 │   │   │   │   ├── settings/
 │   │   │   │   │   └── route.ts   # GET/PUT household AI settings
 │   │   │   │   └── test-connection/
@@ -855,6 +868,9 @@ food-wars/
 │   │   ├── ai/                    # AI chat assistant components
 │   │   │   ├── AiChatWidget.tsx   # Floating FAB + chat panel (global)
 │   │   │   ├── ChatMessage.tsx    # User/assistant message bubbles
+│   │   │   ├── PantryScanDialog.tsx # Pantry/fridge photo scanning dialog
+│   │   │   ├── ReceiptCaptureDialog.tsx # Receipt scanning dialog (capture → process → review → wizard)
+│   │   │   ├── ReceiptReviewTable.tsx # Editable review table for AI-parsed items
 │   │   │   └── StockEntryCard.tsx # Inline editable stock entry cards
 │   │   ├── barcode/               # Barcode scanning components
 │   │   │   ├── BarcodeScanner.tsx  # Camera scanner (react-zxing)
@@ -945,6 +961,7 @@ food-wars/
 │   │   ├── shopping-list-utils.ts   # Auto-generation gap calculators
 │   │   ├── product-actions.ts     # Product server actions (OFF refetch, image download)
 │   │   ├── stock-actions.ts       # Stock actions (consume, open, transfer, correct, undo)
+│   │   ├── stock-entry-utils.ts   # Shared bulk import (bulkCreateStockEntries) & unit conversion
 │   │   └── utils.ts               # cn() and general utilities
 │   └── types/
 │       └── database.ts            # Supabase generated types

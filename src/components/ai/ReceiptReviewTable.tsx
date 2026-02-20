@@ -25,6 +25,8 @@ type Props = {
   onResolveUnmatched?: () => void;
   /** Raw AI response shown when no items were parsed (debugging aid) */
   rawResponse?: string | null;
+  /** Message shown when the items array is empty. Defaults to receipt-specific text. */
+  emptyMessage?: string;
 };
 
 export function ReceiptReviewTable({
@@ -34,6 +36,7 @@ export function ReceiptReviewTable({
   onImported,
   onResolveUnmatched,
   rawResponse,
+  emptyMessage,
 }: Props) {
   const router = useRouter();
   const [checked, setChecked] = useState<Set<number>>(() => new Set(items.map((_, i) => i)));
@@ -153,7 +156,7 @@ export function ReceiptReviewTable({
   if (items.length === 0) {
     return (
       <div className="text-center py-6 space-y-3">
-        <p className="text-sm text-gray-500">No items found on receipt.</p>
+        <p className="text-sm text-gray-500">{emptyMessage ?? "No items found on receipt."}</p>
         {rawResponse && (
           <details className="text-left">
             <summary className="text-[11px] text-gray-400 cursor-pointer hover:text-gray-500">

@@ -5,10 +5,12 @@ import { ProductConversionsClient } from "@/components/inventory/ProductConversi
 
 type Props = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ returnTo?: string }>;
 };
 
-export default async function ProductConversionsPage({ params }: Props) {
+export default async function ProductConversionsPage({ params, searchParams }: Props) {
   const { id } = await params;
+  const { returnTo } = await searchParams;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   
@@ -64,6 +66,7 @@ export default async function ProductConversionsPage({ params }: Props) {
           quantityUnits={quantityUnits ?? []}
           barcodes={barcodes ?? []}
           shoppingLocations={shoppingLocations ?? []}
+          returnTo={returnTo}
         />
       </main>
     </div>

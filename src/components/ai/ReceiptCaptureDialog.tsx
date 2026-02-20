@@ -9,12 +9,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Camera,
   Upload,
   Loader2,
-  Send,
   ScanBarcode,
   SkipForward,
   Eye,
@@ -23,6 +21,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { ParsedStockItem } from "@/types/database";
 import { ReceiptReviewTable } from "./ReceiptReviewTable";
 import { ScannerDialog } from "@/components/barcode/ScannerDialog";
@@ -36,6 +35,7 @@ type ReceiptState = {
   items: ParsedStockItem[];
   checkedIndices: number[];
   wizardIndex: number;
+  returnFromWizard?: boolean;
 };
 
 type Props = {
@@ -87,13 +87,12 @@ export function ReceiptCaptureDialog({
   const [progress, setProgress] = useState(0);
   const [progressLabel, setProgressLabel] = useState("");
   const [items, setItems] = useState<ParsedStockItem[]>(initialState?.items ?? []);
-  const [refineInput, setRefineInput] = useState("");
-  const [refining, setRefining] = useState(false);
   const [rawResponse, setRawResponse] = useState<string | null>(null);
 
   // Wizard state
   const [wizardIndex, setWizardIndex] = useState(initialState?.wizardIndex ?? 0);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [pendingBarcode, setPendingBarcode] = useState<string | null>(null);
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -101,36 +100,68 @@ export function ReceiptCaptureDialog({
 
   // Initialize from restored state
   useEffect(() => {
-    if (initialState) {
-      setItems(initialState.items);
-      setStep("review");
-      // Re-run fuzzy matching with fresh household data
-      if (householdData) {
-        const rematched = initialState.items.map((item) => {
-          if (item.product_id) {
-            // Verify the product still exists
-            const exists = householdData.products.find((p) => p.id === item.product_id);
-            if (exists) return item;
+    if (!initialState) return;
+
+    let rematched = initialState.items;
+
+    if (householdData) {
+      rematched = initialState.items.map((item) => {
+        if (item.product_id) {
+          // Verify the product still exists
+          const exists = householdData.products.find((p) => p.id === item.product_id);
+          if (exists) return item;
+        }
+        // Try to fuzzy match
+        if (item.product_name) {
+          const match = findBestMatch(
+            item.product_name,
+            householdData.products,
+            (p) => p.name
+          );
+          if (match) {
+            return {
+              ...item,
+              product_id: match.item.id,
+              product_name: match.item.name,
+            };
           }
-          // Try to fuzzy match
-          if (item.product_name) {
-            const match = findBestMatch(
-              item.product_name,
-              householdData.products,
-              (p) => p.name
-            );
-            if (match) {
-              return {
-                ...item,
-                product_id: match.item.id,
-                product_name: match.item.name,
-              };
-            }
-          }
-          return item;
-        });
-        setItems(rematched);
+        }
+        return item;
+      });
+    }
+
+    setItems(rematched);
+
+    // When returning from product creation wizard
+    if (initialState.returnFromWizard) {
+      if (!householdData) {
+        // Data still loading — show spinner until it arrives
+        setStep("processing");
+        setProgressLabel("Matching products...");
+        return;
       }
+
+      // Count newly matched items
+      const newlyMatched =
+        rematched.filter((item) => item.product_id).length -
+        initialState.items.filter((item) => item.product_id).length;
+      const stillUnmatched = rematched.filter((item) => !item.product_id).length;
+
+      if (newlyMatched > 0) {
+        toast.success(
+          `Matched ${newlyMatched} item${newlyMatched !== 1 ? "s" : ""} to products`
+        );
+      }
+
+      if (stillUnmatched > 0) {
+        // Resume wizard for remaining unmatched items
+        setWizardIndex(0);
+        setStep("wizard");
+      } else {
+        setStep("review");
+      }
+    } else {
+      setStep("review");
     }
   }, [initialState, householdData]);
 
@@ -252,44 +283,6 @@ export function ReceiptCaptureDialog({
     }
   }, [imageFile, method]);
 
-  const handleRefine = async () => {
-    if (!refineInput.trim() || refining) return;
-
-    setRefining(true);
-    try {
-      const res = await fetch("/api/ai/parse-receipt", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mode: "refine",
-          text: refineInput.trim(),
-          currentItems: items.map((item) => ({
-            product_name: item.product_name,
-            product_id: item.product_id,
-            amount: item.amount,
-            unit_name: item.unit_name,
-            best_before_date: item.best_before_date,
-            store_name: item.store_name,
-            price: item.price,
-            location_name: item.location_name,
-            note: item.note,
-          })),
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed to refine");
-
-      setItems(data.items ?? []);
-      setRefineInput("");
-      toast.success("Items updated");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Refinement failed");
-    } finally {
-      setRefining(false);
-    }
-  };
-
   // Unmatched wizard
   const unmatchedItems = items
     .map((item, index) => ({ item, index }))
@@ -332,16 +325,25 @@ export function ReceiptCaptureDialog({
       return;
     }
 
-    // Not found locally — navigate to product creation
-    // Save receipt state first
+    // Not found locally — show confirmation before navigating
+    setPendingBarcode(barcode);
+  };
+
+  const confirmCreateProduct = () => {
+    if (!pendingBarcode) return;
+    // Save receipt state for round-trip
     saveReceiptState({
       items,
       checkedIndices: Array.from({ length: items.length }, (_, i) => i),
       wizardIndex,
+      returnFromWizard: true,
     });
+    router.push(`/products/new?barcode=${encodeURIComponent(pendingBarcode)}&returnTo=receipt-scan`);
+  };
 
-    // Navigate to product creation with returnTo
-    router.push(`/products/new?barcode=${encodeURIComponent(barcode)}&returnTo=receipt-scan`);
+  const skipPendingBarcode = () => {
+    setPendingBarcode(null);
+    advanceWizard();
   };
 
   const reset = () => {
@@ -351,9 +353,9 @@ export function ReceiptCaptureDialog({
     setItems([]);
     setProgress(0);
     setProgressLabel("");
-    setRefineInput("");
     setRawResponse(null);
     setWizardIndex(0);
+    setPendingBarcode(null);
   };
 
   const handleClose = (val: boolean) => {
@@ -370,7 +372,14 @@ export function ReceiptCaptureDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
+        <DialogContent
+          className={cn(
+            "max-h-[90vh] flex flex-col",
+            step === "review" && imagePreview
+              ? "sm:max-w-5xl"
+              : "sm:max-w-lg"
+          )}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {step === "capture" && "Scan Receipt"}
@@ -517,56 +526,40 @@ export function ReceiptCaptureDialog({
 
           {/* REVIEW STEP */}
           {step === "review" && (
-            <div className="flex-1 overflow-y-auto space-y-3 min-h-0">
-              <ReceiptReviewTable
-                items={items}
-                householdData={householdData}
-                onItemsChange={setItems}
-                onImported={onImported}
-                onResolveUnmatched={unmatchedItems.length > 0 ? startWizard : undefined}
-                rawResponse={rawResponse}
-              />
+            <div className="flex-1 min-h-0 flex flex-col md:flex-row gap-4 overflow-hidden">
+              {/* Receipt image reference pane */}
+              {imagePreview && (
+                <div className="shrink-0 max-h-48 md:max-h-none md:w-[340px] md:shrink-0 overflow-auto rounded-lg border border-gray-200 bg-gray-50">
+                  <img
+                    src={imagePreview}
+                    alt="Receipt"
+                    className="w-full h-auto"
+                  />
+                </div>
+              )}
 
-              {/* NL Refinement input */}
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleRefine();
-                }}
-                className="flex gap-2 pt-2 border-t border-gray-100"
-              >
-                <Input
-                  value={refineInput}
-                  onChange={(e) => setRefineInput(e.target.value)}
-                  placeholder="Refine... e.g. 'remove the total row'"
-                  disabled={refining}
-                  className="flex-1 text-xs"
+              {/* Items + controls pane */}
+              <div className="flex-1 overflow-y-auto space-y-3 min-h-0 min-w-0">
+                <ReceiptReviewTable
+                  items={items}
+                  householdData={householdData}
+                  onItemsChange={setItems}
+                  onImported={onImported}
+                  onResolveUnmatched={unmatchedItems.length > 0 ? startWizard : undefined}
+                  rawResponse={rawResponse}
                 />
-                <Button
-                  type="submit"
-                  disabled={refining || !refineInput.trim()}
-                  size="icon"
-                  variant="outline"
-                  className="shrink-0 h-9 w-9"
-                >
-                  {refining ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Send className="h-3.5 w-3.5" />
-                  )}
-                </Button>
-              </form>
 
-              {/* Scan another / Reset */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={reset}
-                className="w-full text-xs text-gray-500 gap-1"
-              >
-                <RotateCcw className="h-3 w-3" />
-                Scan another receipt
-              </Button>
+                {/* Scan another / Reset */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={reset}
+                  className="w-full text-xs text-gray-500 gap-1"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  Scan another receipt
+                </Button>
+              </div>
             </div>
           )}
 
@@ -587,27 +580,57 @@ export function ReceiptCaptureDialog({
                 )}
               </div>
 
-              <p className="text-xs text-gray-500 text-center">
-                Scan the barcode on this product to create or match it.
-              </p>
-
-              <div className="flex flex-col gap-2">
-                <Button
-                  onClick={() => setScannerOpen(true)}
-                  className="bg-megumi hover:bg-megumi/90 gap-2"
-                >
-                  <ScanBarcode className="h-4 w-4" />
-                  Scan Barcode
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={advanceWizard}
-                  className="gap-2"
-                >
-                  <SkipForward className="h-4 w-4" />
-                  Skip
-                </Button>
-              </div>
+              {pendingBarcode ? (
+                <>
+                  <div className="text-center space-y-1">
+                    <p className="text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                      No product found for barcode {pendingBarcode}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Create a new product, then you&apos;ll return here to continue.
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      onClick={confirmCreateProduct}
+                      className="bg-megumi hover:bg-megumi/90 gap-2"
+                    >
+                      Create Product
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={skipPendingBarcode}
+                      className="gap-2"
+                    >
+                      <SkipForward className="h-4 w-4" />
+                      Skip
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-gray-500 text-center">
+                    Scan the barcode on this product to create or match it.
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      onClick={() => setScannerOpen(true)}
+                      className="bg-megumi hover:bg-megumi/90 gap-2"
+                    >
+                      <ScanBarcode className="h-4 w-4" />
+                      Scan Barcode
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={advanceWizard}
+                      className="gap-2"
+                    >
+                      <SkipForward className="h-4 w-4" />
+                      Skip
+                    </Button>
+                  </div>
+                </>
+              )}
 
               {/* Progress dots */}
               <div className="flex justify-center gap-1.5 pt-2">

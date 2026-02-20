@@ -219,19 +219,26 @@ export function StockEntryCard({ items: initialItems, householdData, onSaved }: 
                   </SelectContent>
                 </Select>
 
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={item.price ?? ""}
-                  onChange={(e) =>
-                    updateItem(index, {
-                      price: e.target.value ? parseFloat(e.target.value) : null,
-                    })
-                  }
-                  className="text-[11px] h-7"
-                  placeholder="Price"
-                />
+                <div className="relative">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={item.price ?? ""}
+                    onChange={(e) =>
+                      updateItem(index, {
+                        price: e.target.value ? parseFloat(e.target.value) : null,
+                      })
+                    }
+                    className="text-[11px] h-7 pr-14"
+                    placeholder="Price"
+                  />
+                  {item.qu_id && (
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-gray-400 pointer-events-none">
+                      /{quantityUnits.find((u) => u.id === item.qu_id)?.name ?? "ea"}
+                    </span>
+                  )}
+                </div>
 
                 <Select
                   value={item.location_id ?? "none"}

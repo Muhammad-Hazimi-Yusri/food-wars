@@ -127,9 +127,9 @@ export async function lookupBarcodeLocal(
       .from('product_barcodes')
       .select('*, product:products!product_barcodes_product_id_fkey(id, name)')
       .eq('household_id', household.householdId)
-      .eq('barcode', barcodeValue)
+      .eq('barcode', barcodeValue.trim())
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (error || !data) return null;
 

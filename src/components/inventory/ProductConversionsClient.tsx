@@ -51,6 +51,7 @@ type Props = {
   quantityUnits: QuantityUnit[];
   barcodes: ProductBarcode[];
   shoppingLocations: ShoppingLocation[];
+  returnTo?: string;
 };
 
 export function ProductConversionsClient({
@@ -59,6 +60,7 @@ export function ProductConversionsClient({
   quantityUnits,
   barcodes,
   shoppingLocations,
+  returnTo,
 }: Props) {
   const [conversions, setConversions] = useState(initialConversions);
   const [showForm, setShowForm] = useState(false);
@@ -182,7 +184,7 @@ export function ProductConversionsClient({
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
-          <Link href="/master-data/products">
+          <Link href={returnTo === "receipt-scan" ? "/?receiptReturn=1" : "/master-data/products"}>
             <ArrowLeft className="h-5 w-5" />
           </Link>
         </Button>
@@ -327,7 +329,9 @@ export function ProductConversionsClient({
       {/* Footer */}
       <div className="flex justify-end">
         <Button asChild>
-          <Link href="/master-data/products">Done</Link>
+          <Link href={returnTo === "receipt-scan" ? "/?receiptReturn=1" : "/master-data/products"}>
+            {returnTo === "receipt-scan" ? "Back to Receipt" : "Done"}
+          </Link>
         </Button>
       </div>
     </div>

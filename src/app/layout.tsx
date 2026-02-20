@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Dela_Gothic_One, Zen_Kaku_Gothic_New } from "next/font/google";
 import "./globals.css";
 import { GuestBanner } from "@/components/diner/GuestBanner";
@@ -33,7 +34,9 @@ export default function RootLayout({
         <GuestBanner />
         {children}
         <Toaster />
-        <AiChatWidget />
+        <Suspense>
+          <AiChatWidget />
+        </Suspense>
       </body>
     </html>
   );

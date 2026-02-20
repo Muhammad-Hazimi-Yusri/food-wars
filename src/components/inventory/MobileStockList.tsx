@@ -225,7 +225,7 @@ export function MobileStockList({ entries, locations, zeroStockProducts = [] }: 
 
   const handleOpen = async (product: AggregatedProduct) => {
     setOpening(product.productId);
-    const count = product.entries[0].product.quick_open_amount;
+    const count = product.entries[0].product.quick_open_amount ?? 1;
     const result = await openStock(product.productId, product.entries, count);
     setOpening(null);
     if (result.success) {

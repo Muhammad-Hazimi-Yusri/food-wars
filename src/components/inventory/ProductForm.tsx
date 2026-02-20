@@ -544,7 +544,13 @@ export function ProductForm({
       }
 
      if (returnTo === "receipt-scan") {
-      router.push("/?receiptReturn=1");
+      if (returnToList) {
+        // Save & return → back to receipt
+        router.push("/?receiptReturn=1");
+      } else {
+        // Save & continue → conversions, preserving returnTo
+        router.push(`/products/${productId}/conversions?returnTo=receipt-scan`);
+      }
     } else if (returnToList) {
       router.push("/master-data/products");
     } else {
@@ -1186,14 +1192,14 @@ export function ProductForm({
                       id="quick_consume_amount"
                       value={formData.quick_consume_amount}
                       onChange={(v) => updateField("quick_consume_amount", v)}
-                      min={1}
-                      step={1}
+                      min={0.0}
+                      step={0.5}
                     />
                   </div>
 
                   <div>
                     <Label htmlFor="quick_open_amount">
-                      Quick open amount ({getUnitName(formData.qu_id_stock) || "unit"})
+                      Quick open amount (entries)
                     </Label>
                     <NumberInput
                       id="quick_open_amount"

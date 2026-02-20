@@ -19,15 +19,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { AlertTriangle } from "lucide-react";
-import { StockEntryWithProduct, Location, ShoppingLocation } from "@/types/database";
+import { StockEntryWithProduct, Location, ShoppingLocation, QuantityUnit } from "@/types/database";
 import { createClient } from "@/lib/supabase/client";
 import { undoEditEntry } from "@/lib/stock-actions";
 import { toast } from "sonner";
+
+type Conversion = {
+  id: string;
+  product_id: string | null;
+  from_qu_id: string;
+  to_qu_id: string;
+  factor: number;
+};
 
 type EditStockEntryModalProps = {
   entry: StockEntryWithProduct | null;
   locations: Location[];
   shoppingLocations: ShoppingLocation[];
+  quantityUnits: QuantityUnit[];
+  conversions: Conversion[];
   open: boolean;
   onClose: () => void;
   onSaved: () => void;
@@ -37,6 +47,8 @@ export function EditStockEntryModal({
   entry,
   locations,
   shoppingLocations,
+  quantityUnits,
+  conversions,
   open,
   onClose,
   onSaved,
@@ -52,9 +64,68 @@ export function EditStockEntryModal({
     note: "",
     open: false,
   });
+  const [priceType, setPriceType] = useState<"unit" | "total">("unit");
+  const [priceUnitId, setPriceUnitId] = useState("");
 
   // Check if date is in the past
   const isDatePast = formData.best_before_date && new Date(formData.best_before_date) < new Date();
+
+  const product = entry?.product;
+  const stockUnitName = product?.qu_stock?.name ?? "unit";
+  const stockUnitId = product?.qu_id_stock ?? "";
+
+  // Available units: stock unit + all units with conversions TO the stock unit
+  const availableUnits = product
+    ? (() => {
+        const units: QuantityUnit[] = [];
+        if (product.qu_stock) units.push(product.qu_stock);
+        const productConversions = conversions.filter(
+          (c) =>
+            (c.product_id === product.id || c.product_id === null) &&
+            c.to_qu_id === product.qu_id_stock
+        );
+        productConversions.forEach((conv) => {
+          const unit = quantityUnits.find((u) => u.id === conv.from_qu_id);
+          if (unit && !units.some((u) => u.id === unit.id)) {
+            units.push(unit);
+          }
+        });
+        return units;
+      })()
+    : [];
+
+  // Get conversion factor from selected price unit to stock unit
+  const getConversionFactor = () => {
+    if (!product || !priceUnitId || priceUnitId === stockUnitId) return 1;
+    const productConv = conversions.find(
+      (c) =>
+        c.product_id === product.id &&
+        c.from_qu_id === priceUnitId &&
+        c.to_qu_id === stockUnitId
+    );
+    if (productConv) return productConv.factor;
+    const globalConv = conversions.find(
+      (c) =>
+        c.product_id === null &&
+        c.from_qu_id === priceUnitId &&
+        c.to_qu_id === stockUnitId
+    );
+    if (globalConv) return globalConv.factor;
+    return 1;
+  };
+
+  const conversionFactor = getConversionFactor();
+  const selectedUnitName = quantityUnits.find((u) => u.id === priceUnitId)?.name ?? stockUnitName;
+
+  // Convert entered price to per-stock-unit for storage
+  const pricePerStockUnit = () => {
+    const p = parseFloat(formData.price) || 0;
+    if (p === 0) return 0;
+    if (priceType === "total") {
+      return formData.amount > 0 ? p / formData.amount : 0;
+    }
+    return p / conversionFactor;
+  };
 
   // Reset form when entry changes
   useEffect(() => {
@@ -68,6 +139,8 @@ export function EditStockEntryModal({
         note: entry.note ?? "",
         open: entry.open ?? false,
       });
+      setPriceType("unit");
+      setPriceUnitId(entry.product?.qu_id_stock ?? "");
     }
   }, [entry]);
 
@@ -88,6 +161,12 @@ export function EditStockEntryModal({
     const entryId = entry.id;
     const productName = entry.product?.name ?? "item";
 
+    // Calculate final price (always store as per stock unit)
+    let finalPrice: number | null = null;
+    if (formData.price) {
+      finalPrice = pricePerStockUnit();
+    }
+
     setSaving(true);
     try {
       const supabase = createClient();
@@ -100,7 +179,7 @@ export function EditStockEntryModal({
             ? formData.shopping_location_id
             : null,
           best_before_date: formData.best_before_date || null,
-          price: formData.price ? parseFloat(formData.price) : null,
+          price: finalPrice,
           note: formData.note || null,
           open: formData.open,
         })
@@ -134,9 +213,6 @@ export function EditStockEntryModal({
 
   if (!entry) return null;
 
-  const product = entry.product;
-  const unitName = product?.qu_stock?.name ?? "unit";
-
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="sm:max-w-md">
@@ -153,7 +229,7 @@ export function EditStockEntryModal({
 
           {/* Amount */}
           <div>
-            <Label htmlFor="amount">Amount ({unitName})</Label>
+            <Label htmlFor="amount">Amount ({stockUnitName})</Label>
             <Input
               id="amount"
               type="number"
@@ -194,21 +270,67 @@ export function EditStockEntryModal({
 
           {/* Price */}
           <div>
-            <Label htmlFor="price">Price (£ per {unitName})</Label>
-            <Input
-              id="price"
-              type="number"
-              min="0"
-              step="0.01"
-              value={formData.price}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  price: e.target.value,
-                }))
-              }
-              placeholder="0.00"
-            />
+            <Label htmlFor="price">Price</Label>
+            <div className="flex items-center gap-4">
+              <Input
+                id="price"
+                type="number"
+                min="0"
+                step="0.01"
+                value={formData.price}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    price: e.target.value,
+                  }))
+                }
+                placeholder="0.00"
+                className="flex-1"
+              />
+              <div className="flex items-center gap-3 text-sm shrink-0">
+                <label className="flex items-center gap-1">
+                  <input
+                    type="radio"
+                    name="editPriceType"
+                    checked={priceType === "unit"}
+                    onChange={() => setPriceType("unit")}
+                    className="h-4 w-4"
+                  />
+                  Per {selectedUnitName}
+                </label>
+                <label className="flex items-center gap-1">
+                  <input
+                    type="radio"
+                    name="editPriceType"
+                    checked={priceType === "total"}
+                    onChange={() => setPriceType("total")}
+                    className="h-4 w-4"
+                  />
+                  Total
+                </label>
+              </div>
+            </div>
+            {/* Unit selector when there are multiple units */}
+            {priceType === "unit" && availableUnits.length > 1 && (
+              <Select value={priceUnitId} onValueChange={setPriceUnitId}>
+                <SelectTrigger className="mt-2">
+                  <SelectValue placeholder="Price per..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableUnits.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      Per {u.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {/* Conversion hint */}
+            {formData.price && parseFloat(formData.price) > 0 && (priceType === "total" || conversionFactor !== 1) && (
+              <p className="text-sm text-gray-500 mt-1">
+                = £{pricePerStockUnit().toFixed(2)} per {stockUnitName}
+              </p>
+            )}
           </div>
 
           {/* Store */}

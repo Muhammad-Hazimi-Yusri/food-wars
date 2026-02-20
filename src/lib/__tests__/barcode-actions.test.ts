@@ -57,9 +57,9 @@ function createMockChain(table: string) {
         const innerChain: Record<string, unknown> = {};
         innerChain.limit = vi.fn(() => {
           const limitChain: Record<string, unknown> = {};
-          limitChain.single = vi.fn(() => ({
+          limitChain.maybeSingle = vi.fn(() => ({
             data: mockSelectResult,
-            error: mockSelectResult ? null : { message: 'Not found' },
+            error: null,
           }));
           return limitChain;
         });

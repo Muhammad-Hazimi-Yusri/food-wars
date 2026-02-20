@@ -23,7 +23,7 @@ export function BarcodeScanner({
 
   const handleDecodeResult = useCallback(
     (result: Result) => {
-      const text = result.getText();
+      const text = result.getText()?.trim();
       if (text && text !== lastScanned) {
         setLastScanned(text);
         // Haptic feedback on successful scan

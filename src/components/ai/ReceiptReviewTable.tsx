@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Check, Loader2, X, AlertTriangle } from "lucide-react";
+import { Check, Loader2, X, AlertTriangle, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { ParsedStockItem } from "@/types/database";
 import { bulkCreateStockEntries } from "@/lib/stock-entry-utils";
@@ -93,6 +93,26 @@ export function ReceiptReviewTable({
     });
     setChecked(newChecked);
     setSavedIndices(newSaved);
+  };
+
+  const addBlankItem = () => {
+    const newItem: ParsedStockItem = {
+      raw: "",
+      product_id: null,
+      product_name: "",
+      amount: 1,
+      qu_id: null,
+      unit_name: "",
+      best_before_date: null,
+      shopping_location_id: null,
+      store_name: "",
+      price: null,
+      location_id: null,
+      location_name: "",
+      note: "",
+    };
+    onItemsChange([...items, newItem]);
+    setChecked((prev) => new Set([...prev, items.length]));
   };
 
   const handleImport = async () => {
@@ -237,6 +257,18 @@ export function ReceiptReviewTable({
             {/* Editable fields */}
             {!isSaved && isChecked && (
               <div className="grid grid-cols-2 gap-1.5">
+                {/* Editable product name for unmatched items */}
+                {!item.product_id && (
+                  <Input
+                    value={item.product_name}
+                    onChange={(e) =>
+                      updateItem(index, { product_name: e.target.value })
+                    }
+                    className="text-[11px] h-7 col-span-2"
+                    placeholder="Product name"
+                  />
+                )}
+
                 <Select
                   value={item.product_id ?? "unmatched"}
                   onValueChange={(val) =>
@@ -370,6 +402,17 @@ export function ReceiptReviewTable({
           </div>
         );
       })}
+
+      {/* Add item */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={addBlankItem}
+        className="w-full text-xs h-7 gap-1 border-dashed"
+      >
+        <Plus className="h-3 w-3" />
+        Add item
+      </Button>
 
       {/* Import button */}
       {importableItems.length > 0 && (

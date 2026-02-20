@@ -1,7 +1,15 @@
 import { ParsedStockItem } from "@/types/database";
 import { findBestMatch } from "@/lib/fuzzy-match";
 
-type MinProduct = { id: string; name: string };
+type MinProduct = {
+  id: string;
+  name: string;
+  qu_id_purchase?: string | null;
+  qu_id_stock?: string | null;
+  location_id?: string | null;
+  shopping_location_id?: string | null;
+  default_due_days?: number | null;
+};
 type MinUnit = { id: string; name: string; name_plural: string | null };
 type MinStore = { id: string; name: string };
 type MinLocation = { id: string; name: string };
@@ -174,12 +182,23 @@ export function parseAndMatchItems(
       }
     }
 
+    // Apply product defaults for matched items
+    const matchedProduct = productId ? products.find((p) => p.id === productId) : null;
+    if (matchedProduct) {
+      if (!quId) quId = matchedProduct.qu_id_purchase ?? matchedProduct.qu_id_stock ?? null;
+      if (!locationId) locationId = matchedProduct.location_id ?? null;
+      if (!shoppingLocationId) shoppingLocationId = matchedProduct.shopping_location_id ?? null;
+      if (!bestBeforeDate && matchedProduct.default_due_days) {
+        const due = new Date();
+        due.setDate(due.getDate() + matchedProduct.default_due_days);
+        bestBeforeDate = due.toISOString().split("T")[0];
+      }
+    }
+
     return {
       raw: productName,
       product_id: productId,
-      product_name: productId
-        ? (products.find((p) => p.id === productId)?.name ?? productName)
-        : productName,
+      product_name: matchedProduct?.name ?? productName,
       amount: typeof r.amount === "number" && r.amount > 0 ? r.amount : 1,
       qu_id: quId,
       unit_name: unitName,

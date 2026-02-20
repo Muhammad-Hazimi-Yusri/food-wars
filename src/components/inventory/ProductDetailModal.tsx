@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ImageIcon, Pencil, Trash2, Utensils, AlertTriangle, ArrowRightLeft, Check, X, RefreshCw, Loader2 } from "lucide-react";
-import { StockEntryWithProduct, Location, ShoppingLocation, ProductNutrition } from "@/types/database";
+import { StockEntryWithProduct, Location, ShoppingLocation, ProductNutrition, QuantityUnit } from "@/types/database";
 import { getExpiryStatus, getExpiryLabel } from "@/lib/inventory-utils";
 import { getProductPictureSignedUrl } from "@/lib/supabase/storage";
 import { consumeStock, undoConsume, undoDeleteEntry } from "@/lib/stock-actions";
@@ -42,6 +42,8 @@ export function ProductDetailModal({
   const [deleting, setDeleting] = useState<string | null>(null);
   const [locations, setLocations] = useState<Location[]>([]);
   const [shoppingLocations, setShoppingLocations] = useState<ShoppingLocation[]>([]);
+  const [quantityUnits, setQuantityUnits] = useState<QuantityUnit[]>([]);
+  const [conversions, setConversions] = useState<{ id: string; product_id: string | null; from_qu_id: string; to_qu_id: string; factor: number }[]>([]);
   const [editingEntry, setEditingEntry] = useState<StockEntryWithProduct | null>(null);
   const [transferringEntry, setTransferringEntry] = useState<StockEntryWithProduct | null>(null);
   const [consumingEntry, setConsumingEntry] = useState<{ id: string; amount: string } | null>(null);
@@ -90,6 +92,24 @@ export function ProductDetailModal({
         .order("name")
         .then(({ data }) => {
           if (data) setShoppingLocations(data);
+        });
+
+      // Fetch quantity units
+      supabase
+        .from("quantity_units")
+        .select("*")
+        .eq("active", true)
+        .order("name")
+        .then(({ data }) => {
+          if (data) setQuantityUnits(data);
+        });
+
+      // Fetch unit conversions
+      supabase
+        .from("quantity_unit_conversions")
+        .select("id, product_id, from_qu_id, to_qu_id, factor")
+        .then(({ data }) => {
+          if (data) setConversions(data);
         });
 
       // Fetch nutrition data
@@ -577,6 +597,8 @@ export function ProductDetailModal({
         entry={editingEntry}
         locations={locations}
         shoppingLocations={shoppingLocations}
+        quantityUnits={quantityUnits}
+        conversions={conversions}
         open={!!editingEntry}
         onClose={() => setEditingEntry(null)}
         onSaved={() => {

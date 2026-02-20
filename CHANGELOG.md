@@ -5,6 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.4] - 2026-02-19
+
+### Fixed
+- **Image timeout / slow page loads** — external OFF images now bypass Next.js SSR image proxy (`unoptimized` prop on non-Supabase URLs); removed `images.openfoodfacts.org` from `remotePatterns` — pages no longer block for 2+ minutes when openfoodfacts.org is slow
+- **Receipt scanning: side-by-side image view** — receipt image now displayed alongside review table for easier item verification
+- **Receipt scanning: unmatched product wizard** — fixed flow for creating new products from unmatched receipt items; dropdowns refresh on return
+- **Receipt scanning: auto-fill product defaults** — selecting a matched product auto-fills unit, location, store from product defaults
+- **Receipt scanning: manual add/edit** — replaced LLM "refine" with direct add/edit/delete of individual receipt items
+- **Barcode scanning reliability** — trim whitespace and control characters from scanned barcodes; use `maybeSingle()` for DB lookup to avoid errors on duplicate entries
+- **Quick open label** — changed misleading "Quick open amount ({unit})" to "Quick open amount (entries)" to clarify it controls how many entries are opened, not a unit amount
+- **Quick open null guard** — `quick_open_amount ?? 1` fallback prevents opening 0 entries when the field is unset
+- **Build: useSearchParams Suspense boundary** — wrapped `AiChatWidget` in `<Suspense>` in root layout to fix static generation error
+
+### Added
+- **Edit stock entry: price per-unit/total** — toggle between per-unit and total price when editing stock entries, with unit selector dropdown and conversion factor display
+- **Fractional quick consume** — `quick_consume_amount` input now accepts decimals (min 0.01, step 0.5) for sub-unit consumption like 0.5 kg
+- **Receipt price unit context** — price input in receipt scanning shows unit suffix (e.g. "/ bottle", "/ kg")
+
+### Changed
+- `EditStockEntryModal` — rewritten with per-unit/total price toggle, unit selector, and conversion hints
+- `ProductDetailModal` — fetches quantity units and conversions to pass to edit modal
+- `ReceiptCaptureDialog` — image preview alongside review table, manual item management
+- `ReceiptReviewTable` — inline row editing, add new item button
+- `AiChatWidget` — reactive `useSearchParams()` for receipt return flow detection
+- `ai-parse-items.ts` — improved JSON extraction with better array/object handling
+- `ProductForm` — fractional quick consume constraints, clearer quick open label
+
+---
+
+## [0.10.3] - 2026-02-18
+
+### Fixed
+- **Ollama 403 behind Cloudflare Tunnel** — added `User-Agent: FoodWars/1.0` header to all Ollama API calls; Cloudflare Tunnel blocks requests without a User-Agent
+- **Error handling for 403 responses** — AI endpoints now return clear error messages when Cloudflare blocks the request, instead of generic parse failures
+
+---
+
 ## [0.10.2] - 2026-02-17
 
 ### Fixed

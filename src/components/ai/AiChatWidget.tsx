@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { Bot, X, Send, Loader2, MessageSquare, Trash2, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,7 @@ type ReceiptState = {
   items: ParsedStockItem[];
   checkedIndices: number[];
   wizardIndex: number;
+  returnFromWizard?: boolean;
 };
 
 export function AiChatWidget() {
@@ -44,11 +46,14 @@ export function AiChatWidget() {
   const [toastOffset, setToastOffset] = useState(0);
   const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
   const [restoredReceiptState, setRestoredReceiptState] = useState<ReceiptState | null>(null);
-  const householdDataRef = useRef<HouseholdData | null>(null);
+  const [householdData, setHouseholdData] = useState<HouseholdData | null>(null);
   const dataLoadedRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Check AI config on mount + check for receipt return
+  const searchParams = useSearchParams();
+  const receiptReturnParam = searchParams.get("receiptReturn");
+
+  // Check AI config on mount
   useEffect(() => {
     fetch("/api/ai/settings")
       .then((res) => res.json())
@@ -59,20 +64,19 @@ export function AiChatWidget() {
       })
       .catch(() => setAiConfigured(false))
       .finally(() => setConfigChecked(true));
-
-    // Check for receipt return from product creation
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("receiptReturn") === "1") {
-      const savedState = loadReceiptState();
-      if (savedState) {
-        setRestoredReceiptState(savedState);
-      }
-      // Clean up URL
-      const url = new URL(window.location.href);
-      url.searchParams.delete("receiptReturn");
-      window.history.replaceState({}, "", url.pathname + url.search);
-    }
   }, []);
+
+  // Reactively detect receiptReturn=1 (works across client-side navigations
+  // even though AiChatWidget is in the root layout and never unmounts)
+  useEffect(() => {
+    if (receiptReturnParam !== "1") return;
+    const savedState = loadReceiptState();
+    if (savedState) {
+      setRestoredReceiptState(savedState);
+    }
+    // Clean up URL
+    window.history.replaceState({}, "", window.location.pathname);
+  }, [receiptReturnParam]);
 
   // When restored state is ready and AI is configured, open the receipt dialog
   useEffect(() => {
@@ -119,13 +123,13 @@ export function AiChatWidget() {
           .select("*"),
       ]);
 
-      householdDataRef.current = {
+      setHouseholdData({
         products: productsRes.data ?? [],
         locations: locsRes.data ?? [],
         quantityUnits: unitsRes.data ?? [],
         shoppingLocations: storesRes.data ?? [],
         conversions: conversionsRes.data ?? [],
-      };
+      });
     } catch {
       // Silently fail — stock entry cards will just have empty dropdowns
     }
@@ -284,7 +288,7 @@ export function AiChatWidget() {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => {
-                  loadHouseholdData();
+                  refreshHouseholdData();
                   setReceiptDialogOpen(true);
                 }}
                 className="hover:bg-white/20 rounded-full p-1 transition-colors"
@@ -353,7 +357,7 @@ export function AiChatWidget() {
                 {msg.type === "stock_entry" && msg.items && msg.items.length > 0 && (
                   <StockEntryCard
                     items={msg.items}
-                    householdData={householdDataRef.current}
+                    householdData={householdData}
                     onSaved={refreshHouseholdData}
                   />
                 )}
@@ -414,7 +418,7 @@ export function AiChatWidget() {
           setReceiptDialogOpen(val);
           if (!val) setRestoredReceiptState(null);
         }}
-        householdData={householdDataRef.current}
+        householdData={householdData}
         hasVisionModel={hasVisionModel}
         onImported={refreshHouseholdData}
         initialState={restoredReceiptState}

@@ -78,6 +78,11 @@ export function ImageUpload({
               alt="Product preview"
               fill
               className="object-cover"
+              unoptimized={
+                !!preview &&
+                preview.startsWith("http") &&
+                !preview.includes(".supabase.co")
+              }
             />
           </div>
           <button

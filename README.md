@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.10.3-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.10.4-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.10.3
+Current version is v0.10.4
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -66,8 +66,10 @@ Current version is v0.10.3
 - **Privacy Warning** — Prominent notice that AI requests are proxied through the server; self-host for full privacy
 - **Receipt Scanning** — Photograph a receipt, extract items via OCR (Tesseract.js) or Vision AI (Ollama VLM), review in editable table, and bulk-import to stock
 - **Dual OCR/VLM Mode** — Choose between traditional OCR + text AI parsing or direct vision model image analysis, with automatic two-pass fallback for thinking models
-- **Receipt NL Refinement** — Refine parsed receipt items with natural language instructions (e.g. "remove the total row")
+- **Receipt Item Editing** — Add, edit, and delete individual receipt items with inline controls; auto-fill product defaults on match
 - **Unmatched Product Wizard** — Step through unmatched receipt items, scan barcodes, create new products, and auto-match back
+- **Edit Stock Entry Pricing** — Per-unit or total price toggle with unit selector and conversion factor display when editing stock entries
+- **Fractional Quick Consume** — Quick consume supports decimal amounts (e.g. 0.5 kg) for sub-unit consumption
 
 ### For Contributors
 - **Documentation** — README, BRANDING.md, CONTRIBUTING.md, CHANGELOG.md
@@ -471,6 +473,18 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Auto-match to existing products, "Import selected" bulk-creates stock entries with purchase-to-stock conversion
 - [x] Natural language refinement of parsed items (e.g. "remove the total row")
 - [x] Unmatched product wizard: scan barcode → create product → auto-match back to receipt
+
+**Bug fixes & UX polish (v0.10.3):** ✓
+- [x] User-Agent header on all Ollama calls (fixes 403 behind Cloudflare Tunnel)
+
+**Receipt improvements, image fix & stock editing (v0.10.4):** ✓
+- [x] Receipt scanning: side-by-side image view, manual add/edit/delete, auto-fill product defaults, wizard fix
+- [x] Barcode scanning: trim whitespace/control chars, `maybeSingle()` lookup
+- [x] Image timeout fix: bypass Next.js SSR proxy for external OFF images (was blocking pages 2+ min)
+- [x] Edit stock entry: per-unit/total price toggle with unit selector and conversion support
+- [x] Fractional quick consume: `quick_consume_amount` accepts decimals (min 0.01, step 0.5)
+- [x] Quick open label clarified: "entries" instead of misleading unit name
+- [x] Receipt price input shows unit suffix (e.g. "/ bottle")
 </details>
 
 ---

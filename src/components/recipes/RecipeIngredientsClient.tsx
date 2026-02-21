@@ -48,12 +48,10 @@ import {
 import {
   addIngredient,
   updateIngredient,
-  updateRecipe,
   removeIngredient,
   undoRemoveIngredient,
   reorderIngredients,
 } from "@/lib/recipe-actions";
-import { ServingScaler } from "@/components/recipes/ServingScaler";
 import { scaleAmount, formatScaledAmount } from "@/lib/recipe-utils";
 import type {
   Recipe,
@@ -73,6 +71,7 @@ type Props = {
   initialIngredients: RecipeIngredientWithRelations[];
   products: Product[];
   quantityUnits: QuantityUnit[];
+  desiredServings: number;
 };
 
 type IngredientFormState = {
@@ -146,10 +145,10 @@ export function RecipeIngredientsClient({
   initialIngredients,
   products,
   quantityUnits,
+  desiredServings,
 }: Props) {
   const router = useRouter();
   const [ingredients, setIngredients] = useState(initialIngredients);
-  const [desiredServings, setDesiredServings] = useState(recipe.desired_servings);
   const [showDialog, setShowDialog] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<IngredientFormState>(EMPTY_FORM);
@@ -196,11 +195,6 @@ export function RecipeIngredientsClient({
       else next.add(key);
       return next;
     });
-  };
-
-  const handleServingChange = async (value: number) => {
-    setDesiredServings(value);
-    await updateRecipe(recipe.id, { desired_servings: value });
   };
 
   // ============================================
@@ -414,15 +408,6 @@ export function RecipeIngredientsClient({
           Add Ingredient
         </Button>
       </div>
-
-      {/* Serving scaler */}
-      {ingredients.length > 0 && (
-        <ServingScaler
-          baseServings={recipe.base_servings}
-          desiredServings={desiredServings}
-          onChange={handleServingChange}
-        />
-      )}
 
       {/* Empty state */}
       {ingredients.length === 0 && (

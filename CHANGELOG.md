@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.4] - 2026-02-21
+
+### Added
+- **Recipes: stock fulfillment + cook action** (v0.11.4)
+  - `RecipeFulfillment` component — "Ready to cook" / "X ingredients missing" badge (CheckCircle / XCircle), fulfillment progress bar, per-ingredient need/have/missing rows, "Add missing" button, "Cook" button
+  - `RecipeDetailClient` — new thin client wrapper that owns `desiredServings` state and passes it to `ServingScaler`, `RecipeFulfillment`, and `RecipeIngredientsClient` (serving scaler moved out of ingredient list)
+  - `consumeRecipe` action — fetches stock entries, computes FIFO fulfillment, consumes all fulfilled non-skipped ingredients with a shared `correlation_id` and `recipe_id` for the stock log
+  - `undoConsumeRecipe(correlationId)` — undoes entire recipe cook via shared correlation_id; exposed as 8-second sonner undo toast
+  - `addMissingToShoppingList` action — increments existing undone items or inserts new rows for each missing ingredient
+  - `computeRecipeFulfillment` pure function in `recipe-utils.ts` — returns per-ingredient and overall fulfillment status
+  - `IngredientFulfillment`, `RecipeFulfillmentResult` types in `recipe-utils.ts`
+  - `consumeStock` in `stock-actions.ts` now accepts `correlationId?` (shared across recipe cook) and `recipeId?` (written to `stock_log.recipe_id`)
+  - `/recipes/[id]` page now fetches stock totals and shopping lists in parallel alongside other data
+
+---
+
 ## [0.11.3] - 2026-02-21
 
 ### Added

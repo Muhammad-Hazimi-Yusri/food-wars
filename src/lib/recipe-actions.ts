@@ -1,7 +1,9 @@
 import { createClient } from '@/lib/supabase/client';
 import { getHouseholdId } from '@/lib/supabase/get-household';
-import type { Recipe, RecipeIngredient } from '@/types/database';
+import type { Recipe, RecipeIngredient, RecipeIngredientWithRelations, StockEntryWithProduct } from '@/types/database';
 import { deleteRecipePicture } from '@/lib/supabase/storage';
+import { consumeStock, undoConsume } from '@/lib/stock-actions';
+import { computeRecipeFulfillment } from '@/lib/recipe-utils';
 
 type ActionResult = {
   success: boolean;
@@ -299,6 +301,165 @@ export async function reorderIngredients(
     return {
       success: false,
       error: err instanceof Error ? err.message : 'Failed to reorder ingredients',
+    };
+  }
+}
+
+// ============================================
+// RECIPE CONSUMPTION
+// ============================================
+
+/**
+ * Consume stock for all fulfilled, checkable ingredients in a recipe.
+ * Uses a shared correlation_id so the entire cook can be undone at once.
+ */
+export async function consumeRecipe(
+  recipe: Recipe,
+  ingredients: RecipeIngredientWithRelations[],
+  desiredServings: number
+): Promise<ActionResult & { correlationId?: string }> {
+  try {
+    const supabase = createClient();
+
+    // Collect product IDs that should be consumed
+    const consumableIngredients = ingredients.filter(
+      (i) =>
+        i.product_id &&
+        !i.not_check_stock_fulfillment &&
+        !i.product?.not_check_stock_fulfillment_for_recipes
+    );
+
+    if (consumableIngredients.length === 0) {
+      return { success: true };
+    }
+
+    const productIds = [...new Set(consumableIngredients.map((i) => i.product_id!))];
+
+    // Fetch stock entries with product join (needed by consumeStock's auto-add logic)
+    const { data: stockData, error: stockError } = await supabase
+      .from('stock_entries')
+      .select('*, product:products(*)')
+      .in('product_id', productIds);
+    if (stockError) throw stockError;
+
+    const stockEntries = (stockData ?? []) as StockEntryWithProduct[];
+
+    // Group entries by product_id
+    const byProduct = new Map<string, StockEntryWithProduct[]>();
+    for (const entry of stockEntries) {
+      const arr = byProduct.get(entry.product_id) ?? [];
+      arr.push(entry);
+      byProduct.set(entry.product_id, arr);
+    }
+
+    // Build totals map for fulfillment check
+    const stockByProduct = new Map<string, number>();
+    for (const [pid, entries] of byProduct) {
+      stockByProduct.set(pid, entries.reduce((sum, e) => sum + e.amount, 0));
+    }
+
+    const fulfillment = computeRecipeFulfillment(
+      ingredients,
+      stockByProduct,
+      recipe.base_servings,
+      desiredServings
+    );
+
+    const sharedCorrelationId = crypto.randomUUID();
+
+    for (const f of fulfillment.ingredients) {
+      if (f.skipped || !f.fulfilled || !f.productId) continue;
+
+      const entries = byProduct.get(f.productId) ?? [];
+      if (entries.length === 0) continue;
+
+      const result = await consumeStock(f.productId, entries, f.needed, {
+        correlationId: sharedCorrelationId,
+        recipeId: recipe.id,
+      });
+      if (!result.success) throw new Error(result.error);
+    }
+
+    return { success: true, correlationId: sharedCorrelationId };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to consume recipe',
+    };
+  }
+}
+
+/**
+ * Undo a recipe consumption by correlation ID.
+ */
+export async function undoConsumeRecipe(
+  correlationId: string
+): Promise<ActionResult> {
+  return undoConsume(correlationId);
+}
+
+type MissingIngredient = {
+  productId: string;
+  amount: number;
+  quId: string | null;
+};
+
+/**
+ * Add missing recipe ingredients to a shopping list.
+ * Increments existing undone items for the same product, inserts new ones otherwise.
+ */
+export async function addMissingToShoppingList(
+  missing: MissingIngredient[],
+  shoppingListId: string
+): Promise<ActionResult> {
+  try {
+    const supabase = createClient();
+    const household = await getHouseholdId(supabase);
+    if (!household.success) return { success: false, error: household.error };
+    const { householdId } = household;
+
+    // Fetch existing undone items for duplicate detection
+    const { data: existingData } = await supabase
+      .from('shopping_list_items')
+      .select('id, product_id, amount, sort_order')
+      .eq('shopping_list_id', shoppingListId)
+      .eq('done', false);
+
+    const items = (existingData ?? []) as {
+      id: string;
+      product_id: string | null;
+      amount: number;
+      sort_order: number;
+    }[];
+
+    for (const m of missing) {
+      const existingItem = items.find((i) => i.product_id === m.productId);
+      if (existingItem) {
+        await supabase
+          .from('shopping_list_items')
+          .update({ amount: existingItem.amount + m.amount })
+          .eq('id', existingItem.id);
+        existingItem.amount += m.amount;
+      } else {
+        const maxSort = items.reduce((max, i) => Math.max(max, i.sort_order), -1);
+        await supabase.from('shopping_list_items').insert({
+          household_id: householdId,
+          shopping_list_id: shoppingListId,
+          product_id: m.productId,
+          amount: m.amount,
+          qu_id: m.quId,
+          sort_order: maxSort + 1,
+          note: null,
+        });
+        items.push({ id: '', product_id: m.productId, amount: m.amount, sort_order: maxSort + 1 });
+      }
+    }
+
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to add to shopping list',
     };
   }
 }

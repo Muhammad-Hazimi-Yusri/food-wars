@@ -5,6 +5,10 @@ import { getHouseholdId } from '@/lib/supabase/get-household';
 
 type ConsumeOptions = {
   spoiled?: boolean;
+  /** If provided, use this correlation ID instead of generating a new one (e.g., for recipe consume). */
+  correlationId?: string;
+  /** Recipe ID to record in the stock log for recipe-initiated consumption. */
+  recipeId?: string;
 };
 
 type ConsumeResult = {
@@ -38,7 +42,7 @@ export async function consumeStock(
     if (!household.success) return { success: false, error: household.error, consumed: 0 };
     const { householdId, userId } = household;
 
-    const correlationId = crypto.randomUUID();
+    const correlationId = options?.correlationId ?? crypto.randomUUID();
     const usedDate = new Date().toISOString().split('T')[0];
 
     // Build a lookup from entry id → full entry for log fields
@@ -83,6 +87,7 @@ export async function consumeStock(
         undone: false,
         user_id: userId,
         note: entry.note ?? null,
+        recipe_id: options?.recipeId ?? null,
       });
       if (logError) throw logError;
     }

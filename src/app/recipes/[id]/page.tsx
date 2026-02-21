@@ -6,8 +6,14 @@ import { ChefHat, ArrowLeft, Pencil } from "lucide-react";
 import { Noren } from "@/components/diner/Noren";
 import { Button } from "@/components/ui/button";
 import { getRecipePictureSignedUrl } from "@/lib/supabase/storage";
-import { RecipeIngredientsClient } from "@/components/recipes/RecipeIngredientsClient";
-import type { Recipe, RecipeIngredientWithRelations, Product, QuantityUnit } from "@/types/database";
+import { RecipeDetailClient } from "@/components/recipes/RecipeDetailClient";
+import type {
+  Recipe,
+  RecipeIngredientWithRelations,
+  Product,
+  QuantityUnit,
+  ShoppingList,
+} from "@/types/database";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -46,6 +52,33 @@ export default async function RecipeDetailPage({ params }: Props) {
   const products = (productsResult.data ?? []) as Product[];
   const quantityUnits = (quantityUnitsResult.data ?? []) as QuantityUnit[];
 
+  // Fetch stock totals and shopping lists in parallel (needed for fulfillment)
+  const productIds = ingredients
+    .map((i) => i.product_id)
+    .filter((pid): pid is string => pid !== null);
+
+  const [stockResult, listsResult] = await Promise.all([
+    productIds.length > 0
+      ? supabase
+          .from("stock_entries")
+          .select("product_id, amount")
+          .in("product_id", productIds)
+      : Promise.resolve({ data: [] }),
+    supabase
+      .from("shopping_lists")
+      .select("*")
+      .order("name"),
+  ]);
+
+  // Build stockByProduct map as plain Record for client serialization
+  const stockByProduct: Record<string, number> = {};
+  for (const row of stockResult.data ?? []) {
+    const entry = row as { product_id: string; amount: number };
+    stockByProduct[entry.product_id] =
+      (stockByProduct[entry.product_id] ?? 0) + entry.amount;
+  }
+
+  const shoppingLists = (listsResult.data ?? []) as ShoppingList[];
   const pictureUrl = await getRecipePictureSignedUrl(recipe.picture_file_name);
 
   return (
@@ -105,12 +138,14 @@ export default async function RecipeDetailPage({ params }: Props) {
           </div>
         </div>
 
-        {/* Ingredients */}
-        <RecipeIngredientsClient
+        {/* Serving scaler + fulfillment + ingredient list */}
+        <RecipeDetailClient
           recipe={recipe}
           initialIngredients={ingredients}
           products={products}
           quantityUnits={quantityUnits}
+          stockByProduct={stockByProduct}
+          shoppingLists={shoppingLists}
         />
       </main>
     </div>

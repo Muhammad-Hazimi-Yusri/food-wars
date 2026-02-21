@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.11.3-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.11.4-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.11.3
+Current version is v0.11.4
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -529,11 +529,11 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] `desired_servings` input with stepper and quick-set buttons
 - [x] Live-scaled ingredient amounts: `amount * (desired / base)`
 
-**v0.11.4 — Stock fulfillment:**
-- [ ] "Can I make this?" badge per recipe and per ingredient
-- [ ] Per-ingredient: needed vs. in-stock vs. missing amounts
-- [ ] "Add missing to shopping list" button
-- [ ] "Consume recipe" action — deducts all ingredients from stock with undo
+**v0.11.4 — Stock fulfillment:** ✓
+- [x] "Can I make this?" badge per recipe and per ingredient
+- [x] Per-ingredient: needed vs. in-stock vs. missing amounts
+- [x] "Add missing to shopping list" button
+- [x] "Consume recipe" action — deducts all ingredients from stock with undo
 
 **v0.11.5 — Nesting + produces product:**
 - [ ] Recipe as ingredient (recipe_nestings table)
@@ -958,6 +958,8 @@ food-wars/
 │   │   │   ├── MasterDataList.tsx # Reusable list with CRUD
 │   │   │   └── ProductsListClient.tsx # Products table with filters/sorting
 │   │   ├── recipes/               # Recipe components
+│   │   │   ├── RecipeDetailClient.tsx # Client wrapper (desiredServings state, orchestrates scaler + fulfillment + list)
+│   │   │   ├── RecipeFulfillment.tsx  # Fulfillment badge, progress bar, cook + add-to-list actions
 │   │   │   ├── RecipeForm.tsx     # Create/edit recipe (name, description, servings, picture)
 │   │   │   ├── RecipeIngredientsClient.tsx # Ingredient list (DnD reorder, groups, add/edit/delete)
 │   │   │   ├── RecipesListClient.tsx # Recipe card grid with search + undo delete

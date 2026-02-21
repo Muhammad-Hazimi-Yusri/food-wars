@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.11.5-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.11.6-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.11.5
+Current version is v0.11.6
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -586,30 +586,30 @@ CREATE TABLE recipe_nestings (
 ```
 
 **Core features:**
-- [ ] Recipe CRUD with rich text instructions
-- [ ] Ingredient groups (collapsible sections)
-- [ ] Serving size scaling (auto-calculates amounts)
-- [ ] Recipe images (Supabase Storage: `recipe-pictures` bucket)
-- [ ] Recipe nesting (recipe as ingredient)
+- [x] Recipe CRUD with markdown instructions (edit + live preview in form, rendered on detail page)
+- [x] Ingredient groups (collapsible sections)
+- [x] Serving size scaling (auto-calculates amounts)
+- [x] Recipe images (Supabase Storage: `recipe-pictures` bucket)
+- [x] Recipe nesting (recipe as ingredient)
 
 **Inventory integration:**
-- [ ] "Can I make this?" — stock fulfillment check
-- [ ] Green/red indicator per ingredient
-- [ ] Shows: needed amount, in stock, missing
-- [ ] "Add missing to shopping list" button
-- [ ] "Consume recipe" — deducts all ingredients
-- [ ] Respects `not_check_stock_fulfillment_for_recipes` product flag
+- [x] "Can I make this?" — stock fulfillment check
+- [x] Green/red indicator per ingredient
+- [x] Shows: needed amount, in stock, missing
+- [x] "Add missing to shopping list" button
+- [x] "Consume recipe" — deducts all ingredients
+- [x] Respects `not_check_stock_fulfillment_for_recipes` product flag
 
 **Due Score:**
-- [ ] Calculated score based on expiring ingredients
-- [ ] Higher = more ingredients due soon/overdue/expired
-- [ ] Sort recipes by due score
-- [ ] Helps reduce food waste
+- [x] Calculated score based on expiring ingredients
+- [x] Higher = more ingredients due soon/overdue/expired
+- [x] Sort recipes by due score
+- [x] "Due soon" / "Expiring!" badge on recipe cards
 
 **Produces product:**
-- [ ] Recipe can output a product (e.g., Bread recipe → Bread product)
-- [ ] On consume, adds produced product to stock
-- [ ] Useful for batch cooking, meal prep
+- [x] Recipe can output a product (e.g., Bread recipe → Bread product)
+- [x] On consume, adds produced product to stock
+- [x] Useful for batch cooking, meal prep
 
 #### v0.12 - Meal Planning (was v1.2)
 

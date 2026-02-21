@@ -342,6 +342,7 @@ export type Recipe = {
   household_id: string;
   name: string;
   description: string | null;
+  instructions: string | null;
   picture_file_name: string | null;
   base_servings: number;
   desired_servings: number;

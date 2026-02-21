@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { ChefHat, ArrowLeft, Pencil } from "lucide-react";
 import { Noren } from "@/components/diner/Noren";
 import { Button } from "@/components/ui/button";
@@ -164,6 +166,19 @@ export default async function RecipeDetailPage({ params }: Props) {
               <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
                 {recipe.description}
               </p>
+            )}
+
+            {recipe.instructions && (
+              <div className="border-t pt-3 mt-1">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                  Instructions
+                </p>
+                <div className="prose prose-sm max-w-none text-gray-700">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {recipe.instructions}
+                  </ReactMarkdown>
+                </div>
+              </div>
             )}
           </div>
         </div>

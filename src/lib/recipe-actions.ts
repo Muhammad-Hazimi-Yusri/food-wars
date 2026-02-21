@@ -13,6 +13,7 @@ type ActionResult = {
 type CreateRecipeParams = {
   name: string;
   description?: string | null;
+  instructions?: string | null;
   base_servings?: number;
   picture_file_name?: string | null;
 };

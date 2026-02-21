@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +27,8 @@ export function RecipeForm({ recipe }: Props) {
 
   const [name, setName] = useState(recipe?.name ?? "");
   const [description, setDescription] = useState(recipe?.description ?? "");
+  const [instructions, setInstructions] = useState(recipe?.instructions ?? "");
+  const [instructionsTab, setInstructionsTab] = useState<"edit" | "preview">("edit");
   const [baseServings, setBaseServings] = useState(
     recipe?.base_servings?.toString() ?? "1"
   );
@@ -93,6 +97,7 @@ export function RecipeForm({ recipe }: Props) {
         const result = await updateRecipe(recipe.id, {
           name: trimmedName,
           description: description.trim() || null,
+          instructions: instructions.trim() || null,
           base_servings: servings,
           picture_file_name: pictureFileName,
         });
@@ -101,6 +106,7 @@ export function RecipeForm({ recipe }: Props) {
         const result = await createRecipe({
           name: trimmedName,
           description: description.trim() || null,
+          instructions: instructions.trim() || null,
           base_servings: servings,
           picture_file_name: pictureFileName,
         });
@@ -137,16 +143,60 @@ export function RecipeForm({ recipe }: Props) {
 
             {/* Description */}
             <div className="space-y-1.5">
-              <Label htmlFor="description">Description / Instructions</Label>
+              <Label htmlFor="description">Description</Label>
               <textarea
                 id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Steps, notes, tips..."
+                placeholder="Short description of the dish..."
                 disabled={saving}
-                rows={6}
+                rows={2}
                 className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-y"
               />
+            </div>
+
+            {/* Instructions (Markdown) */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="instructions">Instructions</Label>
+                <div className="flex items-center gap-1 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setInstructionsTab("edit")}
+                    className={`px-2 py-0.5 rounded ${instructionsTab === "edit" ? "bg-muted font-medium" : "text-muted-foreground hover:text-foreground"}`}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInstructionsTab("preview")}
+                    disabled={!instructions.trim()}
+                    className={`px-2 py-0.5 rounded ${instructionsTab === "preview" ? "bg-muted font-medium" : "text-muted-foreground hover:text-foreground"} disabled:opacity-40`}
+                  >
+                    Preview
+                  </button>
+                </div>
+              </div>
+              {instructionsTab === "edit" ? (
+                <textarea
+                  id="instructions"
+                  value={instructions}
+                  onChange={(e) => setInstructions(e.target.value)}
+                  placeholder={"1. Preheat oven to 200°C\n2. Mix flour and butter...\n\nTip: Use room-temperature eggs for best results."}
+                  disabled={saving}
+                  rows={8}
+                  className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm font-mono placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-y"
+                />
+              ) : (
+                <div className="min-h-[10rem] w-full rounded-md border border-input bg-muted/30 px-3 py-2 text-sm prose prose-sm max-w-none overflow-auto">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {instructions}
+                  </ReactMarkdown>
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Supports Markdown: **bold**, numbered lists, etc.
+              </p>
             </div>
 
             {/* Base servings */}

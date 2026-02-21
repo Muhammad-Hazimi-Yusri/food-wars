@@ -145,6 +145,7 @@ export function RecipesListClient({
               key={recipe.id}
               recipe={recipe}
               onDelete={handleDelete}
+              dueScore={dueScoreByRecipe[recipe.id] ?? 0}
             />
           ))}
         </div>
@@ -153,12 +154,30 @@ export function RecipesListClient({
   );
 }
 
+function DueScoreBadge({ score }: { score: number }) {
+  if (score <= 0) return null;
+  if (score >= 50) {
+    return (
+      <span className="absolute top-2 right-2 z-10 bg-red-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full shadow">
+        Expiring!
+      </span>
+    );
+  }
+  return (
+    <span className="absolute top-2 right-2 z-10 bg-amber-400 text-white text-xs font-semibold px-2 py-0.5 rounded-full shadow">
+      Due soon
+    </span>
+  );
+}
+
 function RecipeCard({
   recipe,
   onDelete,
+  dueScore,
 }: {
   recipe: RecipeWithUrl;
   onDelete: (r: Recipe) => void;
+  dueScore: number;
 }) {
   const descriptionExcerpt =
     recipe.description && recipe.description.length > 90
@@ -168,7 +187,7 @@ function RecipeCard({
   return (
     <div className="bg-white rounded-lg border hover:shadow-sm transition-shadow flex flex-col overflow-hidden">
       {/* Picture */}
-      <Link href={`/recipes/${recipe.id}`} className="block">
+      <Link href={`/recipes/${recipe.id}`} className="block relative">
         {recipe.pictureUrl ? (
           <div className="relative h-36 bg-hayama">
             <Image
@@ -177,10 +196,12 @@ function RecipeCard({
               fill
               className="object-cover"
             />
+            <DueScoreBadge score={dueScore} />
           </div>
         ) : (
-          <div className="h-36 bg-hayama flex items-center justify-center">
+          <div className="h-36 bg-hayama flex items-center justify-center relative">
             <ChefHat className="h-10 w-10 text-hayama-dark" />
+            <DueScoreBadge score={dueScore} />
           </div>
         )}
       </Link>

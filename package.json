@@ -1,6 +1,6 @@
 {
   "name": "food-wars",
-  "version": "0.11.5",
+  "version": "0.11.6",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -33,7 +33,9 @@
     "next": "16.1.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-markdown": "^10.1.0",
     "react-zxing": "^2.1.0",
+    "remark-gfm": "^4.0.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
     "tesseract.js": "^7.0.0"

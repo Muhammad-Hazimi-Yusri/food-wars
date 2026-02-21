@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.6] - 2026-02-21
+
+### Added
+- **Recipes: markdown instructions + due score card badge** (v0.11.6)
+  - `instructions TEXT` column added to `recipes` table (migration 014)
+  - `Recipe` type gains `instructions: string | null` field
+  - `CreateRecipeParams` / `UpdateRecipeParams` in `recipe-actions.ts` include `instructions`
+  - `RecipeForm` — new Instructions textarea (monospace font) below Description; Edit / Preview tab toggle renders markdown via `ReactMarkdown` + `remark-gfm`; Description shortened to 2-row blurb field
+  - `/recipes/[id]` detail page — renders `recipe.instructions` as markdown (`prose prose-sm`) when set
+  - `react-markdown` + `remark-gfm` dependencies added
+  - `RecipeCard` — "Expiring!" (red) / "Due soon" (amber) badge overlaid on card picture when due score ≥ 50 / ≥ 5
+  - All v0.11 roadmap checklist items now `[x]` in README
+
+---
+
 ## [0.11.5] - 2026-02-21
 
 ### Added

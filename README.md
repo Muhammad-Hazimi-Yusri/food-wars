@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.11.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.11.1-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.11.0
+Current version is v0.11.1
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -512,11 +512,12 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Empty `/recipes` page (server component)
 - [x] Recipes nav link (ChefHat icon) in UserMenu
 
-**v0.11.1 — Recipe CRUD:**
-- [ ] Create/edit recipe form (name, description, servings, picture)
-- [ ] Recipe list with search/filter and card grid
-- [ ] Delete with undo toast (sonner)
-- [ ] Recipe images via `recipe-pictures` Supabase Storage bucket
+**v0.11.1 — Recipe CRUD:** ✓
+- [x] Create/edit recipe form (name, description, servings, picture)
+- [x] Recipe list with search/filter and card grid
+- [x] Delete with undo toast (sonner)
+- [x] Recipe images via `recipe-pictures` Supabase Storage bucket
+- [x] `/recipes/new`, `/recipes/[id]`, `/recipes/[id]/edit` pages
 
 **v0.11.2 — Recipe ingredients:**
 - [ ] Add/edit/remove ingredients, drag-reorder (@dnd-kit)
@@ -890,6 +891,14 @@ food-wars/
 │   │   │       │   └── page.tsx   # Edit product page
 │   │   │       └── conversions/
 │   │   │           └── page.tsx   # QU conversions page
+│   │   ├── recipes/
+│   │   │   ├── page.tsx           # Recipe list (card grid + search)
+│   │   │   ├── new/
+│   │   │   │   └── page.tsx       # Create new recipe
+│   │   │   └── [id]/
+│   │   │       ├── page.tsx       # Recipe detail view
+│   │   │       └── edit/
+│   │   │           └── page.tsx   # Edit recipe
 │   │   ├── shopping-lists/
 │   │   │   ├── page.tsx           # Shopping lists overview
 │   │   │   └── [id]/
@@ -948,6 +957,9 @@ food-wars/
 │   │   │   ├── MasterDataForm.tsx # Reusable add/edit modal
 │   │   │   ├── MasterDataList.tsx # Reusable list with CRUD
 │   │   │   └── ProductsListClient.tsx # Products table with filters/sorting
+│   │   ├── recipes/               # Recipe components
+│   │   │   ├── RecipeForm.tsx     # Create/edit recipe (name, description, servings, picture)
+│   │   │   └── RecipesListClient.tsx # Recipe card grid with search + undo delete
 │   │   ├── shopping/              # Shopping list components
 │   │   │   ├── ShoppingListsClient.tsx    # Lists overview (CRUD)
 │   │   │   └── ShoppingListDetailClient.tsx # List detail (items, grouping, purchase)
@@ -972,7 +984,7 @@ food-wars/
 │   │   │   ├── middleware.ts      # Auth middleware helpers
 │   │   │   ├── get-household.ts   # Household ID resolver (auth + guest)
 │   │   │   ├── server.ts          # Server-side Supabase client
-│   │   │   └── storage.ts         # File upload utilities
+│   │   │   └── storage.ts         # File upload utilities (product + recipe pictures)
 │   │   ├── __tests__/
 │   │   │   ├── barcode-actions.test.ts    # Barcode CRUD tests
 │   │   │   ├── date-shorthands.test.ts   # Date shorthand tests
@@ -992,6 +1004,7 @@ food-wars/
 │   │   ├── inventory-utils.ts     # Stock aggregation, expiry & FIFO helpers
 │   │   ├── openfoodfacts.ts      # Open Food Facts API client
 │   │   ├── store-brand-map.ts    # UK store-brand detection config
+│   │   ├── recipe-actions.ts      # Recipe CRUD + undo (create, update, delete, undo delete)
 │   │   ├── shopping-list-actions.ts # Shopping list server actions
 │   │   ├── shopping-list-utils.ts   # Auto-generation gap calculators
 │   │   ├── product-actions.ts     # Product server actions (OFF refetch, image download)
@@ -999,7 +1012,7 @@ food-wars/
 │   │   ├── stock-entry-utils.ts   # Shared bulk import (bulkCreateStockEntries) & unit conversion
 │   │   └── utils.ts               # cn() and general utilities
 │   └── types/
-│       └── database.ts            # Supabase generated types
+│       └── database.ts            # Manual TypeScript types (Product, Stock, Recipe, etc.)
 ├── supabase/
 │   ├── migrations/
 │   │   ├── 001_core_schema.sql    # Main tables + RLS policies
@@ -1013,7 +1026,8 @@ food-wars/
 │   │   ├── 009_barcode_index.sql     # Compound index for barcode lookups
 │   │   ├── 010_brand_fields.sql     # Add brand + is_store_brand to products
 │   │   ├── 011_product_nutrition.sql # Nutrition facts table with RLS
-│   │   └── 012_household_ai_settings.sql # AI settings table with RLS
+│   │   ├── 012_household_ai_settings.sql # AI settings table with RLS
+│   │   └── 013_recipes.sql        # recipes, recipe_ingredients, recipe_nestings tables + RLS
 │   └── scripts/
 │       └── cleanup_orphan_households.sql  # Manual cleanup script
 ├── BRANDING.md                    # Design system & color palette

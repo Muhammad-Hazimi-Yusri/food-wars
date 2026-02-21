@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.1] - 2026-02-21
+
+### Added
+- **Recipes: CRUD + images** (v0.11.1)
+  - `RecipeForm` component — create/edit form with name, description, base servings stepper, and picture upload (reuses `ImageUpload`)
+  - `RecipesListClient` component — searchable card grid with optimistic delete + 8-second undo toast
+  - `/recipes` list page — fetches recipes with signed picture URLs, renders `RecipesListClient`
+  - `/recipes/new` — server page with auth redirect guard
+  - `/recipes/[id]` — recipe detail page with picture, name, description, servings
+  - `/recipes/[id]/edit` — edit page pre-populating `RecipeForm` with existing data
+  - `uploadRecipePicture`, `deleteRecipePicture`, `getRecipePictureSignedUrl` in `storage.ts`
+  - `createRecipe`, `updateRecipe`, `deleteRecipe`, `undoDeleteRecipe` in `recipe-actions.ts`
+
+---
+
 ## [0.11.0] - 2026-02-21
 
 ### Added

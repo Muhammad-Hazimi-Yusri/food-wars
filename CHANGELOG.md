@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] - 2026-02-21
+
+### Added
+- **Recipes: schema + empty page** (v0.11.0)
+  - `recipes` table — name, description, picture, base_servings, desired_servings, not_check_shoppinglist, product_id (produces product)
+  - `recipe_ingredients` table — product, amount, qu, ingredient_group, variable_amount, sort_order, fulfillment flags
+  - `recipe_nestings` table — recipe-as-ingredient with self-nesting guard (CHECK constraint)
+  - Full dual-mode RLS on all 3 tables (authenticated owner + anonymous guest household)
+  - Indexes on household_id, recipe_id, product_id for each table
+  - `Recipe`, `RecipeIngredient`, `RecipeNesting` TypeScript types in `database.ts`
+  - `RecipeWithRelations`, `RecipeIngredientWithRelations` joined types
+  - Empty `/recipes` page (server component, `bg-hayama`, `max-w-5xl`) with `ChefHat` empty state
+  - Recipes nav link (ChefHat icon) in UserMenu dropdown between Shopping Lists and Journal
+
+### Database Migrations
+- `013_recipes.sql` — `CREATE TABLE recipes`, `recipe_ingredients`, `recipe_nestings` with full RLS + indexes
+
+---
+
 ## [0.10.5] - 2026-02-20
 
 ### Added

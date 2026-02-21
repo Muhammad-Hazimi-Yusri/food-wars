@@ -1,5 +1,5 @@
 // ============================================
-// FOOD WARS DATABASE TYPES v0.10.2
+// FOOD WARS DATABASE TYPES v0.11.0
 // Complete types matching Grocy schema
 // ============================================
 
@@ -334,6 +334,49 @@ export type HouseholdAiSettings = {
 };
 
 // ============================================
+// RECIPES
+// ============================================
+
+export type Recipe = {
+  id: string;
+  household_id: string;
+  name: string;
+  description: string | null;
+  picture_file_name: string | null;
+  base_servings: number;
+  desired_servings: number;
+  not_check_shoppinglist: boolean;
+  product_id: string | null;
+  created_at: string;
+};
+
+export type RecipeIngredient = {
+  id: string;
+  household_id: string;
+  recipe_id: string;
+  product_id: string | null;
+  amount: number;
+  qu_id: string | null;
+  note: string | null;
+  ingredient_group: string | null;
+  variable_amount: string | null;
+  only_check_single_unit_in_stock: boolean;
+  not_check_stock_fulfillment: boolean;
+  price_factor: number;
+  sort_order: number;
+  created_at: string;
+};
+
+export type RecipeNesting = {
+  id: string;
+  household_id: string;
+  recipe_id: string;
+  includes_recipe_id: string;
+  servings: number;
+  created_at: string;
+};
+
+// ============================================
 // NLP PARSED STOCK ITEM (for AI stock entry)
 // ============================================
 
@@ -386,6 +429,15 @@ export type StockLogWithRelations = StockLog & {
     qu_stock?: Pick<QuantityUnit, 'name' | 'name_plural'> | null;
   };
   location?: Pick<Location, 'id' | 'name'> | null;
+};
+
+export type RecipeWithRelations = Recipe & {
+  product?: Pick<Product, 'id' | 'name'> | null;
+};
+
+export type RecipeIngredientWithRelations = RecipeIngredient & {
+  product?: Pick<Product, 'id' | 'name' | 'qu_id_stock' | 'not_check_stock_fulfillment_for_recipes'> | null;
+  qu?: Pick<QuantityUnit, 'id' | 'name' | 'name_plural'> | null;
 };
 
 // ============================================

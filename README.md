@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.10.5-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.11.0-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.10.5
+Current version is v0.11.0
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -498,13 +498,48 @@ Food Wars targets a different audience: people who want Grocy-like features with
 
 ---
 
-### Planned
+### In Progress
 
 #### v0.11 - Recipes (was v1.1)
 
 **Goal:** Recipe database with inventory integration
 
-**Schema to add:**
+**v0.11.0 — Schema + empty page:** ✓
+- [x] `recipes` table with RLS (migration 013)
+- [x] `recipe_ingredients` table with RLS
+- [x] `recipe_nestings` table with RLS (CHECK: no self-nesting)
+- [x] `Recipe`, `RecipeIngredient`, `RecipeNesting`, joined types in `database.ts`
+- [x] Empty `/recipes` page (server component)
+- [x] Recipes nav link (ChefHat icon) in UserMenu
+
+**v0.11.1 — Recipe CRUD:**
+- [ ] Create/edit recipe form (name, description, servings, picture)
+- [ ] Recipe list with search/filter and card grid
+- [ ] Delete with undo toast (sonner)
+- [ ] Recipe images via `recipe-pictures` Supabase Storage bucket
+
+**v0.11.2 — Recipe ingredients:**
+- [ ] Add/edit/remove ingredients, drag-reorder (@dnd-kit)
+- [ ] Ingredient groups (collapsible sections by `ingredient_group`)
+- [ ] Product picker with search, quantity unit selector
+- [ ] `variable_amount` support ("to taste", "a pinch")
+
+**v0.11.3 — Serving size scaling:**
+- [ ] `desired_servings` input with stepper and quick-set buttons
+- [ ] Live-scaled ingredient amounts: `amount * (desired / base)`
+
+**v0.11.4 — Stock fulfillment:**
+- [ ] "Can I make this?" badge per recipe and per ingredient
+- [ ] Per-ingredient: needed vs. in-stock vs. missing amounts
+- [ ] "Add missing to shopping list" button
+- [ ] "Consume recipe" action — deducts all ingredients from stock with undo
+
+**v0.11.5 — Nesting + produces product:**
+- [ ] Recipe as ingredient (recipe_nestings table)
+- [ ] "Produces product" — recipe outputs a product on consume
+- [ ] Due score: calculated from expiring ingredients, sortable
+
+**Schema added:**
 ```sql
 -- Recipes
 CREATE TABLE recipes (

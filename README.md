@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.11.2-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.11.3-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.11.2
+Current version is v0.11.3
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -525,9 +525,9 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Product picker with search, quantity unit selector
 - [x] `variable_amount` support ("to taste", "a pinch")
 
-**v0.11.3 — Serving size scaling:**
-- [ ] `desired_servings` input with stepper and quick-set buttons
-- [ ] Live-scaled ingredient amounts: `amount * (desired / base)`
+**v0.11.3 — Serving size scaling:** ✓
+- [x] `desired_servings` input with stepper and quick-set buttons
+- [x] Live-scaled ingredient amounts: `amount * (desired / base)`
 
 **v0.11.4 — Stock fulfillment:**
 - [ ] "Can I make this?" badge per recipe and per ingredient
@@ -960,7 +960,8 @@ food-wars/
 │   │   ├── recipes/               # Recipe components
 │   │   │   ├── RecipeForm.tsx     # Create/edit recipe (name, description, servings, picture)
 │   │   │   ├── RecipeIngredientsClient.tsx # Ingredient list (DnD reorder, groups, add/edit/delete)
-│   │   │   └── RecipesListClient.tsx # Recipe card grid with search + undo delete
+│   │   │   ├── RecipesListClient.tsx # Recipe card grid with search + undo delete
+│   │   │   └── ServingScaler.tsx  # Serving size stepper with quick-set multipliers
 │   │   ├── shopping/              # Shopping list components
 │   │   │   ├── ShoppingListsClient.tsx    # Lists overview (CRUD)
 │   │   │   └── ShoppingListDetailClient.tsx # List detail (items, grouping, purchase)
@@ -1006,6 +1007,7 @@ food-wars/
 │   │   ├── openfoodfacts.ts      # Open Food Facts API client
 │   │   ├── store-brand-map.ts    # UK store-brand detection config
 │   │   ├── recipe-actions.ts      # Recipe CRUD + undo (create, update, delete, undo delete)
+│   │   ├── recipe-utils.ts        # Pure recipe utilities (scaleAmount, formatScaledAmount)
 │   │   ├── shopping-list-actions.ts # Shopping list server actions
 │   │   ├── shopping-list-utils.ts   # Auto-generation gap calculators
 │   │   ├── product-actions.ts     # Product server actions (OFF refetch, image download)

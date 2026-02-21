@@ -48,10 +48,13 @@ import {
 import {
   addIngredient,
   updateIngredient,
+  updateRecipe,
   removeIngredient,
   undoRemoveIngredient,
   reorderIngredients,
 } from "@/lib/recipe-actions";
+import { ServingScaler } from "@/components/recipes/ServingScaler";
+import { scaleAmount, formatScaledAmount } from "@/lib/recipe-utils";
 import type {
   Recipe,
   RecipeIngredientWithRelations,
@@ -146,6 +149,7 @@ export function RecipeIngredientsClient({
 }: Props) {
   const router = useRouter();
   const [ingredients, setIngredients] = useState(initialIngredients);
+  const [desiredServings, setDesiredServings] = useState(recipe.desired_servings);
   const [showDialog, setShowDialog] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<IngredientFormState>(EMPTY_FORM);
@@ -192,6 +196,11 @@ export function RecipeIngredientsClient({
       else next.add(key);
       return next;
     });
+  };
+
+  const handleServingChange = async (value: number) => {
+    setDesiredServings(value);
+    await updateRecipe(recipe.id, { desired_servings: value });
   };
 
   // ============================================
@@ -345,9 +354,12 @@ export function RecipeIngredientsClient({
   // ============================================
 
   function IngredientRow({ ing }: { ing: RecipeIngredientWithRelations }) {
+    const scaledAmount = formatScaledAmount(
+      scaleAmount(ing.amount, recipe.base_servings, desiredServings)
+    );
     const displayAmount = ing.variable_amount
       ? ing.variable_amount
-      : `${ing.amount}${ing.qu ? ` ${ing.qu.name}` : ""}`;
+      : `${scaledAmount}${ing.qu ? ` ${ing.qu.name}` : ""}`;
 
     return (
       <div className="flex items-center gap-2 bg-white border rounded-md px-3 py-2 text-sm">
@@ -402,6 +414,15 @@ export function RecipeIngredientsClient({
           Add Ingredient
         </Button>
       </div>
+
+      {/* Serving scaler */}
+      {ingredients.length > 0 && (
+        <ServingScaler
+          baseServings={recipe.base_servings}
+          desiredServings={desiredServings}
+          onChange={handleServingChange}
+        />
+      )}
 
       {/* Empty state */}
       {ingredients.length === 0 && (

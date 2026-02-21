@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.3] - 2026-02-21
+
+### Added
+- **Recipes: serving size scaling** (v0.11.3)
+  - `ServingScaler` component — stepper (±0.5), direct number input, quick-set ×0.5 / ×1 / ×2 / ×3 buttons relative to base servings; "base: N" hint shown when scaled differs from base
+  - All ingredient amounts live-scale as desired servings changes: `amount × (desired / base)`, rounded to 2 decimals, trailing zeros stripped
+  - Variable-amount ingredients ("to taste") remain unscaled
+  - `desired_servings` persisted to DB on change via `updateRecipe`
+  - `scaleAmount(amount, baseServings, desiredServings)` and `formatScaledAmount(scaled)` pure utilities in `src/lib/recipe-utils.ts`
+  - Serving scaler only shown when recipe has at least one ingredient
+
+---
+
 ## [0.11.2] - 2026-02-21
 
 ### Added

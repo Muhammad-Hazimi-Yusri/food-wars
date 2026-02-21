@@ -440,6 +440,10 @@ export type RecipeIngredientWithRelations = RecipeIngredient & {
   qu?: Pick<QuantityUnit, 'id' | 'name' | 'name_plural'> | null;
 };
 
+export type RecipeNestingWithRelations = RecipeNesting & {
+  included_recipe?: Pick<Recipe, 'id' | 'name' | 'base_servings'> | null;
+};
+
 // ============================================
 // INVENTORY STATS (computed)
 // ============================================

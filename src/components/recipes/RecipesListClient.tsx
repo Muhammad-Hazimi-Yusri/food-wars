@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Plus, Search, ChefHat, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search, ChefHat, Pencil, Trash2, ArrowUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,23 +13,38 @@ import type { Recipe } from "@/types/database";
 
 type RecipeWithUrl = Recipe & { pictureUrl: string | null };
 
+type SortMode = "name" | "due";
+
 type Props = {
   recipes: RecipeWithUrl[];
+  dueScoreByRecipe: Record<string, number>;
 };
 
-export function RecipesListClient({ recipes: initialRecipes }: Props) {
+export function RecipesListClient({
+  recipes: initialRecipes,
+  dueScoreByRecipe,
+}: Props) {
   const router = useRouter();
   const [recipes, setRecipes] = useState(initialRecipes);
   const [search, setSearch] = useState("");
+  const [sortMode, setSortMode] = useState<SortMode>("name");
 
-  const filtered = recipes.filter((r) => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return (
-      r.name.toLowerCase().includes(q) ||
-      (r.description ?? "").toLowerCase().includes(q)
-    );
-  });
+  const filtered = recipes
+    .filter((r) => {
+      if (!search.trim()) return true;
+      const q = search.toLowerCase();
+      return (
+        r.name.toLowerCase().includes(q) ||
+        (r.description ?? "").toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => {
+      if (sortMode === "due") {
+        const diff = (dueScoreByRecipe[b.id] ?? 0) - (dueScoreByRecipe[a.id] ?? 0);
+        if (diff !== 0) return diff;
+      }
+      return a.name.localeCompare(b.name);
+    });
 
   const handleDelete = async (recipe: Recipe) => {
     // Optimistic remove
@@ -65,12 +80,24 @@ export function RecipesListClient({ recipes: initialRecipes }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-megumi">Recipes</h1>
-        <Button asChild className="bg-soma text-white hover:bg-soma-dark">
-          <Link href="/recipes/new">
-            <Plus className="h-4 w-4 mr-1" />
-            Add Recipe
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-xs h-8"
+            onClick={() => setSortMode((m) => (m === "name" ? "due" : "name"))}
+            title={sortMode === "name" ? "Sort by due score" : "Sort by name"}
+          >
+            <ArrowUpDown className="h-3.5 w-3.5" />
+            {sortMode === "due" ? "Due soon" : "A–Z"}
+          </Button>
+          <Button asChild className="bg-soma text-white hover:bg-soma-dark">
+            <Link href="/recipes/new">
+              <Plus className="h-4 w-4 mr-1" />
+              Add Recipe
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Search */}

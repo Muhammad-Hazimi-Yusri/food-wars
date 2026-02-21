@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.5] - 2026-02-21
+
+### Added
+- **Recipes: nesting + produces product** (v0.11.5)
+  - `RecipeNestingClient` component — list of sub-recipes with servings multiplier; add (recipe search picker + servings input), edit servings, remove with undo toast; excludes self and already-nested recipes from picker
+  - `ProducesProduct` component — product search picker; links a product to a recipe; when cooked, the linked product is added to stock (amount = desired servings); Change / Clear buttons
+  - `flattenNestedIngredients` pure utility in `recipe-utils.ts` — recursively resolves sub-recipes into a flat ingredient list, scaling by nesting servings; cycle guard via `Set<string>`
+  - `computeDueScore` pure utility in `recipe-utils.ts` — scores a recipe by ingredient expiry urgency (expired +100, today +50, 1–3 days +20, 4–7 days +5)
+  - `addNestedRecipe`, `updateNestedRecipe`, `removeNestedRecipe`, `undoRemoveNestedRecipe`, `setProducesProduct` server actions in `recipe-actions.ts`
+  - `consumeRecipe` enhanced: when `recipe.product_id` is set, inserts a stock entry for the produced product after consuming ingredients
+  - `RecipeNestingWithRelations` type added to `src/types/database.ts`
+  - Nested ingredient fulfillment — `RecipeDetailClient` flattens nested ingredients and normalises amounts to base scale before passing to `computeRecipeFulfillment`; cook action consumes only direct (own) ingredients
+  - `RecipeFulfillment` gains `ownIngredients` prop — fulfillment display uses all (own + nested), cook consumes own only
+  - `/recipes/[id]` page now fetches nestings, all household recipes, all household recipe_ingredients (for nested fulfillment), and full stock in a single parallel round trip
+  - `/recipes` list gains "Due soon" sort — toggle between A–Z and due score (ingredients expiring soonest rise to top)
+
+---
+
 ## [0.11.4] - 2026-02-21
 
 ### Added

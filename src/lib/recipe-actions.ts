@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/client';
 import { getHouseholdId } from '@/lib/supabase/get-household';
-import type { Recipe, RecipeIngredient, RecipeIngredientWithRelations, StockEntryWithProduct } from '@/types/database';
+import type { Recipe, RecipeIngredient, RecipeNesting, RecipeIngredientWithRelations, StockEntryWithProduct } from '@/types/database';
 import { deleteRecipePicture } from '@/lib/supabase/storage';
 import { consumeStock, undoConsume } from '@/lib/stock-actions';
 import { computeRecipeFulfillment } from '@/lib/recipe-utils';
@@ -380,6 +380,27 @@ export async function consumeRecipe(
       if (!result.success) throw new Error(result.error);
     }
 
+    // If this recipe produces a product, add a stock entry for it
+    if (recipe.product_id) {
+      const hhResult = await getHouseholdId(supabase);
+      if (!hhResult.success) throw new Error(hhResult.error);
+      const today = new Date().toISOString().split('T')[0];
+      await supabase.from('stock_entries').insert({
+        household_id: hhResult.householdId,
+        product_id: recipe.product_id,
+        amount: desiredServings,
+        purchased_date: today,
+        best_before_date: null,
+        price: null,
+        location_id: null,
+        shopping_location_id: null,
+        open: false,
+        opened_date: null,
+        stock_id: crypto.randomUUID(),
+        note: `Produced by recipe cook`,
+      });
+    }
+
     return { success: true, correlationId: sharedCorrelationId };
   } catch (err) {
     return {
@@ -493,6 +514,146 @@ export async function undoDeleteRecipe(
     return {
       success: false,
       error: err instanceof Error ? err.message : 'Failed to undo delete',
+    };
+  }
+}
+
+// ============================================
+// RECIPE NESTING ACTIONS
+// ============================================
+
+/**
+ * Add a nested recipe to a recipe.
+ */
+export async function addNestedRecipe(
+  recipeId: string,
+  includesRecipeId: string,
+  servings: number
+): Promise<ActionResult & { nestingId?: string }> {
+  try {
+    const supabase = createClient();
+    const household = await getHouseholdId(supabase);
+    if (!household.success) return { success: false, error: household.error };
+
+    const { data, error } = await supabase
+      .from('recipe_nestings')
+      .insert({
+        household_id: household.householdId,
+        recipe_id: recipeId,
+        includes_recipe_id: includesRecipeId,
+        servings,
+      })
+      .select('id')
+      .single();
+    if (error) throw error;
+
+    return { success: true, nestingId: data?.id };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to add nested recipe',
+    };
+  }
+}
+
+/**
+ * Update the servings for a recipe nesting.
+ */
+export async function updateNestedRecipe(
+  nestingId: string,
+  servings: number
+): Promise<ActionResult> {
+  try {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from('recipe_nestings')
+      .update({ servings })
+      .eq('id', nestingId);
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to update nesting',
+    };
+  }
+}
+
+/**
+ * Remove a nested recipe. Returns snapshot for undo.
+ */
+export async function removeNestedRecipe(
+  nestingId: string
+): Promise<ActionResult & { snapshot?: RecipeNesting }> {
+  try {
+    const supabase = createClient();
+
+    const { data: snapshot, error: fetchError } = await supabase
+      .from('recipe_nestings')
+      .select('*')
+      .eq('id', nestingId)
+      .single();
+    if (fetchError) throw fetchError;
+
+    const { error } = await supabase
+      .from('recipe_nestings')
+      .delete()
+      .eq('id', nestingId);
+    if (error) throw error;
+
+    return { success: true, snapshot: snapshot as RecipeNesting };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to remove nested recipe',
+    };
+  }
+}
+
+/**
+ * Undo a nested recipe removal.
+ */
+export async function undoRemoveNestedRecipe(
+  snapshot: RecipeNesting
+): Promise<ActionResult> {
+  try {
+    const supabase = createClient();
+    const { error } = await supabase.from('recipe_nestings').insert({
+      id: snapshot.id,
+      household_id: snapshot.household_id,
+      recipe_id: snapshot.recipe_id,
+      includes_recipe_id: snapshot.includes_recipe_id,
+      servings: snapshot.servings,
+    });
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to undo nesting remove',
+    };
+  }
+}
+
+/**
+ * Set or clear the product that this recipe produces on cook.
+ */
+export async function setProducesProduct(
+  recipeId: string,
+  productId: string | null
+): Promise<ActionResult> {
+  try {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from('recipes')
+      .update({ product_id: productId })
+      .eq('id', recipeId);
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to set produces product',
     };
   }
 }

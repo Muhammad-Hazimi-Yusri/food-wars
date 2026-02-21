@@ -10,6 +10,7 @@ import { RecipeDetailClient } from "@/components/recipes/RecipeDetailClient";
 import type {
   Recipe,
   RecipeIngredientWithRelations,
+  RecipeNestingWithRelations,
   Product,
   QuantityUnit,
   ShoppingList,
@@ -23,54 +24,79 @@ export default async function RecipeDetailPage({ params }: Props) {
   const { id } = await params;
   const supabase = await createClient();
 
-  const [recipeResult, ingredientsResult, productsResult, quantityUnitsResult] =
-    await Promise.all([
-      supabase.from("recipes").select("*").eq("id", id).single(),
-      supabase
-        .from("recipe_ingredients")
-        .select(
-          "*, product:products(id, name, qu_id_stock, not_check_stock_fulfillment_for_recipes), qu:quantity_units(id, name, name_plural)"
-        )
-        .eq("recipe_id", id)
-        .order("sort_order"),
-      supabase
-        .from("products")
-        .select("id, name, qu_id_stock, not_check_stock_fulfillment_for_recipes")
-        .eq("active", true)
-        .order("name"),
-      supabase
-        .from("quantity_units")
-        .select("*")
-        .eq("active", true)
-        .order("sort_order"),
-    ]);
+  // Fetch everything in one round trip
+  const [
+    recipeResult,
+    productsResult,
+    quantityUnitsResult,
+    nestingsResult,
+    allRecipesResult,
+    allIngredientsResult,
+    stockResult,
+    listsResult,
+  ] = await Promise.all([
+    supabase.from("recipes").select("*").eq("id", id).single(),
+    supabase
+      .from("products")
+      .select("id, name, qu_id_stock, not_check_stock_fulfillment_for_recipes")
+      .eq("active", true)
+      .order("name"),
+    supabase
+      .from("quantity_units")
+      .select("*")
+      .eq("active", true)
+      .order("sort_order"),
+    supabase
+      .from("recipe_nestings")
+      .select(
+        "*, included_recipe:recipes!includes_recipe_id(id, name, base_servings)"
+      )
+      .eq("recipe_id", id),
+    supabase
+      .from("recipes")
+      .select("id, name, base_servings")
+      .order("name"),
+    supabase
+      .from("recipe_ingredients")
+      .select(
+        "*, product:products(id, name, qu_id_stock, not_check_stock_fulfillment_for_recipes), qu:quantity_units(id, name, name_plural)"
+      ),
+    supabase.from("stock_entries").select("product_id, amount"),
+    supabase.from("shopping_lists").select("*").order("name"),
+  ]);
 
   if (!recipeResult.data) notFound();
 
   const recipe = recipeResult.data as Recipe;
-  const ingredients = (ingredientsResult.data ?? []) as RecipeIngredientWithRelations[];
   const products = (productsResult.data ?? []) as Product[];
   const quantityUnits = (quantityUnitsResult.data ?? []) as QuantityUnit[];
+  const nestings = (nestingsResult.data ?? []) as RecipeNestingWithRelations[];
+  const allRecipes = (allRecipesResult.data ?? []) as Pick<
+    Recipe,
+    "id" | "name" | "base_servings"
+  >[];
+  const shoppingLists = (listsResult.data ?? []) as ShoppingList[];
 
-  // Fetch stock totals and shopping lists in parallel (needed for fulfillment)
-  const productIds = ingredients
-    .map((i) => i.product_id)
-    .filter((pid): pid is string => pid !== null);
+  // Build per-recipe ingredient map from all household ingredients
+  const allRawIngredients = (
+    allIngredientsResult.data ?? []
+  ) as RecipeIngredientWithRelations[];
 
-  const [stockResult, listsResult] = await Promise.all([
-    productIds.length > 0
-      ? supabase
-          .from("stock_entries")
-          .select("product_id, amount")
-          .in("product_id", productIds)
-      : Promise.resolve({ data: [] }),
-    supabase
-      .from("shopping_lists")
-      .select("*")
-      .order("name"),
-  ]);
+  const allIngredientsByRecipe: Record<string, RecipeIngredientWithRelations[]> =
+    {};
+  for (const ing of allRawIngredients) {
+    if (!allIngredientsByRecipe[ing.recipe_id]) {
+      allIngredientsByRecipe[ing.recipe_id] = [];
+    }
+    allIngredientsByRecipe[ing.recipe_id].push(ing);
+  }
 
-  // Build stockByProduct map as plain Record for client serialization
+  // Own ingredients for this recipe (already ordered by sort_order from DB)
+  const ownIngredients = (allIngredientsByRecipe[id] ?? []).sort(
+    (a, b) => a.sort_order - b.sort_order
+  );
+
+  // Build stockByProduct: sum amounts per product_id
   const stockByProduct: Record<string, number> = {};
   for (const row of stockResult.data ?? []) {
     const entry = row as { product_id: string; amount: number };
@@ -78,7 +104,11 @@ export default async function RecipeDetailPage({ params }: Props) {
       (stockByProduct[entry.product_id] ?? 0) + entry.amount;
   }
 
-  const shoppingLists = (listsResult.data ?? []) as ShoppingList[];
+  // Resolve produces product name
+  const initialProducesProductName = recipe.product_id
+    ? (products.find((p) => p.id === recipe.product_id)?.name ?? null)
+    : null;
+
   const pictureUrl = await getRecipePictureSignedUrl(recipe.picture_file_name);
 
   return (
@@ -138,14 +168,18 @@ export default async function RecipeDetailPage({ params }: Props) {
           </div>
         </div>
 
-        {/* Serving scaler + fulfillment + ingredient list */}
+        {/* Serving scaler + fulfillment + ingredient list + nestings + produces */}
         <RecipeDetailClient
           recipe={recipe}
-          initialIngredients={ingredients}
+          initialIngredients={ownIngredients}
           products={products}
           quantityUnits={quantityUnits}
           stockByProduct={stockByProduct}
           shoppingLists={shoppingLists}
+          nestings={nestings}
+          allRecipes={allRecipes}
+          allIngredientsByRecipe={allIngredientsByRecipe}
+          initialProducesProductName={initialProducesProductName}
         />
       </main>
     </div>

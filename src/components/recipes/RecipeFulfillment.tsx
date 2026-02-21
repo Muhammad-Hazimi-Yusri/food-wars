@@ -27,7 +27,10 @@ import type {
 
 type Props = {
   recipe: Recipe;
+  /** All ingredients including nested (used for fulfillment display) */
   ingredients: RecipeIngredientWithRelations[];
+  /** Only direct recipe ingredients (used for the cook/consume action) */
+  ownIngredients: RecipeIngredientWithRelations[];
   /** product_id → total amount in stock */
   stockByProduct: Record<string, number>;
   shoppingLists: ShoppingList[];
@@ -37,6 +40,7 @@ type Props = {
 export function RecipeFulfillment({
   recipe,
   ingredients,
+  ownIngredients,
   stockByProduct,
   shoppingLists,
   desiredServings,
@@ -70,7 +74,7 @@ export function RecipeFulfillment({
 
   const handleCook = async () => {
     setCooking(true);
-    const result = await consumeRecipe(recipe, ingredients, desiredServings);
+    const result = await consumeRecipe(recipe, ownIngredients, desiredServings);
     setCooking(false);
 
     if (!result.success) {

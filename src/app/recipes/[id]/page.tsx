@@ -6,27 +6,45 @@ import { ChefHat, ArrowLeft, Pencil } from "lucide-react";
 import { Noren } from "@/components/diner/Noren";
 import { Button } from "@/components/ui/button";
 import { getRecipePictureSignedUrl } from "@/lib/supabase/storage";
-import type { Recipe } from "@/types/database";
+import { RecipeIngredientsClient } from "@/components/recipes/RecipeIngredientsClient";
+import type { Recipe, RecipeIngredientWithRelations, Product, QuantityUnit } from "@/types/database";
 
 type Props = {
   params: Promise<{ id: string }>;
 };
 
-async function getRecipe(id: string): Promise<Recipe | null> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("recipes")
-    .select("*")
-    .eq("id", id)
-    .single();
-  return (data as Recipe) ?? null;
-}
-
 export default async function RecipeDetailPage({ params }: Props) {
   const { id } = await params;
-  const recipe = await getRecipe(id);
+  const supabase = await createClient();
 
-  if (!recipe) notFound();
+  const [recipeResult, ingredientsResult, productsResult, quantityUnitsResult] =
+    await Promise.all([
+      supabase.from("recipes").select("*").eq("id", id).single(),
+      supabase
+        .from("recipe_ingredients")
+        .select(
+          "*, product:products(id, name, qu_id_stock, not_check_stock_fulfillment_for_recipes), qu:quantity_units(id, name, name_plural)"
+        )
+        .eq("recipe_id", id)
+        .order("sort_order"),
+      supabase
+        .from("products")
+        .select("id, name, qu_id_stock, not_check_stock_fulfillment_for_recipes")
+        .eq("active", true)
+        .order("name"),
+      supabase
+        .from("quantity_units")
+        .select("*")
+        .eq("active", true)
+        .order("sort_order"),
+    ]);
+
+  if (!recipeResult.data) notFound();
+
+  const recipe = recipeResult.data as Recipe;
+  const ingredients = (ingredientsResult.data ?? []) as RecipeIngredientWithRelations[];
+  const products = (productsResult.data ?? []) as Product[];
+  const quantityUnits = (quantityUnitsResult.data ?? []) as QuantityUnit[];
 
   const pictureUrl = await getRecipePictureSignedUrl(recipe.picture_file_name);
 
@@ -86,6 +104,14 @@ export default async function RecipeDetailPage({ params }: Props) {
             )}
           </div>
         </div>
+
+        {/* Ingredients */}
+        <RecipeIngredientsClient
+          recipe={recipe}
+          initialIngredients={ingredients}
+          products={products}
+          quantityUnits={quantityUnits}
+        />
       </main>
     </div>
   );

@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.2] - 2026-02-21
+
+### Added
+- **Recipes: ingredient management** (v0.11.2)
+  - `RecipeIngredientsClient` component — full ingredient list with drag-reorder (@dnd-kit), collapsible groups, add/edit/delete with undo
+  - Add/edit ingredient dialog: product picker with search, amount, quantity unit selector, `ingredient_group` with `<datalist>` autocomplete, `note`, `variable_amount` (text override for "to taste" etc.), `not_check_stock_fulfillment` and `only_check_single_unit_in_stock` checkboxes
+  - Drag-reorder with `PointerSensor` (8 px), `TouchSensor` (250 ms), `KeyboardSensor`; persisted via `reorderIngredients`
+  - Ingredient groups: collapsible sections keyed by `ingredient_group`, ungrouped items shown first under "Ingredients"
+  - Per-ingredient delete with 8-second sonner undo toast
+  - Product selection auto-sets quantity unit from `product.qu_id_stock`
+  - `addIngredient`, `updateIngredient`, `removeIngredient`, `undoRemoveIngredient`, `reorderIngredients` actions in `recipe-actions.ts`
+  - `/recipes/[id]` page now fetches ingredients (with product + qu joins), active products, and active quantity units via `Promise.all`
+
+---
+
 ## [0.11.1] - 2026-02-21
 
 ### Added

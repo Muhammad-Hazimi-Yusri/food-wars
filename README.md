@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.11.1-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.11.2-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.11.1
+Current version is v0.11.2
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -519,11 +519,11 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Recipe images via `recipe-pictures` Supabase Storage bucket
 - [x] `/recipes/new`, `/recipes/[id]`, `/recipes/[id]/edit` pages
 
-**v0.11.2 — Recipe ingredients:**
-- [ ] Add/edit/remove ingredients, drag-reorder (@dnd-kit)
-- [ ] Ingredient groups (collapsible sections by `ingredient_group`)
-- [ ] Product picker with search, quantity unit selector
-- [ ] `variable_amount` support ("to taste", "a pinch")
+**v0.11.2 — Recipe ingredients:** ✓
+- [x] Add/edit/remove ingredients, drag-reorder (@dnd-kit)
+- [x] Ingredient groups (collapsible sections by `ingredient_group`)
+- [x] Product picker with search, quantity unit selector
+- [x] `variable_amount` support ("to taste", "a pinch")
 
 **v0.11.3 — Serving size scaling:**
 - [ ] `desired_servings` input with stepper and quick-set buttons
@@ -959,6 +959,7 @@ food-wars/
 │   │   │   └── ProductsListClient.tsx # Products table with filters/sorting
 │   │   ├── recipes/               # Recipe components
 │   │   │   ├── RecipeForm.tsx     # Create/edit recipe (name, description, servings, picture)
+│   │   │   ├── RecipeIngredientsClient.tsx # Ingredient list (DnD reorder, groups, add/edit/delete)
 │   │   │   └── RecipesListClient.tsx # Recipe card grid with search + undo delete
 │   │   ├── shopping/              # Shopping list components
 │   │   │   ├── ShoppingListsClient.tsx    # Lists overview (CRUD)

@@ -149,6 +149,36 @@ export async function undoRemoveMealPlanEntry(
 }
 
 /**
+ * Reorder entries within a day×section slot.
+ * Takes an ordered array of entry IDs and assigns sequential sort_order values.
+ */
+export async function reorderMealPlanEntries(
+  ids: string[]
+): Promise<ActionResult> {
+  try {
+    const supabase = createClient();
+    const household = await getHouseholdId(supabase);
+    if (!household.success) return { success: false, error: household.error };
+
+    for (let i = 0; i < ids.length; i++) {
+      const { error } = await supabase
+        .from('meal_plan')
+        .update({ sort_order: i })
+        .eq('id', ids[i])
+        .eq('household_id', household.householdId);
+      if (error) throw error;
+    }
+
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to reorder entries',
+    };
+  }
+}
+
+/**
  * Update fields on an existing meal plan entry.
  * Used for servings edits and DnD moves (day/section/sort_order).
  */

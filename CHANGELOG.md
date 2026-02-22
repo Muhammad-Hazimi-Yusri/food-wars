@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.3] - 2026-02-22
+
+### Added
+- **Meal planning: drag-and-drop** (v0.12.3) — reorder meals within a slot and drag across day×section cells; touch-friendly
+  - `reorderMealPlanEntries(ids[])` server action — sequential `sort_order` updates (0, 1, 2…) for entries in a slot
+  - `MealPlanWeekView` — self-contained `DndContext` with `PointerSensor` (distance: 8px) + `TouchSensor` (delay: 250ms) + `KeyboardSensor`; `DroppableCell` wrapper uses `useDroppable` so empty cells register as valid drop targets; `SortableEntryChip` uses `useSortable` per entry; `DragOverlay` shows a compact floating card (slight rotation + shadow) while dragging; drop zone highlighted with `ring-2 ring-soma/40` on hover
+  - `MealPlanClient` — mobile `DndContext` with `DroppableSection` + `SortableDayEntryCard` per section; `DragOverlay` shows full-size card; separate `DndContext`s for mobile and desktop avoid entry ID conflicts between the CSS-hidden view and the visible one
+  - Shared `handleDragEnd(event)` callback (via `useCallback`): parses `over.id` — if starts with `cell:${day}|${sectionId}` → drop onto empty cell/container; otherwise looks up target entry to determine its slot; same slot → `arrayMove` + `reorderMealPlanEntries`; different slot → `updateMealPlanEntry({ day, section_id, sort_order })`; optimistic update applied immediately; reverts to server snapshot + error toast on failure
+  - `localEntries` state in `MealPlanClient` (initialised from server `entries` prop) holds the optimistic DnD state; synced back via `useEffect` on `entries` prop change (after `router.refresh()`)
+
+---
+
 ## [0.12.2] - 2026-02-22
 
 ### Added

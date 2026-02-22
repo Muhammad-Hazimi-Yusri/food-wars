@@ -25,6 +25,10 @@ export type OFFProduct = {
 
 const OFF_API_BASE = "https://world.openfoodfacts.org/api/v2/product";
 
+export type OFFLookupResult =
+  | { found: true; product: OFFProduct }
+  | { found: false; reason: "not_found" | "network_error" };
+
 const OFF_FIELDS = [
   "product_name",
   "product_name_en",
@@ -66,26 +70,20 @@ function parseNutriments(
   return hasAnyValue ? result : null;
 }
 
-/**
- * Look up a barcode on Open Food Facts.
- * Returns product info if found, null otherwise.
- * Never throws — returns null on any error.
- */
-export async function lookupBarcodeOFF(
-  barcode: string
-): Promise<OFFProduct | null> {
-  try {
-    const res = await fetch(
-      `${OFF_API_BASE}/${barcode}.json?fields=${OFF_FIELDS}`,
-      { signal: AbortSignal.timeout(5000) }
-    );
-    if (!res.ok) return null;
+async function fetchOFF(barcode: string): Promise<OFFLookupResult> {
+  const res = await fetch(
+    `${OFF_API_BASE}/${barcode}.json?fields=${OFF_FIELDS}`,
+    { signal: AbortSignal.timeout(10_000) }
+  );
+  if (!res.ok) return { found: false, reason: "not_found" };
 
-    const data = await res.json();
-    if (data.status !== 1 || !data.product) return null;
+  const data = await res.json();
+  if (data.status !== 1 || !data.product) return { found: false, reason: "not_found" };
 
-    const p = data.product;
-    return {
+  const p = data.product;
+  return {
+    found: true,
+    product: {
       name: p.product_name || p.product_name_en || "",
       imageUrl: p.image_front_url || p.image_front_small_url || null,
       brands: p.brands || null,
@@ -96,10 +94,37 @@ export async function lookupBarcodeOFF(
       categories: p.categories || null,
       ingredientsText: p.ingredients_text || null,
       stores: p.stores || null,
-    };
-  } catch {
-    return null;
+    },
+  };
+}
+
+/**
+ * Look up a barcode on Open Food Facts with a typed result distinguishing
+ * "not found" from "network error". Retries once on network failures.
+ */
+export async function lookupBarcodeOFFStatus(
+  barcode: string
+): Promise<OFFLookupResult> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      return await fetchOFF(barcode);
+    } catch {
+      if (attempt === 1) return { found: false, reason: "network_error" };
+    }
   }
+  return { found: false, reason: "network_error" };
+}
+
+/**
+ * Look up a barcode on Open Food Facts.
+ * Returns product info if found, null otherwise.
+ * Never throws — returns null on any error.
+ */
+export async function lookupBarcodeOFF(
+  barcode: string
+): Promise<OFFProduct | null> {
+  const result = await lookupBarcodeOFFStatus(barcode);
+  return result.found ? result.product : null;
 }
 
 /**

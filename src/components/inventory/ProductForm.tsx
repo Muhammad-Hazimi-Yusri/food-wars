@@ -33,7 +33,7 @@ import { toast } from "sonner";
 import { ScannerDialog } from "@/components/barcode/ScannerDialog";
 import { lookupBarcodeLocal } from "@/lib/barcode-actions";
 import {
-  lookupBarcodeOFF,
+  lookupBarcodeOFFStatus,
   type OFFNutriments,
 } from "@/lib/openfoodfacts";
 import { downloadAndUploadOffImage } from "@/lib/product-actions";
@@ -239,7 +239,17 @@ export function ProductForm({
       }
 
       // 2. Look up on Open Food Facts
-      const offResult = await lookupBarcodeOFF(barcode);
+      const offLookup = await lookupBarcodeOFFStatus(barcode);
+      if (!offLookup.found) {
+        toast(
+          offLookup.reason === "network_error"
+            ? "Could not reach Open Food Facts — fill in details manually"
+            : "Barcode not found on Open Food Facts — fill in details manually"
+        );
+        setPendingBarcode(barcode);
+        return;
+      }
+      const offResult = offLookup.product;
       if (offResult) {
         if (offResult.name) {
           setFormData((prev) => ({
@@ -295,8 +305,6 @@ export function ProductForm({
           setOffNutritionGrade(offResult.nutritionGrade);
         }
         toast("Found on Open Food Facts");
-      } else {
-        toast("Barcode not found online — fill in details manually");
       }
       setPendingBarcode(barcode);
     } catch {

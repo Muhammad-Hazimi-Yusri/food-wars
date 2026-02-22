@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.12.1-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.12.2-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.12.1
+Current version is v0.12.2
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -519,11 +519,12 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] `meal-plan-actions.ts` — addMealPlanEntry, removeMealPlanEntry, undoRemoveMealPlanEntry, updateMealPlanEntry
 - [x] `/meal-plan?date=YYYY-MM-DD` query param routing (defaults to today)
 
-**v0.12.2 — Week View + Fulfillment Badges:** (desktop primary)
-- [ ] `MealPlanWeekView` — 7-column CSS Grid (Mon–Sun × sections)
-- [ ] Week navigation: prev/next week + "Today" button (`?week=YYYY-MM-DD`)
-- [ ] Responsive: day view on mobile, week view on desktop
-- [ ] Recipe fulfillment badges computed server-side (green/red per recipe card)
+**v0.12.2 — Week View + Fulfillment Badges:** ✓ (desktop primary)
+- [x] `MealPlanWeekView` — 7-column CSS Grid (Mon–Sun × sections) with section label column
+- [x] Week navigation: prev/next week chevrons + "Today" link (`?week=YYYY-MM-DD`)
+- [x] Responsive: day-tab strip on mobile (Mon–Sun), week grid on desktop (`≥md`)
+- [x] Recipe fulfillment badges computed server-side (green CheckCircle / red XCircle per recipe card)
+- [x] `MealPlanEntryCard` `compact` mode for week grid cells (icon + name + badge, 1 line)
 
 **v0.12.3 — Drag-and-Drop:**
 - [ ] Drag meal cards between day×section slots (cross-slot move)
@@ -716,8 +717,8 @@ CREATE TABLE meal_plan (
 ```
 
 **Calendar UI:**
-- [ ] Week view (desktop primary)
-- [x] Day view (mobile primary) — section cards with entries, prev/next day navigation (v0.12.1)
+- [x] Week view (desktop primary) — 7-column CSS Grid with section rows, fulfillment badges (v0.12.2)
+- [x] Day view (mobile primary) — section cards with entries, day-tab navigation within week (v0.12.2)
 - [ ] Drag-and-drop meal assignment
 - [ ] Copy day / copy week
 - [x] Meal plan sections (Breakfast, Lunch, Dinner) — schema + seed (v0.12.0)

@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.2] - 2026-02-22
+
+### Added
+- **Meal planning: week view + fulfillment badges** (v0.12.2) — desktop 7-column calendar grid with stock fulfillment indicators
+  - `MealPlanWeekView` — CSS Grid layout (`80px + repeat(7, 1fr)`) with section label column + 7 day columns; header row shows short weekday names + date number with today highlighted in `soma` colour; each day×section cell has a minimum height of 72px with stacked compact entry cards and a hover-reveal "+" button; unsectioned entries rendered in an "Other" row at the bottom if any exist
+  - `MealPlanEntryCard` — two display modes: default (day view) and `compact` (week grid); `compact` shows icon + truncated name + fulfillment badge on one line; both modes show fulfillment badge: green `CheckCircle` (can make) or red `XCircle` (missing stock) when `canMake` prop is provided
+  - `MealPlanClient` — restructured for week-based navigation: accepts `weekStart`, `weekDays`, `today`, and `fulfillmentByRecipeId`; **mobile**: day-tab strip (Mon–Sun, scrollable) with the existing section-card day view for the selected tab; **desktop** (`≥md`): `MealPlanWeekView`; week navigation header (prev/next chevrons + "Today" link) shared across both; dialog state tracks `dialogDay` and `dialogSectionId` for both mobile and desktop add buttons
+  - `/meal-plan` page updated to week-based routing: accepts `?week=YYYY-MM-DD` (ISO Monday) or `?date=YYYY-MM-DD` (derives Monday); fetches all 7 days' entries in one query (`.gte/.lte` on day column); max content width widened to `max-w-6xl` for desktop grid
+  - **Fulfillment computation (server-side):** unique recipe IDs collected from week entries; `recipe_ingredients` (with product + qu joins) and `stock_entries` fetched in parallel; stock totals aggregated into `Map<product_id, number>`; `computeRecipeFulfillment` called per recipe at base servings; `fulfillmentByRecipeId: Record<string, boolean>` passed as prop — computed once on page load, not per card
+  - Week header displays formatted date range (e.g. "17–23 Feb 2026", cross-month aware); "Today" link navigates to the current week's Monday
+
+---
+
 ## [0.12.1] - 2026-02-22
 
 ### Added

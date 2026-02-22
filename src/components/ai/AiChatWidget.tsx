@@ -2,16 +2,19 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import { Bot, X, Send, Loader2, MessageSquare, Trash2, Receipt, ScanEye } from "lucide-react";
+import { Bot, X, Send, Loader2, MessageSquare, Trash2, Receipt, ScanEye, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { ChatMessage } from "./ChatMessage";
 import { StockEntryCard } from "./StockEntryCard";
+import { RecipeRefCard } from "./RecipeRefCard";
 import { ReceiptCaptureDialog, loadReceiptState } from "./ReceiptCaptureDialog";
 import { PantryScanDialog } from "./PantryScanDialog";
 import { ParsedStockItem } from "@/types/database";
+import { addRecipeMissingToDefaultList } from "@/lib/recipe-actions";
+import type { RecipeRef, RecipeAction } from "@/types/ai";
 
 type Message = {
   id: string;
@@ -19,6 +22,8 @@ type Message = {
   content: string;
   type: "text" | "stock_entry";
   items?: ParsedStockItem[];
+  recipe_refs?: RecipeRef[];
+  recipe_action?: RecipeAction;
 };
 
 type HouseholdData = {
@@ -45,6 +50,7 @@ export function AiChatWidget() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [toastOffset, setToastOffset] = useState(0);
+  const [doneActionRecipeIds, setDoneActionRecipeIds] = useState<Set<string>>(new Set());
   const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
   const [pantryDialogOpen, setPantryDialogOpen] = useState(false);
   const [restoredReceiptState, setRestoredReceiptState] = useState<ReceiptState | null>(null);
@@ -225,6 +231,8 @@ export function AiChatWidget() {
         content: data.content || "I couldn't generate a response.",
         type: data.type ?? "text",
         items: data.items,
+        recipe_refs: data.recipe_refs,
+        recipe_action: data.recipe_action,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -250,6 +258,20 @@ export function AiChatWidget() {
   const refreshHouseholdData = () => {
     dataLoadedRef.current = false;
     loadHouseholdData();
+  };
+
+  const handleAddMissing = async (action: RecipeAction) => {
+    const result = await addRecipeMissingToDefaultList(action.recipe_id);
+    if (result.success) {
+      setDoneActionRecipeIds((prev) => new Set([...prev, action.recipe_id]));
+      toast.success(
+        result.addedCount === 0
+          ? `All ingredients for "${action.recipe_name}" are already in stock`
+          : `Added ${result.addedCount} missing ingredient${result.addedCount === 1 ? "" : "s"} to ${result.listName}`
+      );
+    } else {
+      toast.error(result.error ?? "Failed to add to shopping list");
+    }
   };
 
   // Don't render anything until we've checked config
@@ -349,6 +371,7 @@ export function AiChatWidget() {
                     "2 cans of tomatoes, aldi, £1",
                     "What's expiring soon?",
                     "What can I cook?",
+                    "Suggest a recipe for expiring items",
                   ].map((suggestion) => (
                     <button
                       key={suggestion}
@@ -373,6 +396,31 @@ export function AiChatWidget() {
                     householdData={householdData}
                     onSaved={refreshHouseholdData}
                   />
+                )}
+                {msg.recipe_refs && msg.recipe_refs.length > 0 && (
+                  <div className="mt-2 flex flex-col gap-1.5">
+                    {msg.recipe_refs.map((ref) => (
+                      <RecipeRefCard key={ref.recipe_id} recipeRef={ref} />
+                    ))}
+                  </div>
+                )}
+                {msg.recipe_action?.action === "add_missing_to_shopping_list" && (
+                  <div className="mt-2">
+                    {doneActionRecipeIds.has(msg.recipe_action.recipe_id) ? (
+                      <span className="text-xs text-green-600 flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3" /> Added to shopping list
+                      </span>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs h-7"
+                        onClick={() => handleAddMissing(msg.recipe_action!)}
+                      >
+                        Add missing to shopping list
+                      </Button>
+                    )}
+                  </div>
                 )}
               </ChatMessage>
             ))}

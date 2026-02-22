@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.11.6-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.11.7-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.11.6
+Current version is v0.11.7
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -60,7 +60,7 @@ Current version is v0.11.6
 - **OFF Image Persistence** — Product images downloaded from OFF to Supabase storage for reliable display
 - **Refetch from OFF** — Re-fetch product data (image, brand, nutrition) from Open Food Facts on demand
 - **AI Smart Input (Ollama)** — Connect your self-hosted Ollama instance for AI-powered stock entry
-- **AI Chat Assistant** — Floating chat widget with natural language stock entry, cooking suggestions from current inventory, and expiry advice
+- **AI Chat Assistant** — Floating chat widget with natural language stock entry, recipe-aware cooking suggestions (uses actual recipe database for fulfillment, due scores, ingredient lookup, and "add missing to shopping list" actions), and expiry advice
 - **AI Settings Page** — Configure Ollama URL, test connection, select text and vision models per household
 - **Guest Contact Hint** — Settings page shows contact info for guests to request Ollama server access
 - **Privacy Warning** — Prominent notice that AI requests are proxied through the server; self-host for full privacy
@@ -112,7 +112,7 @@ Food Wars targets a different audience: people who want Grocy-like features with
 | **Maturity** | Battle-tested since 2017 | Established | Established | Early development |
 | **Barcode scanning** | ✅ | ❌ | ❌ | ✅ v0.8 (camera + OFF lookup) |
 | **Nutrition facts** | ❌ | ✅ (recipe-level) | ✅ (recipe-level) | ✅ v0.9 (per-product, OFF auto-fill, Nutri-Score) |
-| **AI input** | ❌ | ❌ | ❌ | ✅ v0.10 (self-hosted Ollama, NLP stock entry) |
+| **AI input** | ❌ | ❌ | ❌ | ✅ v0.10 (Ollama NLP stock entry, receipt/pantry scan) + v0.11 (recipe-aware chat) |
 | **Offline support** | ✅ Full | ✅ Full | ✅ Full | ❌ Online only |
 | **Multi-user** | ✅ | ✅ | ✅ | 🔜 Planned |
 | **Chores/Tasks** | ✅ | ❌ | ❌ | ❌ Not planned |
@@ -540,6 +540,21 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] "Produces product" — recipe outputs a product on consume
 - [x] Due score: calculated from expiring ingredients, sortable
 
+**v0.11.6 — Markdown instructions + due score card badge:** ✓
+- [x] `instructions TEXT` column on `recipes` table (migration 014)
+- [x] `RecipeForm` — Instructions textarea with Edit/Preview tabs, live markdown preview
+- [x] `/recipes/[id]` detail page — instructions rendered as markdown (`prose prose-sm`)
+- [x] "Expiring!" (red) / "Due soon" (amber) badge overlaid on recipe card images (due score ≥ 50 / ≥ 5)
+
+**v0.11.7 — AI chat recipes awareness:** ✓
+- [x] Recipe library context (up to 80 recipes) injected into AI system prompt — fulfillment status, urgency score (due score), ingredient list with missing markers; computed server-side, sorted by urgency
+- [x] AI handles recipe intents: "What can I cook?", "Can I make X?", "What's in X?", "Scale X for N servings", "What should I cook first?", "Suggest a recipe for expiring items", "Add missing for X to shopping list"
+- [x] `<recipe_ref>` tag — AI wraps referenced recipes in inline `RecipeRefCard` (fulfillment badge + "View →" link); coexists with `<stock_entry>` tag flow
+- [x] `<recipe_action>` tag — "Add missing to shopping list" action button in chat; auto-targets `is_auto_target` shopping list; sonner toast with count + list name
+- [x] `RecipeRefCard` component (`src/components/ai/RecipeRefCard.tsx`)
+- [x] `src/types/ai.ts` — `RecipeRef` and `RecipeAction` shared types
+- [x] "Suggest a recipe for expiring items" chip on chat welcome screen
+
 **Schema added:**
 ```sql
 -- Recipes
@@ -915,6 +930,7 @@ food-wars/
 │   │   │   ├── PantryScanDialog.tsx # Pantry/fridge photo scanning dialog
 │   │   │   ├── ReceiptCaptureDialog.tsx # Receipt scanning dialog (capture → process → review → wizard)
 │   │   │   ├── ReceiptReviewTable.tsx # Editable review table for AI-parsed items
+│   │   │   ├── RecipeRefCard.tsx  # Mini recipe card (fulfillment badge + link) rendered in chat messages
 │   │   │   └── StockEntryCard.tsx # Inline editable stock entry cards
 │   │   ├── barcode/               # Barcode scanning components
 │   │   │   ├── BarcodeScanner.tsx  # Camera scanner (react-zxing)
@@ -1010,7 +1026,7 @@ food-wars/
 │   │   ├── inventory-utils.ts     # Stock aggregation, expiry & FIFO helpers
 │   │   ├── openfoodfacts.ts      # Open Food Facts API client
 │   │   ├── store-brand-map.ts    # UK store-brand detection config
-│   │   ├── recipe-actions.ts      # Recipe CRUD + undo (create, update, delete, undo delete)
+│   │   ├── recipe-actions.ts      # Recipe CRUD + undo + addRecipeMissingToDefaultList (AI chat action)
 │   │   ├── recipe-utils.ts        # Pure recipe utilities (scaleAmount, formatScaledAmount)
 │   │   ├── shopping-list-actions.ts # Shopping list server actions
 │   │   ├── shopping-list-utils.ts   # Auto-generation gap calculators
@@ -1019,6 +1035,7 @@ food-wars/
 │   │   ├── stock-entry-utils.ts   # Shared bulk import (bulkCreateStockEntries) & unit conversion
 │   │   └── utils.ts               # cn() and general utilities
 │   └── types/
+│       ├── ai.ts                  # AI response types (RecipeRef, RecipeAction)
 │       └── database.ts            # Manual TypeScript types (Product, Stock, Recipe, etc.)
 ├── supabase/
 │   ├── migrations/
@@ -1066,8 +1083,8 @@ Food Wars uses a Grocy-compatible database schema designed for comprehensive kit
 | `product_barcodes` | Multiple barcodes per product | ✅ v0.4 (UI in v0.8) |
 | `stock_entries` | Individual batches in stock | ✅ v0.4 |
 | `stock_log` | Transaction history for undo | ✅ v0.4 (UI in v0.6) |
-| `recipes` | Recipe definitions | 🔮 v0.11 |
-| `recipe_ingredients` | Recipe ingredients | 🔮 v0.11 |
+| `recipes` | Recipe definitions | ✅ v0.11 |
+| `recipe_ingredients` | Recipe ingredients | ✅ v0.11 |
 | `meal_plan` | Meal planning calendar | 🔮 v0.12 |
 | `shopping_lists` | Shopping list management | ✅ v0.7 |
 | `shopping_list_items` | Items within shopping lists | ✅ v0.7 |

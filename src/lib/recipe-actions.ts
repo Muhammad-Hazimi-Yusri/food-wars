@@ -658,3 +658,87 @@ export async function setProducesProduct(
     };
   }
 }
+
+// ============================================
+// AI CHAT ACTIONS
+// ============================================
+
+/**
+ * Compute missing ingredients for a recipe and add them to the household's
+ * default shopping list (is_auto_target, or first list alphabetically).
+ * Used by the AI chat widget "add missing to shopping list" action.
+ */
+export async function addRecipeMissingToDefaultList(
+  recipeId: string
+): Promise<ActionResult & { addedCount?: number; listName?: string }> {
+  try {
+    const supabase = createClient();
+    const household = await getHouseholdId(supabase);
+    if (!household.success) return { success: false, error: household.error };
+
+    // Find default shopping list
+    const { data: listsData } = await supabase
+      .from('shopping_lists')
+      .select('id, name, is_auto_target')
+      .order('name');
+    const lists = (listsData ?? []) as { id: string; name: string; is_auto_target: boolean }[];
+    if (lists.length === 0) return { success: false, error: 'No shopping lists found. Create one first.' };
+    const targetList = lists.find((l) => l.is_auto_target) ?? lists[0];
+
+    // Fetch recipe base servings
+    const { data: recipeData } = await supabase
+      .from('recipes')
+      .select('id, base_servings')
+      .eq('id', recipeId)
+      .single();
+    if (!recipeData) return { success: false, error: 'Recipe not found' };
+
+    // Fetch ingredients with product + unit joins
+    const { data: ingredientsData } = await supabase
+      .from('recipe_ingredients')
+      .select('*, product:products(id, name, qu_id_stock, not_check_stock_fulfillment_for_recipes), qu:quantity_units(id, name, name_plural)')
+      .eq('recipe_id', recipeId);
+    const ingredients = (ingredientsData ?? []) as RecipeIngredientWithRelations[];
+
+    // Fetch stock for relevant products only
+    const productIds = ingredients
+      .map((i) => i.product_id)
+      .filter((id): id is string => id !== null);
+    const { data: stockData } = productIds.length > 0
+      ? await supabase.from('stock_entries').select('product_id, amount').in('product_id', productIds)
+      : { data: [] };
+
+    const stockByProduct = new Map<string, number>();
+    for (const entry of (stockData ?? []) as { product_id: string; amount: number }[]) {
+      stockByProduct.set(entry.product_id, (stockByProduct.get(entry.product_id) ?? 0) + entry.amount);
+    }
+
+    const fulfillment = computeRecipeFulfillment(
+      ingredients,
+      stockByProduct,
+      recipeData.base_servings,
+      recipeData.base_servings,
+    );
+
+    const missing = fulfillment.ingredients
+      .filter((f) => !f.skipped && !f.fulfilled && f.productId)
+      .map((f) => {
+        const ing = ingredients.find((i) => i.id === f.ingredientId);
+        return { productId: f.productId!, amount: f.missing, quId: ing?.qu_id ?? null };
+      });
+
+    if (missing.length === 0) {
+      return { success: true, addedCount: 0, listName: targetList.name };
+    }
+
+    const result = await addMissingToShoppingList(missing, targetList.id);
+    if (!result.success) return result;
+
+    return { success: true, addedCount: missing.length, listName: targetList.name };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to add missing ingredients',
+    };
+  }
+}

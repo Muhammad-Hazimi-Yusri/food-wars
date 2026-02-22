@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.7] - 2026-02-22
+
+### Added
+- **AI chat: recipe awareness** — the assistant now knows about all household recipes and can answer recipe questions using real data rather than guessing from stock alone
+  - `POST /api/ai/chat` — fetches up to 80 recipes + their ingredients alongside the existing stock/product queries (all in the same `Promise.all`); computes `computeRecipeFulfillment` and `computeDueScore` server-side for each recipe; injects a compact `RECIPE LIBRARY` block into the system prompt, sorted by urgency (ingredient expiry pressure) descending
+  - Recipe context format per recipe: name, UUID, base servings, fulfillment status (✓ can make / ✗ missing N), urgency score, up to 15 ingredients with amounts + units + missing markers (`[✗]`), and "produces" product name where set
+  - System prompt recipe behaviour instructions: "What can I cook?", "What should I cook first?", "Can I make X?", "Recipe for X?", "Scale X for N servings", "Add missing for X to shopping list", "Suggest a recipe for expiring items"
+  - `<recipe_ref>` response tag — AI wraps referenced recipes in structured JSON tags (`recipe_id`, `recipe_name`, `can_make`, `missing_count`); parsed from the raw response alongside existing `<stock_entry>` parsing; returned as `recipe_refs[]` in API response with all tags stripped from display text
+  - `<recipe_action>` response tag — AI outputs a structured action tag when user asks to add missing ingredients to shopping list; parsed and returned as `recipe_action` in API response
+  - `stock_entries` select in `/api/ai/chat` extended with `product_id` (previously omitted) to enable server-side fulfillment and due score computation against the already-fetched stock data
+  - `RecipeRefCard` component (`src/components/ai/RecipeRefCard.tsx`) — mini recipe card rendered inline in chat messages: green `CheckCircle2` (can make) or red `XCircle` + missing count badge, recipe name truncated, "View →" link to `/recipes/[id]`
+  - `addRecipeMissingToDefaultList(recipeId)` added to `recipe-actions.ts` — finds the household's `is_auto_target` shopping list (fallback: first list alphabetically), fetches recipe ingredients with product + unit joins, fetches stock for relevant product IDs only, calls `computeRecipeFulfillment`, then delegates to the existing `addMissingToShoppingList`; returns `{ addedCount, listName }` for toast messaging; gracefully handles 0-missing ("already in stock") case
+  - `AiChatWidget` — `Message` type extended with `recipe_refs?: RecipeRef[]` and `recipe_action?: RecipeAction`; recipe ref cards rendered as a vertical stack below message text; "Add missing to shopping list" button rendered when `recipe_action` is present; `doneActionRecipeIds: Set<string>` state tracks completed actions per recipe ID (button replaced by "✓ Added to shopping list" on success); `handleAddMissing` calls `addRecipeMissingToDefaultList` and shows sonner toast with item count + list name
+  - "Suggest a recipe for expiring items" added as 4th suggestion chip on the chat welcome screen
+  - `src/types/ai.ts` — new shared types file: `RecipeRef` and `RecipeAction` interfaces, imported by both the server route and client widget
+
+---
+
 ## [0.11.6] - 2026-02-21
 
 ### Added

@@ -3,6 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { GUEST_HOUSEHOLD_ID } from "@/lib/constants";
 import { getAiSettings, isAiConfigured, callOllama } from "@/lib/ai-utils";
 import { parseAndMatchItems } from "@/lib/ai-parse-items";
+import { computeRecipeFulfillment, computeDueScore } from "@/lib/recipe-utils";
+import type { RecipeRef, RecipeAction } from "@/types/ai";
+import type { RecipeIngredientWithRelations } from "@/types/database";
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,8 +50,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch household context in parallel
-    const [productsRes, unitsRes, storesRes, locsRes, stockRes] = await Promise.all([
+    // Fetch household context + recipes in parallel
+    const [productsRes, unitsRes, storesRes, locsRes, stockRes, recipesRes] = await Promise.all([
       supabase
         .from("products")
         .select("id, name")
@@ -69,11 +72,17 @@ export async function POST(request: NextRequest) {
         .eq("active", true),
       supabase
         .from("stock_entries")
-        .select("amount, best_before_date, open, location_id, product:products(name, qu_stock:quantity_units!products_qu_id_stock_fkey(name))")
+        .select("product_id, amount, best_before_date, open, location_id, product:products(name, qu_stock:quantity_units!products_qu_id_stock_fkey(name))")
         .eq("household_id", householdId)
         .gt("amount", 0)
         .order("best_before_date", { ascending: true, nullsFirst: false })
         .limit(100),
+      supabase
+        .from("recipes")
+        .select("id, name, base_servings, product_id")
+        .eq("household_id", householdId)
+        .order("name")
+        .limit(80),
     ]);
 
     const products = productsRes.data ?? [];
@@ -114,6 +123,136 @@ export async function POST(request: NextRequest) {
 
     const today = new Date().toISOString().split("T")[0];
 
+    // Build recipe context
+    const recipes = recipesRes.data ?? [];
+    let recipeCtx = "";
+
+    if (recipes.length > 0) {
+      // Fetch ingredients for all recipes
+      const recipeIds = recipes.map((r) => r.id);
+      const ingredientsRes = await supabase
+        .from("recipe_ingredients")
+        .select("id, recipe_id, product_id, amount, qu_id, not_check_stock_fulfillment, product:products(id, name, qu_id_stock, not_check_stock_fulfillment_for_recipes), qu:quantity_units(id, name, name_plural)")
+        .eq("household_id", householdId)
+        .in("recipe_id", recipeIds);
+      const allIngredients = (ingredientsRes.data ?? []) as unknown as RecipeIngredientWithRelations[];
+
+      // Build stockByProduct for fulfillment
+      const stockByProduct = new Map<string, number>();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for (const e of stockEntries as any[]) {
+        if (e.product_id) {
+          stockByProduct.set(e.product_id, (stockByProduct.get(e.product_id) ?? 0) + e.amount);
+        }
+      }
+
+      // Map product_id → name for "produces" display
+      const productsMap = new Map<string, string>(products.map((p) => [p.id, p.name]));
+
+      // Group ingredients by recipe_id
+      const ingredientsByRecipe = new Map<string, RecipeIngredientWithRelations[]>();
+      for (const ing of allIngredients) {
+        const arr = ingredientsByRecipe.get(ing.recipe_id) ?? [];
+        arr.push(ing);
+        ingredientsByRecipe.set(ing.recipe_id, arr);
+      }
+
+      // Compute per-recipe summary
+      type RecipeSummary = {
+        id: string;
+        name: string;
+        base_servings: number;
+        producesProductName: string | null;
+        canMake: boolean;
+        missingCount: number;
+        dueScore: number;
+        ingredientLines: string;
+      };
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const recipeSummaries: RecipeSummary[] = (recipes as any[]).map((r) => {
+        const ings = ingredientsByRecipe.get(r.id) ?? [];
+        const fulfillment = computeRecipeFulfillment(ings, stockByProduct, r.base_servings, r.base_servings);
+        const dueScore = computeDueScore(
+          ings,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          stockEntries as unknown as { product_id: string; best_before_date: string | null }[],
+          today,
+        );
+        const missingCount = fulfillment.ingredients.filter((f) => !f.skipped && !f.fulfilled).length;
+
+        const detailLines = ings.slice(0, 15).map((ing, idx) => {
+          const f = fulfillment.ingredients[idx];
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const product = Array.isArray(ing.product) ? ing.product[0] : ing.product as any;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const qu = Array.isArray(ing.qu) ? ing.qu[0] : ing.qu as any;
+          const name = product?.name ?? "Unknown";
+          const unitName = qu?.name ?? "";
+          const missing = f ? !f.skipped && !f.fulfilled : false;
+          const amt = parseFloat(ing.amount.toFixed(2)).toString();
+          const parts = [amt];
+          if (unitName) parts.push(unitName);
+          parts.push(name + (missing ? "[✗]" : ""));
+          return parts.join(" ");
+        });
+
+        return {
+          id: r.id,
+          name: r.name,
+          base_servings: r.base_servings,
+          producesProductName: r.product_id ? (productsMap.get(r.product_id) ?? null) : null,
+          canMake: fulfillment.canMake,
+          missingCount,
+          dueScore,
+          ingredientLines: detailLines.join(", "),
+        };
+      });
+
+      // Sort by due score descending (most urgent first)
+      recipeSummaries.sort((a, b) => b.dueScore - a.dueScore);
+
+      const lines: string[] = [
+        `## RECIPE LIBRARY (${recipeSummaries.length} recipes, sorted by cooking urgency)`,
+        `Fulfillment key: ✓ = can make now, ✗N = missing N ingredients`,
+        ``,
+      ];
+
+      recipeSummaries.forEach((r, i) => {
+        const status = r.canMake ? "✓ can make" : `✗ missing ${r.missingCount}`;
+        const produces = r.producesProductName ? ` | produces: ${r.producesProductName}` : "";
+        lines.push(`${i + 1}. [urgency:${r.dueScore}] "${r.name}" (id:${r.id}) | ${r.base_servings} servings | ${status}${produces}`);
+        if (r.ingredientLines) {
+          lines.push(`   ${r.ingredientLines}`);
+        }
+      });
+
+      recipeCtx = lines.join("\n");
+    }
+
+    const recipeInstructions = recipes.length > 0 ? `
+
+## RECIPE BEHAVIOUR
+When users ask about cooking or recipes, use the RECIPE LIBRARY data above — do not guess from stock alone.
+Reference specific recipes using <recipe_ref> tags inline in your response:
+<recipe_ref>{"recipe_id":"EXACT-ID-FROM-LIST","recipe_name":"Exact Name","can_make":true,"missing_count":0}</recipe_ref>
+
+When user asks to add missing ingredients to a shopping list, respond with:
+<recipe_action>{"action":"add_missing_to_shopping_list","recipe_id":"EXACT-ID","recipe_name":"Exact Name"}</recipe_action>
+
+Handle these intents:
+- "What can I cook?" → list recipes where ✓ can make, highest urgency first, one <recipe_ref> per recipe
+- "What should I cook first?" → recommend highest urgency ✓ can make recipe
+- "Can I make [X]?" → check its status; list missing ingredients with amounts
+- "Recipe for [X]?" / "What's in [X]?" → list its ingredients from the data above
+- "Scale [X] for N servings" → multiply each ingredient by (N ÷ base_servings)
+- "Add missing [X] to shopping list" → respond with <recipe_action> tag
+- "Suggest a recipe for expiring items" → recommend highest urgency score recipe
+
+IMPORTANT: Only use recipe IDs that appear in the RECIPE LIBRARY above. Never invent recipe IDs.
+IMPORTANT: <recipe_ref> tags coexist with normal text — include inline when mentioning a specific recipe.
+IMPORTANT: Only output <recipe_action> when the user explicitly wants to add missing items to a shopping list.` : "";
+
     const systemPrompt = `You are a helpful kitchen inventory assistant for "Food Wars", a household inventory management app.
 
 You can:
@@ -133,8 +272,9 @@ CURRENT STOCK INVENTORY (what the user actually has right now):
 ${stockCtx}
 
 IMPORTANT: When suggesting meals or answering "what can I cook", ONLY use items from CURRENT STOCK INVENTORY above. Do NOT suggest items that are just in the known products list but have zero stock. When answering about expiry, use the dates from CURRENT STOCK INVENTORY and compare with today's date.
+${recipeCtx ? `\n${recipeCtx}` : ""}${recipeInstructions}
 
-RESPONSE FORMAT:
+STOCK ENTRY RESPONSE FORMAT:
 - For normal conversation, reply naturally in plain text.
 - When the user wants to ADD items to their inventory, reply with a brief summary then include a JSON block wrapped in <stock_entry> tags like this:
 
@@ -177,34 +317,50 @@ IMPORTANT: Only use <stock_entry> tags when the user clearly wants to add items 
 
     console.log("[ai-chat] Ollama raw response:", rawResponse);
 
-    // Check for stock entry tags in response
+    // Parse stock entry tag
     const stockEntryMatch = rawResponse.match(
       /<stock_entry>\s*([\s\S]*?)\s*<\/stock_entry>/
     );
+    const items = stockEntryMatch
+      ? parseAndMatchItems(stockEntryMatch[1], products, units, stores, locations)
+      : [];
 
-    if (stockEntryMatch) {
-      const content = rawResponse
-        .replace(/<stock_entry>[\s\S]*<\/stock_entry>/, "")
-        .trim();
-
-      const items = parseAndMatchItems(
-        stockEntryMatch[1],
-        products,
-        units,
-        stores,
-        locations,
-      );
-
-      return NextResponse.json({
-        type: "stock_entry",
-        content: content || "Here are the items I parsed:",
-        items,
-      });
+    // Parse recipe_ref tags
+    const recipeRefs: RecipeRef[] = [];
+    const recipeRefRegex = /<recipe_ref>([\s\S]*?)<\/recipe_ref>/g;
+    for (const match of rawResponse.matchAll(recipeRefRegex)) {
+      try {
+        recipeRefs.push(JSON.parse(match[1]) as RecipeRef);
+      } catch {
+        // skip malformed tag
+      }
     }
 
+    // Parse recipe_action tag (take first valid one)
+    let recipeAction: RecipeAction | undefined;
+    const recipeActionRegex = /<recipe_action>([\s\S]*?)<\/recipe_action>/g;
+    for (const match of rawResponse.matchAll(recipeActionRegex)) {
+      try {
+        recipeAction = JSON.parse(match[1]) as RecipeAction;
+        break;
+      } catch {
+        // skip malformed tag
+      }
+    }
+
+    // Strip all tags for clean display text
+    const content = rawResponse
+      .replace(/<stock_entry>[\s\S]*?<\/stock_entry>/g, "")
+      .replace(/<recipe_ref>[\s\S]*?<\/recipe_ref>/g, "")
+      .replace(/<recipe_action>[\s\S]*?<\/recipe_action>/g, "")
+      .trim() || (items.length > 0 ? "Here are the items I parsed:" : "I couldn't generate a response.");
+
     return NextResponse.json({
-      type: "text",
-      content: rawResponse.trim(),
+      type: items.length > 0 ? "stock_entry" : "text",
+      content,
+      items: items.length > 0 ? items : undefined,
+      recipe_refs: recipeRefs.length > 0 ? recipeRefs : undefined,
+      recipe_action: recipeAction,
     });
   } catch (error) {
     const message =

@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.1] - 2026-02-22
+
+### Added
+- **Meal planning: day view + entry CRUD** (v0.12.1) — full add/remove for recipe, product, and note entries with mobile-first day navigation
+  - `/meal-plan` page updated to server component with real data fetching: reads `?date=YYYY-MM-DD` query param (defaults to today), fetches sections, day entries, recipes, and products in parallel via `Promise.all`; assembles `MealPlanEntryWithRelations` server-side by manual map join (avoids complex Supabase FK hints)
+  - `MealPlanClient` — client wrapper for date navigation and dialog state; date header with prev/next chevron buttons using `router.push('/meal-plan?date=…')`; groups entries by `section_id` using `useMemo`; renders each section as a bordered card with entry list and per-section "+" button
+  - Date formatting helpers (no date-fns): `offsetDate` uses `new Date(str + 'T00:00:00')` for timezone-safe arithmetic; `formatDateDisplay` returns "Today", "Yesterday", "Tomorrow", or `en-AU` long date
+  - `MealPlanEntryCard` — entry card with type icon (ChefHat = recipe, Package = product, FileText = note), name, and servings/amount sub-label; delete button visible on hover; 8-second undo toast using `removeMealPlanEntry` + `undoRemoveMealPlanEntry` (same pattern as recipe deletion)
+  - `AddMealEntryDialog` — modal dialog for adding entries: 3-button type toggle (Recipe / Product / Note); recipe picker via shadcn Select with servings stepper (−0.5 / value / +0.5); base servings pre-filled when recipe selected; product picker with amount stepper; note textarea; section picker; client-side validation before submit
+  - `src/lib/meal-plan-actions.ts` — four server actions (browser Supabase client pattern):
+    - `addMealPlanEntry` — inserts with computed `sort_order` (max+1 within day×section slot)
+    - `removeMealPlanEntry` — fetches row snapshot then deletes; returns snapshot for undo
+    - `undoRemoveMealPlanEntry` — re-inserts snapshot with original ID for referential integrity
+    - `updateMealPlanEntry` — partial update for servings edits and future DnD moves
+  - `shadcn/ui` Textarea component installed (`src/components/ui/textarea.tsx`) for note entry
+
+---
+
 ## [0.12.0] - 2026-02-22
 
 ### Added

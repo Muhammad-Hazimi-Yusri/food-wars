@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.12.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.12.1-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.12.0
+Current version is v0.12.1
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -512,12 +512,12 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Empty `/meal-plan` page (server component, CalendarDays icon empty state)
 - [x] "Meal Plan" nav link (CalendarDays icon) in UserMenu between Recipes and Journal
 
-**v0.12.1 — Day View + Entry CRUD:** (mobile primary)
-- [ ] `MealPlanDayView` — vertical list of sections with meal cards, date navigation
-- [ ] `AddMealEntryDialog` — add recipe/product/note to a day+section
-- [ ] `MealPlanEntryCard` — shows name, type icon, servings; delete with undo toast
-- [ ] `meal-plan-actions.ts` — addMealPlanEntry, removeMealPlanEntry, undoRemoveMealPlanEntry, updateMealPlanEntry
-- [ ] `/meal-plan?date=YYYY-MM-DD` query param routing
+**v0.12.1 — Day View + Entry CRUD:** ✓ (mobile primary)
+- [x] `MealPlanClient` — day view with section cards, date navigation (prev/next chevrons)
+- [x] `AddMealEntryDialog` — add recipe/product/note to a day+section with type toggle + pickers + steppers
+- [x] `MealPlanEntryCard` — shows name, type icon, servings; delete with 8-sec undo toast
+- [x] `meal-plan-actions.ts` — addMealPlanEntry, removeMealPlanEntry, undoRemoveMealPlanEntry, updateMealPlanEntry
+- [x] `/meal-plan?date=YYYY-MM-DD` query param routing (defaults to today)
 
 **v0.12.2 — Week View + Fulfillment Badges:** (desktop primary)
 - [ ] `MealPlanWeekView` — 7-column CSS Grid (Mon–Sun × sections)
@@ -717,14 +717,14 @@ CREATE TABLE meal_plan (
 
 **Calendar UI:**
 - [ ] Week view (desktop primary)
-- [ ] Day view (mobile primary)
+- [x] Day view (mobile primary) — section cards with entries, prev/next day navigation (v0.12.1)
 - [ ] Drag-and-drop meal assignment
 - [ ] Copy day / copy week
 - [x] Meal plan sections (Breakfast, Lunch, Dinner) — schema + seed (v0.12.0)
 
 **Recipe integration:**
-- [ ] Add recipe to meal plan
-- [ ] Adjust servings per meal
+- [x] Add recipe to meal plan — recipe picker with servings stepper (v0.12.1)
+- [x] Adjust servings per meal — servings stepper in AddMealEntryDialog (v0.12.1)
 - [ ] Show recipe fulfillment status on calendar
 - [ ] "What's for dinner?" — today's meals view
 

@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.11.8-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.12.0-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.11.8
+Current version is v0.12.0
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -500,6 +500,52 @@ Food Wars targets a different audience: people who want Grocy-like features with
 
 ### In Progress
 
+#### v0.12 - Meal Planning (was v1.2)
+
+**Goal:** Calendar-based meal organization
+
+**v0.12.0 — Schema + Nav + Empty Page:** ✓
+- [x] `meal_plan_sections` table with RLS (migration 015)
+- [x] `meal_plan` table with RLS (migration 015)
+- [x] `MealPlanSection`, `MealPlanEntry`, `MealPlanEntryWithRelations` TypeScript types in `database.ts`
+- [x] Default sections seeded: Breakfast (08:00), Lunch (12:00), Dinner (18:00) for new users + guest + existing households
+- [x] Empty `/meal-plan` page (server component, CalendarDays icon empty state)
+- [x] "Meal Plan" nav link (CalendarDays icon) in UserMenu between Recipes and Journal
+
+**v0.12.1 — Day View + Entry CRUD:** (mobile primary)
+- [ ] `MealPlanDayView` — vertical list of sections with meal cards, date navigation
+- [ ] `AddMealEntryDialog` — add recipe/product/note to a day+section
+- [ ] `MealPlanEntryCard` — shows name, type icon, servings; delete with undo toast
+- [ ] `meal-plan-actions.ts` — addMealPlanEntry, removeMealPlanEntry, undoRemoveMealPlanEntry, updateMealPlanEntry
+- [ ] `/meal-plan?date=YYYY-MM-DD` query param routing
+
+**v0.12.2 — Week View + Fulfillment Badges:** (desktop primary)
+- [ ] `MealPlanWeekView` — 7-column CSS Grid (Mon–Sun × sections)
+- [ ] Week navigation: prev/next week + "Today" button (`?week=YYYY-MM-DD`)
+- [ ] Responsive: day view on mobile, week view on desktop
+- [ ] Recipe fulfillment badges computed server-side (green/red per recipe card)
+
+**v0.12.3 — Drag-and-Drop:**
+- [ ] Drag meal cards between day×section slots (cross-slot move)
+- [ ] Reorder within same slot (DnD sort)
+- [ ] Touch-friendly (TouchSensor 250ms delay)
+
+**v0.12.4 — Copy Day / Week + Sections Management:**
+- [ ] "Copy day to..." and "Copy week →" batch actions
+- [ ] `MealPlanSectionsManager` — CRUD for sections (add/rename/delete/reorder)
+
+**v0.12.5 — Shopping List Generation:**
+- [ ] "Generate shopping list for week" — aggregates recipe ingredients, subtracts stock, adds missing to auto-target list
+- [ ] `aggregateWeekIngredients` pure utility in `meal-plan-utils.ts`
+
+**v0.12.6 — "What's for Dinner?" + Nutrition:**
+- [ ] "What's for dinner?" card on stock overview home page
+- [ ] Daily calorie estimate in day view header
+
+---
+
+### Previously In Progress (now complete)
+
 #### v0.11 - Recipes (was v1.1)
 
 **Goal:** Recipe database with inventory integration
@@ -664,6 +710,7 @@ CREATE TABLE meal_plan (
   product_qu_id UUID REFERENCES quantity_units(id) ON DELETE SET NULL,
   note TEXT,
   section_id UUID REFERENCES meal_plan_sections(id) ON DELETE SET NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0, -- for drag-and-drop reorder within slot
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ```
@@ -673,7 +720,7 @@ CREATE TABLE meal_plan (
 - [ ] Day view (mobile primary)
 - [ ] Drag-and-drop meal assignment
 - [ ] Copy day / copy week
-- [ ] Meal plan sections (Breakfast, Lunch, Dinner)
+- [x] Meal plan sections (Breakfast, Lunch, Dinner) — schema + seed (v0.12.0)
 
 **Recipe integration:**
 - [ ] Add recipe to meal plan
@@ -1095,7 +1142,8 @@ Food Wars uses a Grocy-compatible database schema designed for comprehensive kit
 | `stock_log` | Transaction history for undo | ✅ v0.4 (UI in v0.6) |
 | `recipes` | Recipe definitions | ✅ v0.11 |
 | `recipe_ingredients` | Recipe ingredients | ✅ v0.11 |
-| `meal_plan` | Meal planning calendar | 🔮 v0.12 |
+| `meal_plan_sections` | Configurable meal sections (Breakfast, Lunch, Dinner) | ✅ v0.12 |
+| `meal_plan` | Meal planning calendar entries | ✅ v0.12 |
 | `shopping_lists` | Shopping list management | ✅ v0.7 |
 | `shopping_list_items` | Items within shopping lists | ✅ v0.7 |
 | `product_nutrition` | Nutrition facts per 100g | ✅ v0.9.2 |

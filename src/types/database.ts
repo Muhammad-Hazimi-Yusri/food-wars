@@ -378,6 +378,48 @@ export type RecipeNesting = {
 };
 
 // ============================================
+// MEAL PLAN
+// ============================================
+
+export type MealPlanSection = {
+  id: string;
+  household_id: string;
+  name: string;
+  time: string | null; // TIME stored as "HH:MM:SS" string from Postgres
+  sort_order: number;
+  created_at: string;
+};
+
+export type MealPlanEntry = {
+  id: string;
+  household_id: string;
+  day: string; // DATE stored as "YYYY-MM-DD" string
+  type: 'recipe' | 'product' | 'note';
+  // Recipe entry
+  recipe_id: string | null;
+  recipe_servings: number | null;
+  // Product entry
+  product_id: string | null;
+  product_amount: number | null;
+  product_qu_id: string | null;
+  // Note entry
+  note: string | null;
+  // Section assignment
+  section_id: string | null;
+  sort_order: number;
+  created_at: string;
+};
+
+export type MealPlanEntryWithRelations = MealPlanEntry & {
+  section?: Pick<MealPlanSection, 'id' | 'name' | 'sort_order'> | null;
+  recipe?: Pick<Recipe, 'id' | 'name' | 'base_servings' | 'picture_file_name'> | null;
+  product?: Pick<Product, 'id' | 'name'> & {
+    qu_stock?: Pick<QuantityUnit, 'id' | 'name' | 'name_plural'> | null;
+  } | null;
+  product_qu?: Pick<QuantityUnit, 'id' | 'name' | 'name_plural'> | null;
+};
+
+// ============================================
 // NLP PARSED STOCK ITEM (for AI stock entry)
 // ============================================
 

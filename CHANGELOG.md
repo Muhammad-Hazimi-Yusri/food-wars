@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] - 2026-02-22
+
+### Added
+- **Meal planning: schema + nav + empty page** (v0.12.0) — foundation for v0.12 calendar-based meal planner
+  - `meal_plan_sections` table — configurable meal sections (name, optional time, sort_order) with full dual-mode RLS (authenticated + anonymous guest)
+  - `meal_plan` table — entries per day with type `recipe | product | note`, recipe_servings, product_amount/qu, note text, section assignment, and `sort_order` for drag-and-drop within a slot; full dual-mode RLS
+  - Indexes: `(household_id)`, `(household_id, day)`, `(section_id)` on `meal_plan`; `(household_id)` on `meal_plan_sections`
+  - Default sections seeded automatically: `Breakfast` (08:00), `Lunch` (12:00), `Dinner` (18:00)
+    - New user signup trigger (`handle_new_user`) updated to insert default sections
+    - Guest household seeded with fixed-ID sections (`b0000000-...`) for reset stability
+    - `seed_guest_data()` function updated to clear and re-seed sections on admin reset
+    - One-time backfill for all existing authenticated households (no duplicate guard via `NOT EXISTS`)
+  - `MealPlanSection` and `MealPlanEntry` TypeScript types in `src/types/database.ts`
+  - `MealPlanEntryWithRelations` joined type (section, recipe, product, product_qu)
+  - Empty `/meal-plan` page (server component) — CalendarDays icon empty state with placeholder text
+  - "Meal Plan" navigation link (CalendarDays icon) added to UserMenu dropdown between Recipes and Journal
+
+### Database Migrations
+- `015_meal_plan.sql` — `CREATE TABLE meal_plan_sections`, `CREATE TABLE meal_plan` with full RLS + indexes; updates `handle_new_user()` and `seed_guest_data()` functions; seeds guest and backfills existing households
+
+---
+
 ## [0.11.8] - 2026-02-22
 
 ### Added

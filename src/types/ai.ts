@@ -15,3 +15,22 @@ export type RecipeAction = {
   recipe_id: string;
   recipe_name: string;
 };
+
+export type RecipeDraftIngredient = {
+  product_name: string;
+  product_id: string | null;
+  qu_id: string | null;
+  amount: number;
+  unit_name: string;
+  ingredient_group: string | null;
+  note: string | null;
+  variable_amount: string | null;
+};
+
+export type RecipeDraft = {
+  name: string;
+  description: string | null;
+  instructions: string | null;
+  base_servings: number;
+  ingredients: RecipeDraftIngredient[];
+};

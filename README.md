@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.11.7-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.11.8-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.11.7
+Current version is v0.11.8
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -60,7 +60,7 @@ Current version is v0.11.7
 - **OFF Image Persistence** — Product images downloaded from OFF to Supabase storage for reliable display
 - **Refetch from OFF** — Re-fetch product data (image, brand, nutrition) from Open Food Facts on demand
 - **AI Smart Input (Ollama)** — Connect your self-hosted Ollama instance for AI-powered stock entry
-- **AI Chat Assistant** — Floating chat widget with natural language stock entry, recipe-aware cooking suggestions (uses actual recipe database for fulfillment, due scores, ingredient lookup, and "add missing to shopping list" actions), and expiry advice
+- **AI Chat Assistant** — Floating chat widget with natural language stock entry, recipe-aware cooking suggestions (uses actual recipe database for fulfillment, due scores, ingredient lookup, and "add missing to shopping list" actions), expiry advice, and AI recipe generation (describe a recipe in natural language, review an inline draft card with editable name/servings/ingredients, save directly to the recipe database from chat)
 - **AI Settings Page** — Configure Ollama URL, test connection, select text and vision models per household
 - **Guest Contact Hint** — Settings page shows contact info for guests to request Ollama server access
 - **Privacy Warning** — Prominent notice that AI requests are proxied through the server; self-host for full privacy
@@ -555,6 +555,15 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] `src/types/ai.ts` — `RecipeRef` and `RecipeAction` shared types
 - [x] "Suggest a recipe for expiring items" chip on chat welcome screen
 
+**v0.11.8 — AI recipe generation:** ✓
+- [x] `<recipe_draft>` system prompt instructions added to `/api/ai/chat` (unconditional) — AI emits a structured JSON recipe when user asks to create/make/generate a recipe
+- [x] `<recipe_draft>` tag parsing in route — server-side product ID validation, fuzzy product name matching, fuzzy unit matching via `findBestMatch`; stripped from display text; returned as `recipe_draft` in API response
+- [x] `RecipeDraftCard` component (`src/components/ai/RecipeDraftCard.tsx`) — inline review card: editable name, servings stepper, ingredient list with Matched/No-match badges, per-ingredient remove, instructions 3-line preview, "Save Recipe" button with spinner
+- [x] Save flow: `createRecipe` → sequential `addIngredient` calls; transitions to saved state with "View Recipe →" and "Edit Recipe →" links
+- [x] `RecipeDraft` and `RecipeDraftIngredient` types added to `src/types/ai.ts`
+- [x] `AiChatWidget` — `Message` type extended with `recipe_draft?`; renders `RecipeDraftCard` when present
+- [x] "Create a recipe from my stock" chip on chat welcome screen
+
 **Schema added:**
 ```sql
 -- Recipes
@@ -930,6 +939,7 @@ food-wars/
 │   │   │   ├── PantryScanDialog.tsx # Pantry/fridge photo scanning dialog
 │   │   │   ├── ReceiptCaptureDialog.tsx # Receipt scanning dialog (capture → process → review → wizard)
 │   │   │   ├── ReceiptReviewTable.tsx # Editable review table for AI-parsed items
+│   │   │   ├── RecipeDraftCard.tsx # AI-generated recipe review card (editable name/servings, ingredient badges, save flow)
 │   │   │   ├── RecipeRefCard.tsx  # Mini recipe card (fulfillment badge + link) rendered in chat messages
 │   │   │   └── StockEntryCard.tsx # Inline editable stock entry cards
 │   │   ├── barcode/               # Barcode scanning components
@@ -1035,7 +1045,7 @@ food-wars/
 │   │   ├── stock-entry-utils.ts   # Shared bulk import (bulkCreateStockEntries) & unit conversion
 │   │   └── utils.ts               # cn() and general utilities
 │   └── types/
-│       ├── ai.ts                  # AI response types (RecipeRef, RecipeAction)
+│       ├── ai.ts                  # AI response types (RecipeRef, RecipeAction, RecipeDraft, RecipeDraftIngredient)
 │       └── database.ts            # Manual TypeScript types (Product, Stock, Recipe, etc.)
 ├── supabase/
 │   ├── migrations/

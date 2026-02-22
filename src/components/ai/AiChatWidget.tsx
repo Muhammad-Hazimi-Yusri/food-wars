@@ -10,11 +10,12 @@ import { createClient } from "@/lib/supabase/client";
 import { ChatMessage } from "./ChatMessage";
 import { StockEntryCard } from "./StockEntryCard";
 import { RecipeRefCard } from "./RecipeRefCard";
+import { RecipeDraftCard } from "./RecipeDraftCard";
 import { ReceiptCaptureDialog, loadReceiptState } from "./ReceiptCaptureDialog";
 import { PantryScanDialog } from "./PantryScanDialog";
 import { ParsedStockItem } from "@/types/database";
 import { addRecipeMissingToDefaultList } from "@/lib/recipe-actions";
-import type { RecipeRef, RecipeAction } from "@/types/ai";
+import type { RecipeRef, RecipeAction, RecipeDraft } from "@/types/ai";
 
 type Message = {
   id: string;
@@ -24,6 +25,7 @@ type Message = {
   items?: ParsedStockItem[];
   recipe_refs?: RecipeRef[];
   recipe_action?: RecipeAction;
+  recipe_draft?: RecipeDraft;
 };
 
 type HouseholdData = {
@@ -233,6 +235,7 @@ export function AiChatWidget() {
         items: data.items,
         recipe_refs: data.recipe_refs,
         recipe_action: data.recipe_action,
+        recipe_draft: data.recipe_draft,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -372,6 +375,7 @@ export function AiChatWidget() {
                     "What's expiring soon?",
                     "What can I cook?",
                     "Suggest a recipe for expiring items",
+                    "Create a recipe from my stock",
                   ].map((suggestion) => (
                     <button
                       key={suggestion}
@@ -421,6 +425,9 @@ export function AiChatWidget() {
                       </Button>
                     )}
                   </div>
+                )}
+                {msg.recipe_draft && (
+                  <RecipeDraftCard draft={msg.recipe_draft} />
                 )}
               </ChatMessage>
             ))}

@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.8] - 2026-02-22
+
+### Added
+- **AI recipe generation** — users describe a recipe in natural language and the AI generates a structured draft reviewed inline in chat before saving
+  - `POST /api/ai/chat` — new `## RECIPE GENERATION` section appended to system prompt unconditionally (always present, regardless of recipe library size); instructs the model to emit a single `<recipe_draft>` XML tag containing a JSON object when the user asks to "create", "make", "generate", or "give me a recipe"; includes full example schema and rules: use `[id:...]` product IDs from the known products context where matched, use units from the units list, format instructions as markdown with `##` headings and numbered steps, use ingredient groups ("Main", "Sauce", "Garnish", "Spices"), prefer in-stock products first when user says "from my stock" / "using what I have"; tag must never be emitted for other intents (stock queries, recipe lookups, etc.)
+  - `<recipe_draft>` tag parsing — regex-extracted from raw Ollama response alongside existing `<stock_entry>`, `<recipe_ref>`, `<recipe_action>` tags; JSON parsed as a single object; server-side ingredient validation loop: if AI provides a `product_id`, validated against the live products list and nulled if invented; null `product_id` fuzzy-matched via `findBestMatch` (bigram Dice coefficient) against active products by name; `unit_name` fuzzy-matched to `qu_id` against active quantity units; resulting `RecipeDraft` returned as `recipe_draft` field in the API JSON response; `<recipe_draft>` tag stripped from display text alongside all other tags
+  - `findBestMatch` imported directly from `src/lib/fuzzy-match.ts` into the route (previously only reached via `ai-parse-items.ts`)
+  - `RecipeDraftCard` component (`src/components/ai/RecipeDraftCard.tsx`) — inline review card rendered in chat messages when `recipe_draft` is present:
+    - **Header**: inline-editable recipe name (transparent input that looks like text until focused), base servings stepper (−/count/+ controls, minimum 1); description shown as 1-line muted preview when present
+    - **Ingredients section**: each row shows `amount unit product_name — note`; "Matched" (green border, `text-green-700 bg-green-50 border-green-200`) or "No match" (amber border, `text-amber-700 bg-amber-50 border-amber-200`) badge — same visual pattern as `StockEntryCard`; matching determined by `product_id !== null` (resolved server-side at parse time); per-ingredient ✕ remove button removes from local state before saving
+    - **Instructions preview**: first 3 non-empty lines shown as truncated plain text with "Full instructions included" italic hint below; full markdown instructions always saved regardless
+    - **Save Recipe button**: calls `createRecipe({ name, description, instructions, base_servings })`, then sequential `addIngredient(recipeId, { product_id, amount, qu_id, note, ingredient_group, variable_amount })` for each remaining ingredient; `addIngredient` auto-increments `sort_order` via `max(existing)+1` so sequential calls produce correct ingredient ordering
+    - Loading spinner during save; on error: sonner error toast, card remains interactive for retry
+    - **Saved state**: card body replaced with green success panel — recipe name with ✓ (ChefHat icon), "View Recipe →" link to `/recipes/[id]`, "Edit Recipe →" link to `/recipes/[id]/edit`
+  - `AiChatWidget` — `Message` type extended with `recipe_draft?: RecipeDraft`; `data.recipe_draft` mapped onto assistant message in `handleSend`; `RecipeDraftCard` rendered below message text (after recipe_action block) when `recipe_draft` is present
+  - "Create a recipe from my stock" added as 5th suggestion chip on the chat welcome screen
+  - `src/types/ai.ts` — two new shared types exported: `RecipeDraftIngredient` (`product_name`, `product_id`, `qu_id`, `amount`, `unit_name`, `ingredient_group`, `note`, `variable_amount`) and `RecipeDraft` (`name`, `description`, `instructions`, `base_servings`, `ingredients: RecipeDraftIngredient[]`)
+
+---
+
 ## [0.11.7] - 2026-02-22
 
 ### Added

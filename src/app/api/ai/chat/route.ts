@@ -3,8 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { GUEST_HOUSEHOLD_ID } from "@/lib/constants";
 import { getAiSettings, isAiConfigured, callOllama } from "@/lib/ai-utils";
 import { parseAndMatchItems } from "@/lib/ai-parse-items";
+import { findBestMatch } from "@/lib/fuzzy-match";
 import { computeRecipeFulfillment, computeDueScore } from "@/lib/recipe-utils";
-import type { RecipeRef, RecipeAction } from "@/types/ai";
+import type { RecipeRef, RecipeAction, RecipeDraft } from "@/types/ai";
 import type { RecipeIngredientWithRelations } from "@/types/database";
 
 export async function POST(request: NextRequest) {
@@ -253,6 +254,40 @@ IMPORTANT: Only use recipe IDs that appear in the RECIPE LIBRARY above. Never in
 IMPORTANT: <recipe_ref> tags coexist with normal text — include inline when mentioning a specific recipe.
 IMPORTANT: Only output <recipe_action> when the user explicitly wants to add missing items to a shopping list.` : "";
 
+    const recipeGenerationInstructions = `
+
+## RECIPE GENERATION
+When the user asks to "create", "make", "generate", or "give me a recipe" for any dish:
+Respond with a brief intro sentence, then output a <recipe_draft> tag containing a single JSON object:
+
+<recipe_draft>
+{
+  "name": "Chicken Stir Fry",
+  "description": "Quick weeknight stir fry",
+  "instructions": "## Steps\\n1. Slice chicken thin...\\n2. Heat wok on high...",
+  "base_servings": 4,
+  "ingredients": [
+    {
+      "product_name": "Chicken Breast",
+      "product_id": "uuid-from-known-products-or-null",
+      "amount": 500,
+      "unit_name": "g",
+      "ingredient_group": "Main",
+      "note": "sliced thin",
+      "variable_amount": null
+    }
+  ]
+}
+</recipe_draft>
+
+RECIPE GENERATION RULES:
+- product_id: use the [id:...] from the known products list if matched, otherwise null
+- unit_name: use a unit from the Units list when possible
+- instructions: markdown with ## headings and numbered steps
+- ingredient_group: use groups like "Main", "Sauce", "Garnish", "Spices", or null
+- If user says "from my stock" / "using what I have", prefer in-stock products first
+- Output exactly ONE <recipe_draft> per response. Never output <recipe_draft> for other intents (stock queries, recipe lookups, etc.)`;
+
     const systemPrompt = `You are a helpful kitchen inventory assistant for "Food Wars", a household inventory management app.
 
 You can:
@@ -272,7 +307,7 @@ CURRENT STOCK INVENTORY (what the user actually has right now):
 ${stockCtx}
 
 IMPORTANT: When suggesting meals or answering "what can I cook", ONLY use items from CURRENT STOCK INVENTORY above. Do NOT suggest items that are just in the known products list but have zero stock. When answering about expiry, use the dates from CURRENT STOCK INVENTORY and compare with today's date.
-${recipeCtx ? `\n${recipeCtx}` : ""}${recipeInstructions}
+${recipeCtx ? `\n${recipeCtx}` : ""}${recipeInstructions}${recipeGenerationInstructions}
 
 STOCK ENTRY RESPONSE FORMAT:
 - For normal conversation, reply naturally in plain text.
@@ -348,11 +383,40 @@ IMPORTANT: Only use <stock_entry> tags when the user clearly wants to add items 
       }
     }
 
+    // Parse recipe_draft tag
+    let recipeDraft: RecipeDraft | undefined;
+    const recipeDraftMatch = rawResponse.match(/<recipe_draft>\s*([\s\S]*?)\s*<\/recipe_draft>/);
+    if (recipeDraftMatch) {
+      try {
+        const parsed = JSON.parse(recipeDraftMatch[1]) as RecipeDraft;
+        parsed.ingredients = parsed.ingredients.map((ing) => {
+          // Validate product_id if AI provided one — reject invented IDs
+          if (ing.product_id) {
+            const valid = products.find((p) => p.id === ing.product_id);
+            if (!valid) ing.product_id = null;
+          }
+          // Fuzzy-match product_name if product_id still null
+          if (!ing.product_id) {
+            const match = findBestMatch(ing.product_name, products, (p) => p.name);
+            if (match) ing.product_id = match.item.id;
+          }
+          // Fuzzy-match unit_name → qu_id
+          const unitMatch = findBestMatch(ing.unit_name, units, (u) => u.name);
+          ing.qu_id = unitMatch ? unitMatch.item.id : null;
+          return ing;
+        });
+        recipeDraft = parsed;
+      } catch {
+        // skip malformed recipe_draft
+      }
+    }
+
     // Strip all tags for clean display text
     const content = rawResponse
       .replace(/<stock_entry>[\s\S]*?<\/stock_entry>/g, "")
       .replace(/<recipe_ref>[\s\S]*?<\/recipe_ref>/g, "")
       .replace(/<recipe_action>[\s\S]*?<\/recipe_action>/g, "")
+      .replace(/<recipe_draft>[\s\S]*?<\/recipe_draft>/g, "")
       .trim() || (items.length > 0 ? "Here are the items I parsed:" : "I couldn't generate a response.");
 
     return NextResponse.json({
@@ -361,6 +425,7 @@ IMPORTANT: Only use <stock_entry> tags when the user clearly wants to add items 
       items: items.length > 0 ? items : undefined,
       recipe_refs: recipeRefs.length > 0 ? recipeRefs : undefined,
       recipe_action: recipeAction,
+      recipe_draft: recipeDraft,
     });
   } catch (error) {
     const message =

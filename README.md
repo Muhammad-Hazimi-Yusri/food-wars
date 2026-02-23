@@ -496,6 +496,65 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] VLM prompt tuned for visual product recognition, quantity estimation, and uncertainty notes
 </details>
 
+<details>
+<summary><strong>v0.11 - Recipes ✓</strong></summary>
+
+**Goal:** Recipe database with inventory integration
+
+**v0.11.0 — Schema + empty page:** ✓
+- [x] `recipes` table with RLS (migration 013)
+- [x] `recipe_ingredients` table with RLS
+- [x] `recipe_nestings` table with RLS (CHECK: no self-nesting)
+- [x] `Recipe`, `RecipeIngredient`, `RecipeNesting`, joined types in `database.ts`
+- [x] Empty `/recipes` page (server component)
+- [x] Recipes nav link (ChefHat icon) in UserMenu
+
+**v0.11.1 — Recipe CRUD:** ✓
+- [x] Create/edit recipe form (name, description, servings, picture)
+- [x] Recipe list with search/filter and card grid
+- [x] Delete with undo toast (sonner)
+- [x] Recipe images via `recipe-pictures` Supabase Storage bucket
+- [x] `/recipes/new`, `/recipes/[id]`, `/recipes/[id]/edit` pages
+
+**v0.11.2 — Recipe ingredients:** ✓
+- [x] Add/edit/remove ingredients, drag-reorder (@dnd-kit)
+- [x] Ingredient groups (collapsible sections by `ingredient_group`)
+- [x] Product picker with search, quantity unit selector
+- [x] `variable_amount` support ("to taste", "a pinch")
+
+**v0.11.3 — Serving size scaling:** ✓
+- [x] `desired_servings` input with stepper and quick-set buttons
+- [x] Live-scaled ingredient amounts: `amount * (desired / base)`
+
+**v0.11.4 — Stock fulfillment:** ✓
+- [x] "Can I make this?" badge per recipe and per ingredient
+- [x] Per-ingredient: needed vs. in-stock vs. missing amounts
+- [x] "Add missing to shopping list" button
+- [x] "Consume recipe" action — deducts all ingredients from stock with undo
+
+**v0.11.5 — Nesting + produces product:** ✓
+- [x] Recipe as ingredient (recipe_nestings table)
+- [x] "Produces product" — recipe outputs a product on consume
+- [x] Due score: calculated from expiring ingredients, sortable
+
+**v0.11.6 — Markdown instructions + due score card badge:** ✓
+- [x] `instructions TEXT` column on `recipes` table (migration 014)
+- [x] `RecipeForm` — Instructions textarea with Edit/Preview tabs, live markdown preview
+- [x] `/recipes/[id]` detail page — instructions rendered as markdown (`prose prose-sm`)
+- [x] "Expiring!" (red) / "Due soon" (amber) badge overlaid on recipe card images (due score ≥ 50 / ≥ 5)
+
+**v0.11.7 — AI chat recipes awareness:** ✓
+- [x] Recipe library context injected into AI system prompt — fulfillment status, urgency score, ingredient list with missing markers
+- [x] `<recipe_ref>` tag — inline `RecipeRefCard` (fulfillment badge + "View →" link)
+- [x] `<recipe_action>` tag — "Add missing to shopping list" action button in chat
+- [x] "Suggest a recipe for expiring items" chip on chat welcome screen
+
+**v0.11.8 — AI recipe generation:** ✓
+- [x] `<recipe_draft>` tag — AI emits structured JSON recipe; parsed server-side with product/unit fuzzy matching
+- [x] `RecipeDraftCard` — inline review card: editable name, servings stepper, ingredient list, save flow
+- [x] "Create a recipe from my stock" chip on chat welcome screen
+</details>
+
 ---
 
 ### In Progress
@@ -546,201 +605,7 @@ Food Wars targets a different audience: people who want Grocy-like features with
 
 ---
 
-### Previously In Progress (now complete)
-
-#### v0.11 - Recipes (was v1.1)
-
-**Goal:** Recipe database with inventory integration
-
-**v0.11.0 — Schema + empty page:** ✓
-- [x] `recipes` table with RLS (migration 013)
-- [x] `recipe_ingredients` table with RLS
-- [x] `recipe_nestings` table with RLS (CHECK: no self-nesting)
-- [x] `Recipe`, `RecipeIngredient`, `RecipeNesting`, joined types in `database.ts`
-- [x] Empty `/recipes` page (server component)
-- [x] Recipes nav link (ChefHat icon) in UserMenu
-
-**v0.11.1 — Recipe CRUD:** ✓
-- [x] Create/edit recipe form (name, description, servings, picture)
-- [x] Recipe list with search/filter and card grid
-- [x] Delete with undo toast (sonner)
-- [x] Recipe images via `recipe-pictures` Supabase Storage bucket
-- [x] `/recipes/new`, `/recipes/[id]`, `/recipes/[id]/edit` pages
-
-**v0.11.2 — Recipe ingredients:** ✓
-- [x] Add/edit/remove ingredients, drag-reorder (@dnd-kit)
-- [x] Ingredient groups (collapsible sections by `ingredient_group`)
-- [x] Product picker with search, quantity unit selector
-- [x] `variable_amount` support ("to taste", "a pinch")
-
-**v0.11.3 — Serving size scaling:** ✓
-- [x] `desired_servings` input with stepper and quick-set buttons
-- [x] Live-scaled ingredient amounts: `amount * (desired / base)`
-
-**v0.11.4 — Stock fulfillment:** ✓
-- [x] "Can I make this?" badge per recipe and per ingredient
-- [x] Per-ingredient: needed vs. in-stock vs. missing amounts
-- [x] "Add missing to shopping list" button
-- [x] "Consume recipe" action — deducts all ingredients from stock with undo
-
-**v0.11.5 — Nesting + produces product:** ✓
-- [x] Recipe as ingredient (recipe_nestings table)
-- [x] "Produces product" — recipe outputs a product on consume
-- [x] Due score: calculated from expiring ingredients, sortable
-
-**v0.11.6 — Markdown instructions + due score card badge:** ✓
-- [x] `instructions TEXT` column on `recipes` table (migration 014)
-- [x] `RecipeForm` — Instructions textarea with Edit/Preview tabs, live markdown preview
-- [x] `/recipes/[id]` detail page — instructions rendered as markdown (`prose prose-sm`)
-- [x] "Expiring!" (red) / "Due soon" (amber) badge overlaid on recipe card images (due score ≥ 50 / ≥ 5)
-
-**v0.11.7 — AI chat recipes awareness:** ✓
-- [x] Recipe library context (up to 80 recipes) injected into AI system prompt — fulfillment status, urgency score (due score), ingredient list with missing markers; computed server-side, sorted by urgency
-- [x] AI handles recipe intents: "What can I cook?", "Can I make X?", "What's in X?", "Scale X for N servings", "What should I cook first?", "Suggest a recipe for expiring items", "Add missing for X to shopping list"
-- [x] `<recipe_ref>` tag — AI wraps referenced recipes in inline `RecipeRefCard` (fulfillment badge + "View →" link); coexists with `<stock_entry>` tag flow
-- [x] `<recipe_action>` tag — "Add missing to shopping list" action button in chat; auto-targets `is_auto_target` shopping list; sonner toast with count + list name
-- [x] `RecipeRefCard` component (`src/components/ai/RecipeRefCard.tsx`)
-- [x] `src/types/ai.ts` — `RecipeRef` and `RecipeAction` shared types
-- [x] "Suggest a recipe for expiring items" chip on chat welcome screen
-
-**v0.11.8 — AI recipe generation:** ✓
-- [x] `<recipe_draft>` system prompt instructions added to `/api/ai/chat` (unconditional) — AI emits a structured JSON recipe when user asks to create/make/generate a recipe
-- [x] `<recipe_draft>` tag parsing in route — server-side product ID validation, fuzzy product name matching, fuzzy unit matching via `findBestMatch`; stripped from display text; returned as `recipe_draft` in API response
-- [x] `RecipeDraftCard` component (`src/components/ai/RecipeDraftCard.tsx`) — inline review card: editable name, servings stepper, ingredient list with Matched/No-match badges, per-ingredient remove, instructions 3-line preview, "Save Recipe" button with spinner
-- [x] Save flow: `createRecipe` → sequential `addIngredient` calls; transitions to saved state with "View Recipe →" and "Edit Recipe →" links
-- [x] `RecipeDraft` and `RecipeDraftIngredient` types added to `src/types/ai.ts`
-- [x] `AiChatWidget` — `Message` type extended with `recipe_draft?`; renders `RecipeDraftCard` when present
-- [x] "Create a recipe from my stock" chip on chat welcome screen
-
-**Schema added:**
-```sql
--- Recipes
-CREATE TABLE recipes (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  household_id UUID NOT NULL REFERENCES households(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  description TEXT, -- Rich text instructions
-  picture_file_name TEXT,
-  base_servings DECIMAL NOT NULL DEFAULT 1,
-  desired_servings DECIMAL NOT NULL DEFAULT 1,
-  not_check_shoppinglist BOOLEAN NOT NULL DEFAULT FALSE,
-  product_id UUID REFERENCES products(id) ON DELETE SET NULL, -- "Produces product"
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Recipe ingredients
-CREATE TABLE recipe_ingredients (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  household_id UUID NOT NULL REFERENCES households(id) ON DELETE CASCADE,
-  recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
-  product_id UUID REFERENCES products(id) ON DELETE SET NULL,
-  amount DECIMAL NOT NULL DEFAULT 1,
-  qu_id UUID REFERENCES quantity_units(id) ON DELETE SET NULL,
-  note TEXT, -- Prep notes (e.g., "diced", "room temp")
-  ingredient_group TEXT, -- Section header (e.g., "For the sauce")
-  variable_amount TEXT, -- Text instead of number (e.g., "to taste")
-  only_check_single_unit_in_stock BOOLEAN NOT NULL DEFAULT FALSE,
-  not_check_stock_fulfillment BOOLEAN NOT NULL DEFAULT FALSE,
-  price_factor DECIMAL NOT NULL DEFAULT 1,
-  sort_order INTEGER NOT NULL DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Recipe nestings (recipe as ingredient)
-CREATE TABLE recipe_nestings (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  household_id UUID NOT NULL REFERENCES households(id) ON DELETE CASCADE,
-  recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
-  includes_recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
-  servings DECIMAL NOT NULL DEFAULT 1,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-**Core features:**
-- [x] Recipe CRUD with markdown instructions (edit + live preview in form, rendered on detail page)
-- [x] Ingredient groups (collapsible sections)
-- [x] Serving size scaling (auto-calculates amounts)
-- [x] Recipe images (Supabase Storage: `recipe-pictures` bucket)
-- [x] Recipe nesting (recipe as ingredient)
-
-**Inventory integration:**
-- [x] "Can I make this?" — stock fulfillment check
-- [x] Green/red indicator per ingredient
-- [x] Shows: needed amount, in stock, missing
-- [x] "Add missing to shopping list" button
-- [x] "Consume recipe" — deducts all ingredients
-- [x] Respects `not_check_stock_fulfillment_for_recipes` product flag
-
-**Due Score:**
-- [x] Calculated score based on expiring ingredients
-- [x] Higher = more ingredients due soon/overdue/expired
-- [x] Sort recipes by due score
-- [x] "Due soon" / "Expiring!" badge on recipe cards
-
-**Produces product:**
-- [x] Recipe can output a product (e.g., Bread recipe → Bread product)
-- [x] On consume, adds produced product to stock
-- [x] Useful for batch cooking, meal prep
-
-#### v0.12 - Meal Planning (was v1.2)
-
-**Goal:** Calendar-based meal organization
-
-**Schema to add:**
-```sql
--- Meal plan sections
-CREATE TABLE meal_plan_sections (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  household_id UUID NOT NULL REFERENCES households(id) ON DELETE CASCADE,
-  name TEXT NOT NULL, -- Breakfast, Lunch, Dinner
-  sort_order INTEGER NOT NULL DEFAULT 0,
-  time TIME, -- Optional time for calendar export
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- Meal plan entries
-CREATE TABLE meal_plan (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  household_id UUID NOT NULL REFERENCES households(id) ON DELETE CASCADE,
-  day DATE NOT NULL,
-  type TEXT NOT NULL CHECK (type IN ('recipe', 'product', 'note')),
-  recipe_id UUID REFERENCES recipes(id) ON DELETE CASCADE,
-  recipe_servings DECIMAL,
-  product_id UUID REFERENCES products(id) ON DELETE CASCADE,
-  product_amount DECIMAL,
-  product_qu_id UUID REFERENCES quantity_units(id) ON DELETE SET NULL,
-  note TEXT,
-  section_id UUID REFERENCES meal_plan_sections(id) ON DELETE SET NULL,
-  sort_order INTEGER NOT NULL DEFAULT 0, -- for drag-and-drop reorder within slot
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-```
-
-**Calendar UI:**
-- [x] Week view (desktop primary) — 7-column CSS Grid with section rows, fulfillment badges (v0.12.2)
-- [x] Day view (mobile primary) — section cards with entries, day-tab navigation within week (v0.12.2)
-- [x] Drag-and-drop meal assignment — cross-slot + reorder, optimistic updates (v0.12.3)
-- [x] Copy day / copy week (v0.12.4)
-- [x] Meal plan sections (Breakfast, Lunch, Dinner) — schema + seed (v0.12.0)
-- [x] Sections management — add/rename/delete/reorder sections (v0.12.4)
-
-**Recipe integration:**
-- [x] Add recipe to meal plan — recipe picker with servings stepper (v0.12.1)
-- [x] Adjust servings per meal — servings stepper in AddMealEntryDialog (v0.12.1)
-- [ ] Show recipe fulfillment status on calendar
-- [ ] "What's for dinner?" — today's meals view
-
-**Shopping integration:**
-- [ ] "Generate shopping list for week"
-- [ ] Aggregates all recipe ingredients
-- [ ] Subtracts current stock
-- [ ] Groups by store preference
-
-**Nutritional overview:**
-- [ ] Daily/weekly calorie totals
-- [ ] Based on `product_nutrition` table (energy_kcal per 100g)
-- [ ] Visual charts
+### Planned
 
 #### v0.13 - Product Analytics (was v1.3)
 

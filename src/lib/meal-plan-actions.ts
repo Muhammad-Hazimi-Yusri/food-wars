@@ -207,3 +207,244 @@ export async function updateMealPlanEntry(
     };
   }
 }
+
+// ---------------------------------------------------------------------------
+// Section actions
+// ---------------------------------------------------------------------------
+
+export type SectionParams = {
+  name: string;
+  time?: string | null;
+};
+
+/**
+ * Add a new meal plan section at the end of the sort order.
+ */
+export async function addMealPlanSection(
+  params: SectionParams
+): Promise<ActionResult & { sectionId?: string }> {
+  try {
+    const supabase = createClient();
+    const household = await getHouseholdId(supabase);
+    if (!household.success) return { success: false, error: household.error };
+
+    const { data: existing } = await supabase
+      .from('meal_plan_sections')
+      .select('sort_order')
+      .eq('household_id', household.householdId)
+      .order('sort_order', { ascending: false })
+      .limit(1);
+
+    const nextOrder =
+      existing && existing.length > 0 ? existing[0].sort_order + 1 : 0;
+
+    const { data, error } = await supabase
+      .from('meal_plan_sections')
+      .insert({
+        household_id: household.householdId,
+        name: params.name,
+        time: params.time ?? null,
+        sort_order: nextOrder,
+      })
+      .select('id')
+      .single();
+
+    if (error) throw error;
+
+    return { success: true, sectionId: data?.id };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to add section',
+    };
+  }
+}
+
+/**
+ * Update name and/or time of a meal plan section.
+ */
+export async function updateMealPlanSection(
+  id: string,
+  params: Partial<SectionParams>
+): Promise<ActionResult> {
+  try {
+    const supabase = createClient();
+    const household = await getHouseholdId(supabase);
+    if (!household.success) return { success: false, error: household.error };
+
+    const { error } = await supabase
+      .from('meal_plan_sections')
+      .update(params)
+      .eq('id', id)
+      .eq('household_id', household.householdId);
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to update section',
+    };
+  }
+}
+
+/**
+ * Delete a meal plan section.
+ * Entries assigned to this section will have section_id set to NULL (ON DELETE SET NULL).
+ */
+export async function removeMealPlanSection(id: string): Promise<ActionResult> {
+  try {
+    const supabase = createClient();
+    const household = await getHouseholdId(supabase);
+    if (!household.success) return { success: false, error: household.error };
+
+    const { error } = await supabase
+      .from('meal_plan_sections')
+      .delete()
+      .eq('id', id)
+      .eq('household_id', household.householdId);
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to remove section',
+    };
+  }
+}
+
+/**
+ * Reorder sections by assigning sequential sort_order values.
+ */
+export async function reorderMealPlanSections(
+  ids: string[]
+): Promise<ActionResult> {
+  try {
+    const supabase = createClient();
+    const household = await getHouseholdId(supabase);
+    if (!household.success) return { success: false, error: household.error };
+
+    for (let i = 0; i < ids.length; i++) {
+      const { error } = await supabase
+        .from('meal_plan_sections')
+        .update({ sort_order: i })
+        .eq('id', ids[i])
+        .eq('household_id', household.householdId);
+      if (error) throw error;
+    }
+
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to reorder sections',
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Copy actions
+// ---------------------------------------------------------------------------
+
+/**
+ * Copy all entries from one day to another.
+ * New entries get fresh IDs; sort_order is preserved within each slot.
+ */
+export async function copyMealPlanDay(
+  fromDate: string,
+  toDate: string
+): Promise<ActionResult & { copiedCount?: number }> {
+  try {
+    const supabase = createClient();
+    const household = await getHouseholdId(supabase);
+    if (!household.success) return { success: false, error: household.error };
+
+    const { data: entries, error: fetchError } = await supabase
+      .from('meal_plan')
+      .select('*')
+      .eq('household_id', household.householdId)
+      .eq('day', fromDate)
+      .order('sort_order');
+
+    if (fetchError) throw fetchError;
+    if (!entries || entries.length === 0) return { success: true, copiedCount: 0 };
+
+    // Strip id + created_at so DB generates fresh ones; replace day
+    const copies = entries.map(
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      ({ id: _id, created_at: _created_at, ...rest }) => ({
+        ...rest,
+        day: toDate,
+      })
+    );
+
+    const { error: insertError } = await supabase.from('meal_plan').insert(copies);
+    if (insertError) throw insertError;
+
+    return { success: true, copiedCount: copies.length };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to copy day',
+    };
+  }
+}
+
+/**
+ * Copy all entries from one week to another.
+ * Day offsets are preserved (Mon→Mon, Tue→Tue, etc.).
+ */
+export async function copyMealPlanWeek(
+  fromWeekStart: string,
+  toWeekStart: string
+): Promise<ActionResult & { copiedCount?: number }> {
+  try {
+    const supabase = createClient();
+    const household = await getHouseholdId(supabase);
+    if (!household.success) return { success: false, error: household.error };
+
+    const fromStart = new Date(fromWeekStart + 'T00:00:00');
+    const fromEndDate = new Date(fromStart);
+    fromEndDate.setDate(fromEndDate.getDate() + 6);
+    const fromEndStr = fromEndDate.toISOString().split('T')[0];
+
+    const toStart = new Date(toWeekStart + 'T00:00:00');
+    const dayOffsetDays = Math.round(
+      (toStart.getTime() - fromStart.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    const { data: entries, error: fetchError } = await supabase
+      .from('meal_plan')
+      .select('*')
+      .eq('household_id', household.householdId)
+      .gte('day', fromWeekStart)
+      .lte('day', fromEndStr)
+      .order('day')
+      .order('sort_order');
+
+    if (fetchError) throw fetchError;
+    if (!entries || entries.length === 0) return { success: true, copiedCount: 0 };
+
+    const copies = entries.map(
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      ({ id: _id, created_at: _created_at, ...rest }) => {
+        const origDay = new Date(rest.day + 'T00:00:00');
+        origDay.setDate(origDay.getDate() + dayOffsetDays);
+        return { ...rest, day: origDay.toISOString().split('T')[0] };
+      }
+    );
+
+    const { error: insertError } = await supabase.from('meal_plan').insert(copies);
+    if (insertError) throw insertError;
+
+    return { success: true, copiedCount: copies.length };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to copy week',
+    };
+  }
+}

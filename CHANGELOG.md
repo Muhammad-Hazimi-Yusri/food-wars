@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.4] - 2026-02-23
+
+### Added
+- **Meal planning: copy day/week + sections management** (v0.12.4) — batch copy operations and configurable meal sections
+  - **Copy day** — compact icon button in the mobile day-tab bar opens a "Copy day to…" dialog with a native date picker; `copyMealPlanDay(fromDate, toDate)` server action fetches all entries for `fromDate` and bulk-inserts copies with fresh IDs to `toDate`; shows count toast with the target date
+  - **Copy week** — "Copy week →" text button in the week header calls `copyMealPlanWeek(fromWeekStart, toWeekStart)` with next week as the target; preserves day-of-week offsets (Mon→Mon, Tue→Tue, etc.); toast includes a "View" action that navigates to the destination week
+  - **Sections manager** — gear icon (⚙) button in the week navigation header opens a `MealPlanSectionsManager` dialog:
+    - DnD-sortable section list (GripVertical handle); `reorderMealPlanSections(ids[])` server action persists new sort order
+    - Inline edit: pencil button toggles each row to an editable name + optional time (`HH:MM`) input; ✓/✗ buttons save or cancel; keyboard `Enter` / `Escape` also work
+    - Delete: trash button removes section; `meal_plan` entries with that section fall back to "Other" (DB `ON DELETE SET NULL`); toast confirms with a message
+    - Add section: name + time inputs with a "+" button at the bottom of the dialog; appended at the end of the sort order
+  - New server actions in `meal-plan-actions.ts`: `addMealPlanSection`, `updateMealPlanSection`, `removeMealPlanSection`, `reorderMealPlanSections`, `copyMealPlanDay`, `copyMealPlanWeek`
+  - New component `MealPlanSectionsManager` (`src/components/meal-plan/MealPlanSectionsManager.tsx`) — self-contained Dialog with optimistic local state synced from server props via `useEffect`
+
+---
+
 ## [0.12.3] - 2026-02-22
 
 ### Added

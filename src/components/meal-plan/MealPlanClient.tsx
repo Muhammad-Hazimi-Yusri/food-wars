@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Plus, CalendarDays } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, CalendarDays, Settings2, Copy, CopyCheck } from "lucide-react";
 import {
   DndContext,
   DragOverlay,
@@ -26,12 +26,21 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { MealPlanEntryCard } from "@/components/meal-plan/MealPlanEntryCard";
 import { MealPlanWeekView } from "@/components/meal-plan/MealPlanWeekView";
 import { AddMealEntryDialog } from "@/components/meal-plan/AddMealEntryDialog";
+import { MealPlanSectionsManager } from "@/components/meal-plan/MealPlanSectionsManager";
 import {
   reorderMealPlanEntries,
   updateMealPlanEntry,
+  copyMealPlanDay,
+  copyMealPlanWeek,
 } from "@/lib/meal-plan-actions";
 import type {
   MealPlanSection,
@@ -201,6 +210,18 @@ export function MealPlanClient({
   const [dialogDay, setDialogDay] = useState<string>(today);
   const [dialogSectionId, setDialogSectionId] = useState<string | null>(null);
 
+  // ── Sections manager ──────────────────────────────────────────────────────
+  const [sectionsManagerOpen, setSectionsManagerOpen] = useState(false);
+
+  // ── Copy day dialog ───────────────────────────────────────────────────────
+  const [copyDayOpen, setCopyDayOpen] = useState(false);
+  const [copyDayFrom, setCopyDayFrom] = useState<string>(today);
+  const [copyDayTo, setCopyDayTo] = useState<string>("");
+  const [copyingDay, setCopyingDay] = useState(false);
+
+  // ── Copy week ─────────────────────────────────────────────────────────────
+  const [copyingWeek, setCopyingWeek] = useState(false);
+
   // ── Week navigation ───────────────────────────────────────────────────────
   const weekEnd = weekDays[6];
   const goToWeek = (monday: string) =>
@@ -216,6 +237,51 @@ export function MealPlanClient({
     setDialogDay(day);
     setDialogSectionId(sectionId);
     setDialogOpen(true);
+  };
+
+  const openCopyDay = (fromDay: string) => {
+    setCopyDayFrom(fromDay);
+    setCopyDayTo("");
+    setCopyDayOpen(true);
+  };
+
+  const handleCopyDay = async () => {
+    if (!copyDayTo) return;
+    setCopyingDay(true);
+    const result = await copyMealPlanDay(copyDayFrom, copyDayTo);
+    setCopyingDay(false);
+    if (!result.success) {
+      toast.error(result.error ?? "Failed to copy day.");
+    } else if (result.copiedCount === 0) {
+      toast("No meals to copy on that day.");
+    } else {
+      toast(`Copied ${result.copiedCount} meal${result.copiedCount !== 1 ? "s" : ""} to ${copyDayTo}.`);
+      setCopyDayOpen(false);
+      router.refresh();
+    }
+  };
+
+  const handleCopyWeekToNext = async () => {
+    const nextWeek = offsetDate(weekStart, 7);
+    setCopyingWeek(true);
+    const result = await copyMealPlanWeek(weekStart, nextWeek);
+    setCopyingWeek(false);
+    if (!result.success) {
+      toast.error(result.error ?? "Failed to copy week.");
+    } else if (result.copiedCount === 0) {
+      toast("No meals to copy this week.");
+    } else {
+      toast(
+        `Copied ${result.copiedCount} meal${result.copiedCount !== 1 ? "s" : ""} to next week.`,
+        {
+          action: {
+            label: "View",
+            onClick: () => goToWeek(nextWeek),
+          },
+        }
+      );
+      router.refresh();
+    }
   };
 
   const handleSuccess = () => router.refresh();
@@ -368,36 +434,61 @@ export function MealPlanClient({
 
   // ── Week navigation header (shared) ──────────────────────────────────────
   const weekHeader = (
-    <div className="flex items-center justify-between gap-3 mb-4">
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={() => goToWeek(offsetDate(weekStart, -7))}
-        aria-label="Previous week"
-      >
-        <ChevronLeft className="h-4 w-4" />
-      </Button>
-
-      <div className="flex flex-col items-center gap-1">
-        <span className="font-semibold text-megumi text-base leading-tight">
-          {formatWeekHeader(weekStart, weekEnd)}
-        </span>
-        <button
-          onClick={goToToday}
-          className="text-xs text-muted-foreground hover:text-soma transition-colors"
+    <div className="space-y-1 mb-4">
+      <div className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => goToWeek(offsetDate(weekStart, -7))}
+          aria-label="Previous week"
         >
-          Today
-        </button>
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+
+        <div className="flex flex-col items-center gap-0.5 flex-1 min-w-0 text-center">
+          <span className="font-semibold text-megumi text-base leading-tight">
+            {formatWeekHeader(weekStart, weekEnd)}
+          </span>
+          <button
+            onClick={goToToday}
+            className="text-xs text-muted-foreground hover:text-soma transition-colors"
+          >
+            Today
+          </button>
+        </div>
+
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => goToWeek(offsetDate(weekStart, 7))}
+          aria-label="Next week"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setSectionsManagerOpen(true)}
+          aria-label="Manage sections"
+          title="Manage sections"
+        >
+          <Settings2 className="h-4 w-4" />
+        </Button>
       </div>
 
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={() => goToWeek(offsetDate(weekStart, 7))}
-        aria-label="Next week"
-      >
-        <ChevronRight className="h-4 w-4" />
-      </Button>
+      {/* Secondary actions row */}
+      <div className="flex items-center justify-end gap-2">
+        <button
+          onClick={handleCopyWeekToNext}
+          disabled={copyingWeek}
+          className="text-xs text-muted-foreground hover:text-soma transition-colors flex items-center gap-1 disabled:opacity-50"
+          title="Copy this week's meals to next week"
+        >
+          <CopyCheck className="h-3 w-3" />
+          {copyingWeek ? "Copying…" : "Copy week →"}
+        </button>
+      </div>
     </div>
   );
 
@@ -406,23 +497,35 @@ export function MealPlanClient({
     <div className="md:hidden space-y-4">
       {weekHeader}
 
-      {/* Day tabs */}
-      <div className="flex gap-1 overflow-x-auto pb-1">
-        {weekDays.map((day) => (
-          <button
-            key={day}
-            onClick={() => setSelectedDay(day)}
-            className={`shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              day === selectedDay
-                ? "bg-soma text-white"
-                : day === today
-                ? "bg-soma/10 text-soma"
-                : "bg-muted text-muted-foreground hover:bg-muted/80"
-            }`}
-          >
-            {formatDayTabLabel(day, today)}
-          </button>
-        ))}
+      {/* Day tabs + copy day button */}
+      <div className="flex items-center gap-2">
+        <div className="flex gap-1 overflow-x-auto pb-1 flex-1 min-w-0">
+          {weekDays.map((day) => (
+            <button
+              key={day}
+              onClick={() => setSelectedDay(day)}
+              className={`shrink-0 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                day === selectedDay
+                  ? "bg-soma text-white"
+                  : day === today
+                  ? "bg-soma/10 text-soma"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              {formatDayTabLabel(day, today)}
+            </button>
+          ))}
+        </div>
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-7 w-7 shrink-0"
+          onClick={() => openCopyDay(selectedDay)}
+          title="Copy this day's meals to another day"
+          aria-label="Copy day"
+        >
+          <Copy className="h-3.5 w-3.5" />
+        </Button>
       </div>
 
       {/* Sections with DnD */}
@@ -599,6 +702,8 @@ export function MealPlanClient({
     <>
       {mobileView}
       {desktopView}
+
+      {/* Add meal entry dialog */}
       <AddMealEntryDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
@@ -609,6 +714,52 @@ export function MealPlanClient({
         products={products}
         onSuccess={handleSuccess}
       />
+
+      {/* Sections manager dialog */}
+      <MealPlanSectionsManager
+        open={sectionsManagerOpen}
+        onOpenChange={setSectionsManagerOpen}
+        sections={sections}
+      />
+
+      {/* Copy day dialog */}
+      <Dialog open={copyDayOpen} onOpenChange={setCopyDayOpen}>
+        <DialogContent className="max-w-xs">
+          <DialogHeader>
+            <DialogTitle>Copy day to…</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">
+                Copying meals from <span className="font-medium text-foreground">{copyDayFrom}</span>
+              </p>
+              <input
+                type="date"
+                value={copyDayTo}
+                min={copyDayFrom === today ? undefined : undefined}
+                onChange={(e) => setCopyDayTo(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCopyDayOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleCopyDay}
+                disabled={copyingDay || !copyDayTo}
+              >
+                {copyingDay ? "Copying…" : "Copy"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

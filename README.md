@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.12.3-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.12.4-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.12.3
+Current version is v0.12.4
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -532,9 +532,9 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Touch-friendly (TouchSensor 250ms delay, PointerSensor 8px distance)
 - [x] `DragOverlay` shows floating card while dragging; empty cells highlighted as drop zones
 
-**v0.12.4 — Copy Day / Week + Sections Management:**
-- [ ] "Copy day to..." and "Copy week →" batch actions
-- [ ] `MealPlanSectionsManager` — CRUD for sections (add/rename/delete/reorder)
+**v0.12.4 — Copy Day / Week + Sections Management:** ✓
+- [x] "Copy day to..." and "Copy week →" batch actions
+- [x] `MealPlanSectionsManager` — CRUD for sections (add/rename/delete/reorder)
 
 **v0.12.5 — Shopping List Generation:**
 - [ ] "Generate shopping list for week" — aggregates recipe ingredients, subtracts stock, adds missing to auto-target list
@@ -721,8 +721,9 @@ CREATE TABLE meal_plan (
 - [x] Week view (desktop primary) — 7-column CSS Grid with section rows, fulfillment badges (v0.12.2)
 - [x] Day view (mobile primary) — section cards with entries, day-tab navigation within week (v0.12.2)
 - [x] Drag-and-drop meal assignment — cross-slot + reorder, optimistic updates (v0.12.3)
-- [ ] Copy day / copy week
+- [x] Copy day / copy week (v0.12.4)
 - [x] Meal plan sections (Breakfast, Lunch, Dinner) — schema + seed (v0.12.0)
+- [x] Sections management — add/rename/delete/reorder sections (v0.12.4)
 
 **Recipe integration:**
 - [x] Add recipe to meal plan — recipe picker with servings stepper (v0.12.1)

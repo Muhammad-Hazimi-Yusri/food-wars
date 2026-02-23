@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.12.5-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.12.6-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.12.5
+Current version is v0.12.6
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -599,9 +599,9 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] "Generate shopping list for week" — aggregates recipe ingredients, subtracts stock, adds missing to auto-target list
 - [x] `aggregateWeekIngredients` pure utility in `meal-plan-utils.ts`
 
-**v0.12.6 — "What's for Dinner?" + Nutrition:**
-- [ ] "What's for dinner?" card on stock overview home page
-- [ ] Daily calorie estimate in day view header
+**v0.12.6 — "What's for Dinner?" + Nutrition:** ✓
+- [x] "What's for dinner?" card on stock overview home page
+- [x] Daily calorie estimate in day view header
 
 ---
 

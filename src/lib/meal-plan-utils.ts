@@ -95,3 +95,34 @@ export function aggregateWeekIngredients(
 
   return missing.sort((a, b) => a.productId.localeCompare(b.productId));
 }
+
+// ---------------------------------------------------------------------------
+// computeDailyNutrition
+// ---------------------------------------------------------------------------
+
+/**
+ * Estimate total kcal for a set of meal plan entries.
+ *
+ * @param entries         Entries for a single day (or any subset)
+ * @param kcalPerServing  Map<recipe_id, kcal per 1 serving>
+ *                        (caller computes: totalRecipeKcal / base_servings)
+ *
+ * For each recipe entry, multiplies kcal-per-serving by the entry's
+ * recipe_servings (falls back to 1 when null).
+ * Non-recipe entries (product, note) are ignored.
+ *
+ * Returns a rounded integer; 0 when no nutrition data is available.
+ */
+export function computeDailyNutrition(
+  entries: EntryForAggregation[],
+  kcalPerServing: Map<string, number>
+): number {
+  let total = 0;
+  for (const entry of entries) {
+    if (entry.type !== "recipe" || !entry.recipe_id) continue;
+    const perServing = kcalPerServing.get(entry.recipe_id) ?? 0;
+    const servings = entry.recipe_servings ?? 1;
+    total += perServing * servings;
+  }
+  return Math.round(total);
+}

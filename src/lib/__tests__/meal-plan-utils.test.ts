@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { RecipeIngredientWithRelations } from '@/types/database';
-import { aggregateWeekIngredients, type EntryForAggregation } from '../meal-plan-utils';
+import { aggregateWeekIngredients, computeDailyNutrition, type EntryForAggregation } from '../meal-plan-utils';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -234,5 +234,63 @@ describe('aggregateWeekIngredients', () => {
     );
     expect(result).toHaveLength(1);
     expect(result[0].amount).toBeCloseTo(4);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// computeDailyNutrition tests
+// ---------------------------------------------------------------------------
+
+describe('computeDailyNutrition', () => {
+  it('returns 0 for empty entries', () => {
+    expect(computeDailyNutrition([], new Map())).toBe(0);
+  });
+
+  it('returns 0 for non-recipe entries', () => {
+    const entries: EntryForAggregation[] = [
+      { type: 'note', recipe_id: null, recipe_servings: null },
+      { type: 'product', recipe_id: null, recipe_servings: null },
+    ];
+    expect(computeDailyNutrition(entries, new Map([['r1', 500]]))).toBe(0);
+  });
+
+  it('returns 0 when recipe has no nutrition data', () => {
+    const entries: EntryForAggregation[] = [
+      { type: 'recipe', recipe_id: 'r1', recipe_servings: 2 },
+    ];
+    expect(computeDailyNutrition(entries, new Map())).toBe(0);
+  });
+
+  it('returns kcal for a single recipe entry at 1 serving', () => {
+    // 400 kcal/serving × 1 serving = 400
+    const entries: EntryForAggregation[] = [
+      { type: 'recipe', recipe_id: 'r1', recipe_servings: 1 },
+    ];
+    expect(computeDailyNutrition(entries, new Map([['r1', 400]]))).toBe(400);
+  });
+
+  it('scales kcal by recipe_servings', () => {
+    // 300 kcal/serving × 3 servings = 900
+    const entries: EntryForAggregation[] = [
+      { type: 'recipe', recipe_id: 'r1', recipe_servings: 3 },
+    ];
+    expect(computeDailyNutrition(entries, new Map([['r1', 300]]))).toBe(900);
+  });
+
+  it('falls back to 1 serving when recipe_servings is null', () => {
+    const entries: EntryForAggregation[] = [
+      { type: 'recipe', recipe_id: 'r1', recipe_servings: null },
+    ];
+    expect(computeDailyNutrition(entries, new Map([['r1', 250]]))).toBe(250);
+  });
+
+  it('sums kcal across multiple entries', () => {
+    // r1: 400 × 2 = 800; r2: 200 × 1 = 200 → total 1000
+    const entries: EntryForAggregation[] = [
+      { type: 'recipe', recipe_id: 'r1', recipe_servings: 2 },
+      { type: 'recipe', recipe_id: 'r2', recipe_servings: 1 },
+    ];
+    const map = new Map([['r1', 400], ['r2', 200]]);
+    expect(computeDailyNutrition(entries, map)).toBe(1000);
   });
 });

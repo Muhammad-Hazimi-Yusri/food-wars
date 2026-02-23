@@ -5,8 +5,10 @@ import { AddStockEntryModal } from "@/components/inventory/AddStockEntryModal";
 import { StockOverviewClient } from "@/components/inventory/StockOverviewClient";
 import { StockEntryWithProduct, Location, ProductGroup, Product, QuantityUnit, ShoppingLocation } from "@/types/database";
 import { ScanToStockFlow } from "@/components/barcode/ScanToStockFlow";
+import { TodaysDinnerCard } from "@/components/meal-plan/TodaysDinnerCard";
 import Link from "next/link";
 import { Plus } from "lucide-react";
+import { Suspense } from "react";
 
 type QuantityUnitConversion = {
   id: string;
@@ -160,6 +162,11 @@ export default async function Home() {
             <span>Add Product</span>
           </Link>
         </div>
+
+        {/* Tonight's dinner — only renders when Dinner entries exist today */}
+        <Suspense fallback={null}>
+          <TodaysDinnerCard />
+        </Suspense>
 
         {/* Client-side filtering wrapper */}
         <StockOverviewClient

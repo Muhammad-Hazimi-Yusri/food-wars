@@ -121,9 +121,10 @@ export default async function MealPlanPage({ searchParams }: PageProps) {
   ];
 
   const fulfillmentByRecipeId: Record<string, boolean> = {};
+  const kcalPerServingByRecipe: Record<string, number> = {};
 
   if (weekRecipeIds.length > 0) {
-    const [ingredientsResult, stockResult] = await Promise.all([
+    const [ingredientsResult, stockResult, nutritionResult] = await Promise.all([
       supabase
         .from("recipe_ingredients")
         .select(
@@ -133,6 +134,7 @@ export default async function MealPlanPage({ searchParams }: PageProps) {
         )
         .in("recipe_id", weekRecipeIds),
       supabase.from("stock_entries").select("product_id, amount"),
+      supabase.from("product_nutritions").select("product_id, energy_kcal"),
     ]);
 
     const allIngredients =
@@ -153,6 +155,22 @@ export default async function MealPlanPage({ searchParams }: PageProps) {
       const base = recipe?.base_servings ?? 1;
       const result = computeRecipeFulfillment(ings, stockByProduct, base, base);
       fulfillmentByRecipeId[recipeId] = result.canMake;
+    }
+
+    // Build kcal-per-serving map for calorie display
+    const kcalByProduct = new Map<string, number>();
+    for (const n of nutritionResult.data ?? []) {
+      if (n.energy_kcal != null) kcalByProduct.set(n.product_id, n.energy_kcal);
+    }
+    for (const recipeId of weekRecipeIds) {
+      const ings = allIngredients.filter((i) => i.recipe_id === recipeId);
+      const base = recipesMap.get(recipeId)?.base_servings ?? 1;
+      let totalKcal = 0;
+      for (const ing of ings) {
+        if (!ing.product_id || ing.variable_amount) continue;
+        totalKcal += (ing.amount ?? 0) * ((kcalByProduct.get(ing.product_id) ?? 0) / 100);
+      }
+      kcalPerServingByRecipe[recipeId] = base > 0 ? totalKcal / base : 0;
     }
   }
 
@@ -192,6 +210,7 @@ export default async function MealPlanPage({ searchParams }: PageProps) {
           recipes={recipes}
           products={products}
           fulfillmentByRecipeId={fulfillmentByRecipeId}
+          kcalPerServingByRecipe={kcalPerServingByRecipe}
         />
       </main>
     </div>

@@ -37,6 +37,7 @@ type Props = {
   today: string; // YYYY-MM-DD for highlighting
   onAddEntry: (day: string, sectionId: string | null) => void;
   onDragEnd: (event: DragEndEvent) => void;
+  kcalByDay?: Record<string, number>;
 };
 
 // ---------------------------------------------------------------------------
@@ -130,6 +131,7 @@ export function MealPlanWeekView({
   today,
   onAddEntry,
   onDragEnd,
+  kcalByDay,
 }: Props) {
   const [activeEntryId, setActiveEntryId] = useState<string | null>(null);
   const activeEntry = entries.find((e) => e.id === activeEntryId) ?? null;
@@ -201,6 +203,11 @@ export function MealPlanWeekView({
               >
                 {dayNum}
               </p>
+              {kcalByDay?.[day] != null && (
+                <p className="text-[10px] text-muted-foreground leading-tight">
+                  ~{kcalByDay[day].toLocaleString()}
+                </p>
+              )}
             </div>
           );
         })}

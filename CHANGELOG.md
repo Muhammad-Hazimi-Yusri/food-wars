@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.6] - 2026-02-23
+
+### Added
+- **Meal planning: "What's for Dinner?" + calorie display** (v0.12.6) — quick dinner visibility on the home page and estimated daily calories in the meal plan view
+  - **"Tonight's dinner" card** on the stock overview home page (`/`) — async server component (`TodaysDinnerCard`) fetches today's "Dinner" section entries at page render; shows each recipe name with a green `CheckCircle` / red `XCircle` fulfillment badge; displays a "See full plan →" link to `/meal-plan?date=today`; rendered inside a `<Suspense fallback={null}>` so it streams in without blocking the main page; card is entirely absent when no dinner is planned (no empty state clutter)
+  - **Daily kcal estimate** in mobile day view — a "~X,XXX kcal" text line appears below the day tab strip when any recipe entries on the selected day have nutrition data; updates in real-time when entries are moved between days via drag-and-drop (derived from `localEntries` + `kcalPerServingByRecipe` in `useMemo`)
+  - **Per-day kcal in week grid** — each day column header shows "~X,XXX" in muted text below the date number when there are recipe entries with nutrition data for that day
+  - **`computeDailyNutrition`** pure utility in `meal-plan-utils.ts`: takes `entries: EntryForAggregation[]` and `kcalPerServing: Map<string, number>`; multiplies per-serving kcal by `recipe_servings` (falls back to 1); returns a rounded integer; ignores product/note entries
+  - **Server-side nutrition computation** (`meal-plan/page.tsx`): fetches `product_nutritions` in parallel with ingredients and stock; builds `kcalByProduct` map; computes `kcalPerServingByRecipe[recipeId] = totalIngredientKcal / base_servings` for each recipe in the week; passed as a new `kcalPerServingByRecipe` prop to `MealPlanClient`
+  - **Unit tests** — 7 new Vitest tests for `computeDailyNutrition`: empty entries, non-recipe entries skipped, no nutrition data returns 0, single recipe kcal, servings scaling, null servings fallback, multi-recipe sum
+
+---
+
 ## [0.12.5] - 2026-02-23
 
 ### Added

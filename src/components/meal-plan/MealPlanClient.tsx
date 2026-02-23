@@ -63,6 +63,7 @@ type Props = {
   recipes: Pick<Recipe, "id" | "name" | "base_servings" | "picture_file_name">[];
   products: Pick<Product, "id" | "name">[];
   fulfillmentByRecipeId: Record<string, boolean>;
+  kcalPerServingByRecipe?: Record<string, number>; // kcal per 1 serving per recipe
 };
 
 // ---------------------------------------------------------------------------
@@ -186,6 +187,7 @@ export function MealPlanClient({
   recipes,
   products,
   fulfillmentByRecipeId,
+  kcalPerServingByRecipe,
 }: Props) {
   const router = useRouter();
 
@@ -337,6 +339,23 @@ export function MealPlanClient({
   const hasUnsectioned =
     entriesBySection.has(null) &&
     (entriesBySection.get(null)?.length ?? 0) > 0;
+
+  // ── Calorie totals per day ─────────────────────────────────────────────────
+  const kcalByDay = useMemo(() => {
+    if (!kcalPerServingByRecipe) return {} as Record<string, number>;
+    const result: Record<string, number> = {};
+    for (const day of weekDays) {
+      const dayTotal = localEntries
+        .filter((e) => e.day === day && e.type === "recipe" && e.recipe_id)
+        .reduce((sum, e) => {
+          const perServing = kcalPerServingByRecipe[e.recipe_id!] ?? 0;
+          const servings = e.recipe_servings ?? (e.recipe?.base_servings ?? 1);
+          return sum + perServing * servings;
+        }, 0);
+      if (dayTotal > 0) result[day] = Math.round(dayTotal);
+    }
+    return result;
+  }, [localEntries, kcalPerServingByRecipe, weekDays]);
 
   // ── DnD sensors (used by both mobile + desktop views) ────────────────────
   const sensors = useSensors(
@@ -566,6 +585,13 @@ export function MealPlanClient({
         </Button>
       </div>
 
+      {/* Daily kcal estimate */}
+      {kcalByDay[selectedDay] != null && (
+        <p className="text-xs text-muted-foreground text-right -mt-1">
+          ~{kcalByDay[selectedDay].toLocaleString()} kcal
+        </p>
+      )}
+
       {/* Sections with DnD */}
       <DndContext
         sensors={sensors}
@@ -732,6 +758,7 @@ export function MealPlanClient({
         today={today}
         onAddEntry={openDialog}
         onDragEnd={handleDragEnd}
+        kcalByDay={kcalByDay}
       />
     </div>
   );

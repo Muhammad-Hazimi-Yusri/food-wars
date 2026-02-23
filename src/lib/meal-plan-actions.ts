@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/client';
 import { getHouseholdId } from '@/lib/supabase/get-household';
-import type { MealPlanEntry } from '@/types/database';
+import { addMissingToShoppingList } from '@/lib/recipe-actions';
+import { aggregateWeekIngredients } from '@/lib/meal-plan-utils';
+import type { MealPlanEntry, RecipeIngredientWithRelations } from '@/types/database';
 
 type ActionResult = {
   success: boolean;
@@ -445,6 +447,144 @@ export async function copyMealPlanWeek(
     return {
       success: false,
       error: err instanceof Error ? err.message : 'Failed to copy week',
+    };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Shopping list generation
+// ---------------------------------------------------------------------------
+
+/**
+ * Aggregate all recipe ingredient requirements for a week, subtract current
+ * stock, and add missing items to the household's default shopping list.
+ */
+export async function generateWeekShoppingList(
+  weekStart: string
+): Promise<ActionResult & { addedCount?: number; listName?: string }> {
+  try {
+    const supabase = createClient();
+    const household = await getHouseholdId(supabase);
+    if (!household.success) return { success: false, error: household.error };
+
+    // Week range
+    const weekEndDate = new Date(weekStart + 'T00:00:00');
+    weekEndDate.setDate(weekEndDate.getDate() + 6);
+    const weekEnd = weekEndDate.toISOString().split('T')[0];
+
+    // Fetch all recipe entries for the week
+    const { data: entriesData, error: entriesError } = await supabase
+      .from('meal_plan')
+      .select('type, recipe_id, recipe_servings')
+      .eq('household_id', household.householdId)
+      .gte('day', weekStart)
+      .lte('day', weekEnd)
+      .eq('type', 'recipe')
+      .not('recipe_id', 'is', null);
+
+    if (entriesError) throw entriesError;
+
+    const entries = (entriesData ?? []) as Array<{
+      type: string;
+      recipe_id: string;
+      recipe_servings: number | null;
+    }>;
+
+    if (entries.length === 0) return { success: true, addedCount: 0 };
+
+    const weekRecipeIds = [...new Set(entries.map((e) => e.recipe_id))];
+
+    // Parallel fetches: ingredients, base servings, stock, shopping lists
+    const [ingredientsResult, recipesResult, stockResult, listsResult] =
+      await Promise.all([
+        supabase
+          .from('recipe_ingredients')
+          .select(
+            'id, recipe_id, product_id, amount, qu_id, not_check_stock_fulfillment, variable_amount, ' +
+              'ingredient_group, note, sort_order, ' +
+              'product:products(id, name, qu_id_stock, not_check_stock_fulfillment_for_recipes), ' +
+              'qu:quantity_units(id, name, name_plural)'
+          )
+          .in('recipe_id', weekRecipeIds),
+        supabase
+          .from('recipes')
+          .select('id, base_servings')
+          .in('id', weekRecipeIds),
+        supabase.from('stock_entries').select('product_id, amount'),
+        supabase
+          .from('shopping_lists')
+          .select('id, name, is_auto_target')
+          .order('name'),
+      ]);
+
+    if (ingredientsResult.error) throw ingredientsResult.error;
+    if (recipesResult.error) throw recipesResult.error;
+
+    // Build lookup maps
+    const allIngredients =
+      (ingredientsResult.data ?? []) as unknown as RecipeIngredientWithRelations[];
+
+    const ingredientsByRecipe = new Map<string, RecipeIngredientWithRelations[]>();
+    for (const ing of allIngredients) {
+      const arr = ingredientsByRecipe.get(ing.recipe_id) ?? [];
+      arr.push(ing);
+      ingredientsByRecipe.set(ing.recipe_id, arr);
+    }
+
+    const baseServingsByRecipe = new Map<string, number>();
+    for (const r of (recipesResult.data ?? []) as {
+      id: string;
+      base_servings: number;
+    }[]) {
+      baseServingsByRecipe.set(r.id, r.base_servings);
+    }
+
+    const stockByProduct = new Map<string, number>();
+    for (const entry of (stockResult.data ?? []) as {
+      product_id: string;
+      amount: number;
+    }[]) {
+      stockByProduct.set(
+        entry.product_id,
+        (stockByProduct.get(entry.product_id) ?? 0) + entry.amount
+      );
+    }
+
+    // Find default shopping list (is_auto_target first, else alphabetically first)
+    const lists = (listsResult.data ?? []) as {
+      id: string;
+      name: string;
+      is_auto_target: boolean;
+    }[];
+    if (lists.length === 0) {
+      return {
+        success: false,
+        error: 'No shopping lists found. Create one first.',
+      };
+    }
+    const targetList = lists.find((l) => l.is_auto_target) ?? lists[0];
+
+    // Aggregate and subtract stock
+    const missing = aggregateWeekIngredients(
+      entries,
+      ingredientsByRecipe,
+      stockByProduct,
+      baseServingsByRecipe
+    );
+
+    if (missing.length === 0) {
+      return { success: true, addedCount: 0, listName: targetList.name };
+    }
+
+    // Add missing items to the shopping list
+    const result = await addMissingToShoppingList(missing, targetList.id);
+    if (!result.success) return result;
+
+    return { success: true, addedCount: missing.length, listName: targetList.name };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to generate shopping list',
     };
   }
 }

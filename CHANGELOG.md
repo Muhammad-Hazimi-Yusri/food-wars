@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.5] - 2026-02-23
+
+### Added
+- **Meal planning: shopping list generation** (v0.12.5) — one-click button fills the shopping list for the entire week's meal plan
+  - **"Generate list" button** in the week view secondary actions row (ShoppingCart icon); calls `generateWeekShoppingList(weekStart)` server action; Sonner toast reports "Added N ingredients to "List Name"" with a "View list" action that navigates to `/shopping-lists`; separate toast shown when all ingredients are already in stock
+  - **`aggregateWeekIngredients`** pure utility in `src/lib/meal-plan-utils.ts`: iterates all recipe entries in the week; scales each ingredient's amount by `recipe_servings / base_servings`; consolidates duplicate `product_id × qu_id` pairs across all days and sections; subtracts current stock from totals; returns only items with a positive deficit, sorted by `product_id`; skips: `not_check_stock_fulfillment`, `variable_amount` ("to taste") ingredients, null `product_id`, and products with `not_check_stock_fulfillment_for_recipes`
+  - **`generateWeekShoppingList(weekStart)`** server action: fetches all recipe entries for the 7-day window; parallel fetches for ingredients (with product+qu joins), base servings per recipe, current stock totals, and existing shopping lists; builds Maps and calls `aggregateWeekIngredients`; finds target list (auto-target flag or alphabetically first); delegates to reused `addMissingToShoppingList` from `recipe-actions.ts`; returns `{ success, addedCount, listName }`
+  - **Unit tests** (`src/lib/__tests__/meal-plan-utils.test.ts`) — 13 Vitest tests for `aggregateWeekIngredients`: empty entries, no ingredients found, serving scaling (recipe_servings / base_servings), null servings fallback to base, consolidation of same product×qu across multiple entries, separate entries for different qu_ids, stock subtraction, fully-in-stock items omitted, skip flags (not_check_stock_fulfillment, variable_amount, null product_id, product.not_check_stock_fulfillment_for_recipes), cross-recipe aggregation
+
+---
+
 ## [0.12.4] - 2026-02-23
 
 ### Added

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Plus, CalendarDays, Settings2, Copy, CopyCheck } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, CalendarDays, Settings2, Copy, CopyCheck, ShoppingCart } from "lucide-react";
 import {
   DndContext,
   DragOverlay,
@@ -41,6 +41,7 @@ import {
   updateMealPlanEntry,
   copyMealPlanDay,
   copyMealPlanWeek,
+  generateWeekShoppingList,
 } from "@/lib/meal-plan-actions";
 import type {
   MealPlanSection,
@@ -222,6 +223,9 @@ export function MealPlanClient({
   // ── Copy week ─────────────────────────────────────────────────────────────
   const [copyingWeek, setCopyingWeek] = useState(false);
 
+  // ── Generate shopping list ────────────────────────────────────────────────
+  const [generatingList, setGeneratingList] = useState(false);
+
   // ── Week navigation ───────────────────────────────────────────────────────
   const weekEnd = weekDays[6];
   const goToWeek = (monday: string) =>
@@ -231,6 +235,31 @@ export function MealPlanClient({
     const dow = d.getDay();
     d.setDate(d.getDate() + (dow === 0 ? -6 : 1 - dow));
     router.push(`/meal-plan?week=${d.toISOString().split("T")[0]}`);
+  };
+
+  const handleGenerateShoppingList = async () => {
+    setGeneratingList(true);
+    const result = await generateWeekShoppingList(weekStart);
+    setGeneratingList(false);
+    if (!result.success) {
+      toast.error(result.error ?? "Failed to generate shopping list.");
+    } else if (result.addedCount === 0) {
+      toast(
+        result.listName
+          ? `All ingredients in stock — nothing to add to "${result.listName}".`
+          : "No recipe meals this week, or all ingredients in stock."
+      );
+    } else {
+      toast(
+        `Added ${result.addedCount} ingredient${result.addedCount !== 1 ? "s" : ""} to "${result.listName}".`,
+        {
+          action: {
+            label: "View list",
+            onClick: () => router.push("/shopping-lists"),
+          },
+        }
+      );
+    }
   };
 
   const openDialog = (day: string, sectionId: string | null) => {
@@ -478,7 +507,16 @@ export function MealPlanClient({
       </div>
 
       {/* Secondary actions row */}
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex items-center justify-end gap-3">
+        <button
+          onClick={handleGenerateShoppingList}
+          disabled={generatingList}
+          className="text-xs text-muted-foreground hover:text-soma transition-colors flex items-center gap-1 disabled:opacity-50"
+          title="Add missing ingredients for this week's recipes to shopping list"
+        >
+          <ShoppingCart className="h-3 w-3" />
+          {generatingList ? "Adding…" : "Generate list"}
+        </button>
         <button
           onClick={handleCopyWeekToNext}
           disabled={copyingWeek}

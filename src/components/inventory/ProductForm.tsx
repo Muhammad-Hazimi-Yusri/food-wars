@@ -69,6 +69,7 @@ type Product = {
   tare_weight: number;
   calories: number | null;
   quick_consume_amount: number;
+  quick_consume_as_percentage: boolean;
   quick_open_amount: number;
   default_stock_label_type: number;
   auto_reprint_stock_label: boolean;
@@ -361,6 +362,7 @@ export function ProductForm({
     // Misc
     calories: product?.calories?.toString() ?? "",
     quick_consume_amount: product?.quick_consume_amount ?? 1,
+    quick_consume_as_percentage: product?.quick_consume_as_percentage ?? false,
     quick_open_amount: product?.quick_open_amount ?? 1,
     default_stock_label_type: product?.default_stock_label_type ?? 0,
     auto_reprint_stock_label: product?.auto_reprint_stock_label ?? false,
@@ -475,6 +477,7 @@ export function ProductForm({
         tare_weight: formData.tare_weight,
         calories: formData.calories ? parseInt(formData.calories) : null,
         quick_consume_amount: formData.quick_consume_amount,
+        quick_consume_as_percentage: formData.quick_consume_as_percentage,
         quick_open_amount: formData.quick_open_amount,
         default_stock_label_type: formData.default_stock_label_type,
         auto_reprint_stock_label: formData.auto_reprint_stock_label,
@@ -1194,14 +1197,35 @@ export function ProductForm({
                 <div className="pt-4 border-t space-y-4">
                   <div>
                     <Label htmlFor="quick_consume_amount">
-                      Quick consume amount ({getUnitName(formData.qu_id_stock) || "unit"})
+                      Quick consume amount{" "}
+                      ({formData.quick_consume_as_percentage ? "% of total" : (getUnitName(formData.qu_id_stock) || "unit")})
                     </Label>
+                    <div className="flex items-center gap-3 mt-1 mb-2">
+                      <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+                        <input
+                          type="radio"
+                          checked={!formData.quick_consume_as_percentage}
+                          onChange={() => updateField("quick_consume_as_percentage", false)}
+                          className="h-4 w-4"
+                        />
+                        Absolute
+                      </label>
+                      <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+                        <input
+                          type="radio"
+                          checked={formData.quick_consume_as_percentage}
+                          onChange={() => updateField("quick_consume_as_percentage", true)}
+                          className="h-4 w-4"
+                        />
+                        % of total
+                      </label>
+                    </div>
                     <NumberInput
                       id="quick_consume_amount"
                       value={formData.quick_consume_amount}
                       onChange={(v) => updateField("quick_consume_amount", v)}
-                      min={0.0}
-                      step={0.5}
+                      min={0.1}
+                      step={0.1}
                     />
                   </div>
 

@@ -174,7 +174,10 @@ export function MobileStockList({ entries, locations, zeroStockProducts = [] }: 
 
   const handleConsume = async (product: AggregatedProduct) => {
     setConsuming(product.productId);
-    const amount = product.entries[0].product.quick_consume_amount;
+    const p = product.entries[0].product;
+    const amount = p.quick_consume_as_percentage
+      ? product.totalAmount * (p.quick_consume_amount / 100)
+      : p.quick_consume_amount;
     const result = await consumeStock(product.productId, product.entries, amount);
     setConsuming(null);
     if (result.success) {
@@ -341,7 +344,7 @@ export function MobileStockList({ entries, locations, zeroStockProducts = [] }: 
                         <button
                           onClick={() => handleConsume(product)}
                           disabled={consuming === product.productId}
-                          title={`Consume ${product.entries[0]?.product.quick_consume_amount ?? 1}`}
+                          title={`Consume ${product.entries[0]?.product.quick_consume_as_percentage ? `${product.entries[0]?.product.quick_consume_amount ?? 1}%` : (product.entries[0]?.product.quick_consume_amount ?? 1)}`}
                           className={cn(
                             "h-6 px-1.5 text-xs font-medium rounded bg-green-600 text-white flex items-center gap-0.5",
                             consuming === product.productId
@@ -349,7 +352,7 @@ export function MobileStockList({ entries, locations, zeroStockProducts = [] }: 
                               : "hover:bg-green-700 transition-colors"
                           )}
                         >
-                          <Utensils className="h-3 w-3" />{product.entries[0]?.product.quick_consume_amount ?? 1}
+                          <Utensils className="h-3 w-3" />{product.entries[0]?.product.quick_consume_as_percentage ? `${product.entries[0]?.product.quick_consume_amount ?? 1}%` : (product.entries[0]?.product.quick_consume_amount ?? 1)}
                         </button>
                         <button
                           onClick={() => handleConsumeAll(product)}

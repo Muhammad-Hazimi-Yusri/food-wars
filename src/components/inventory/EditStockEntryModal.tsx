@@ -23,6 +23,7 @@ import { StockEntryWithProduct, Location, ShoppingLocation, QuantityUnit } from 
 import { createClient } from "@/lib/supabase/client";
 import { undoEditEntry } from "@/lib/stock-actions";
 import { toast } from "sonner";
+import { getSmartPriceDisplay } from "@/lib/unit-conversions";
 
 type Conversion = {
   id: string;
@@ -326,11 +327,14 @@ export function EditStockEntryModal({
               </Select>
             )}
             {/* Conversion hint */}
-            {formData.price && parseFloat(formData.price) > 0 && (priceType === "total" || conversionFactor !== 1) && (
-              <p className="text-sm text-gray-500 mt-1">
-                = £{pricePerStockUnit().toFixed(2)} per {stockUnitName}
-              </p>
-            )}
+            {formData.price && parseFloat(formData.price) > 0 && (priceType === "total" || conversionFactor !== 1) && (() => {
+              const smart = getSmartPriceDisplay(pricePerStockUnit(), stockUnitName);
+              return (
+                <p className="text-sm text-gray-500 mt-1">
+                  = £{smart.scaledPrice.toFixed(2)} per {smart.displayUnit}
+                </p>
+              );
+            })()}
           </div>
 
           {/* Store */}

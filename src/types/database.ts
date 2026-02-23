@@ -104,6 +104,7 @@ export type Product = {
   // Stock management
   min_stock_amount: number;
   quick_consume_amount: number;
+  quick_consume_as_percentage: boolean;
   quick_open_amount: number;
   treat_opened_as_out_of_stock: boolean;
   

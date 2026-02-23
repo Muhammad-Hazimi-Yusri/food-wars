@@ -25,6 +25,7 @@ import { Product, Location, QuantityUnit, ShoppingLocation } from "@/types/datab
 import { GUEST_HOUSEHOLD_ID } from "@/lib/constants";
 import { parseDateShorthand } from "@/lib/date-shorthands";
 import { useRecentProducts } from "@/hooks/useRecentProducts";
+import { resolveBuiltInConversion, getSmartPriceDisplay } from "@/lib/unit-conversions";
 
 type ProductWithUnits = Product & {
   qu_stock?: QuantityUnit | null;
@@ -163,6 +164,14 @@ export function AddStockEntryModal({
         c.to_qu_id === selectedProduct.qu_id_stock
     );
     if (globalConversion) return globalConversion.factor;
+
+    // Built-in SI conversion fallback (kg↔g, L↔mL, pint↔mL, etc.)
+    const fromName = quantityUnits.find((u) => u.id === selectedQuId)?.name;
+    const toName = quantityUnits.find((u) => u.id === selectedProduct.qu_id_stock)?.name;
+    if (fromName && toName) {
+      const builtIn = resolveBuiltInConversion(fromName, toName);
+      if (builtIn !== null) return builtIn;
+    }
 
     return 1;
   };
@@ -538,11 +547,14 @@ export function AddStockEntryModal({
                     </label>
                   </div>
                 </div>
-                {price && parseFloat(price) > 0 && conversionFactor !== 1 && (
-                  <p className="text-sm text-gray-500 mt-1">
-                    means £{pricePerStockUnit().toFixed(2)} per {stockUnitName}
-                  </p>
-                )}
+                {price && parseFloat(price) > 0 && (conversionFactor !== 1 || priceType === "total") && (() => {
+                  const smart = getSmartPriceDisplay(pricePerStockUnit(), stockUnitName);
+                  return (
+                    <p className="text-sm text-gray-500 mt-1">
+                      means £{smart.scaledPrice.toFixed(2)} per {smart.displayUnit}
+                    </p>
+                  );
+                })()}
               </div>
 
               {/* Store */}

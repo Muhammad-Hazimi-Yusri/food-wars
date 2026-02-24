@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.13.10-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.13.11-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.13.10
+Current version is v0.13.11
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -657,6 +657,9 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] dnd-kit hydration mismatch warning resolved — stable `id` props added to all three `DndContext` instances in the Meal Plan page (`MealPlanWeekView`, `MealPlanClient`, `MealPlanSectionsManager`)
 - [x] Missing React `key` prop warning resolved — `sections.map()` in `MealPlanWeekView` now uses `<React.Fragment key={section.id}>` instead of a keyless shorthand fragment
 - [x] Recipe meal entries in the week grid and mobile day view are now clickable links to `/recipes/{id}`
+
+**Test fix (v0.13.11):**
+- [x] Stale `undoTransaction` test updated — probe value changed from `'purchase'` (now handled) to `'transfer-to'` (genuinely unhandled), restoring green CI
 
 #### v0.14 - Grocycode & Label Printing (was v1.4)
 

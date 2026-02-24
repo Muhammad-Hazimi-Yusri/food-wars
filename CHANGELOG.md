@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.11] - 2026-02-24
+
+### Fixed
+- **Stale `undoTransaction` test** (v0.13.11) — the "returns error for unknown type" assertion in `stock-actions.test.ts` was probing with `'purchase'`, which became a handled case in v0.13.9 when `undoPurchase` was added; the mock was not configured for the purchase path, causing a spurious "is not a function" error rather than the expected message; changed probe value to `'transfer-to'`, which genuinely hits the `default` branch
+
+---
+
 ## [0.13.10] - 2026-02-24
 
 ### Fixed

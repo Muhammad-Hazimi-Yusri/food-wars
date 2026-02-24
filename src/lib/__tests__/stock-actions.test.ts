@@ -590,7 +590,7 @@ describe('stock-actions', () => {
     });
 
     it('returns error for unknown type', async () => {
-      const result = await undoTransaction('corr-1', 'purchase');
+      const result = await undoTransaction('corr-1', 'transfer-to');
       expect(result.success).toBe(false);
       expect(result.error).toBe('Cannot undo this transaction type');
     });

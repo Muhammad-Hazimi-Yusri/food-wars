@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import Image from "next/image";
-import { Settings, BookOpen, ShoppingCart, Bot, ChefHat, CalendarDays } from "lucide-react";
+import { Settings, BookOpen, ShoppingCart, Bot, ChefHat, CalendarDays, BarChart2 } from "lucide-react";
 import Link from "next/link";
 
 export function UserMenu() {
@@ -94,6 +94,12 @@ export function UserMenu() {
           <Link href="/meal-plan" className="flex items-center gap-2">
             <CalendarDays className="h-4 w-4" />
             Meal Plan
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/reports" className="flex items-center gap-2">
+            <BarChart2 className="h-4 w-4" />
+            Reports
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>

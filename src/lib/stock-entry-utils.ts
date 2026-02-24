@@ -107,24 +107,45 @@ export async function bulkCreateStockEntries(
       finalPrice = (finalPrice * item.amount) / stockAmount;
     }
 
-    const { error: insertError } = await supabase
+    const shoppingLocationId = item.shopping_location_id || product?.shopping_location_id || null;
+    const purchasedDate = new Date().toISOString().split("T")[0];
+
+    const { data: newEntry, error: insertError } = await supabase
       .from("stock_entries")
       .insert({
         household_id: householdId,
         product_id: item.product_id,
         amount: stockAmount,
         location_id: item.location_id || product?.location_id || null,
-        shopping_location_id:
-          item.shopping_location_id || product?.shopping_location_id || null,
+        shopping_location_id: shoppingLocationId,
         best_before_date: item.best_before_date || null,
         price: finalPrice,
         note: item.note || null,
-        purchased_date: new Date().toISOString().split("T")[0],
-      });
+        purchased_date: purchasedDate,
+      })
+      .select("id, stock_id")
+      .single();
 
     if (!insertError) {
       successCount++;
       savedIndices.push(i);
+
+      // Log the purchase in stock_log (best-effort — don't block on failure)
+      await supabase.from("stock_log").insert({
+        household_id: householdId,
+        product_id: item.product_id,
+        amount: stockAmount,
+        transaction_type: "purchase",
+        price: finalPrice,
+        shopping_location_id: shoppingLocationId,
+        purchased_date: purchasedDate,
+        stock_entry_id: newEntry?.id ?? null,
+        stock_id: newEntry?.stock_id ?? null,
+        correlation_id: crypto.randomUUID(),
+        transaction_id: crypto.randomUUID(),
+        undone: false,
+        user_id: user.id,
+      });
     }
   }
 

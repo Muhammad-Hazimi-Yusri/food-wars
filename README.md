@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.12.6-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.13.6-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.12.6
+Current version is v0.13.6
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -605,40 +605,40 @@ Food Wars targets a different audience: people who want Grocy-like features with
 
 ---
 
-### Planned
+### In Progress
 
 #### v0.13 - Product Analytics (was v1.3)
 
 **Goal:** Rich insights per product
 
-**Product detail modal:**
-- [ ] Stock amount (total + per location)
-- [ ] Stock value (amount × last price)
-- [ ] Amount opened
+**Product detail modal (v0.13.0):**
+- [x] Stock amount (total + per location)
+- [x] Stock value (amount × last price)
+- [x] Amount opened
 - [ ] Default location display
 
-**Purchase history:**
-- [ ] Last purchased date
-- [ ] Last price paid
-- [ ] Average price (all time)
-- [ ] Price history chart (by store, over time)
+**Purchase history (v0.13.1):**
+- [x] Last purchased date
+- [x] Last price paid
+- [x] Average price (all time)
+- [x] Price history chart (by store, over time)
 
-**Consumption analytics:**
-- [ ] Last used/consumed date
-- [ ] Average shelf life (calculated from history)
-- [ ] Spoil rate (% marked spoiled vs normal consume)
+**Consumption analytics (v0.13.2):**
+- [x] Last used/consumed date
+- [x] Average shelf life (calculated from history)
+- [x] Spoil rate (% marked spoiled vs normal consume)
 
-**Quick links from modal:**
-- [ ] View stock entries (filtered)
-- [ ] View stock journal (filtered)
-- [ ] Purchase this product
-- [ ] Edit product
+**Quick links from modal (v0.13.0):**
+- [x] View stock entries (filtered)
+- [x] View stock journal
+- [x] Purchase this product
+- [x] Edit product
 
 **Reports pages:**
-- [ ] Waste report (spoiled items over time, by product group)
-- [ ] Spending report (by product group, by store, over time)
-- [ ] Stock value report (total inventory value)
-- [ ] Expiring soon report (printable)
+- [x] Waste report (spoiled items over time, by product group)
+- [x] Spending report (by product group, by store, over time)
+- [x] Stock value report (total inventory value)
+- [x] Expiring soon report (printable)
 
 #### v0.14 - Grocycode & Label Printing (was v1.4)
 

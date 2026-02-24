@@ -5,6 +5,82 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.6] - 2026-02-23
+
+### Added
+- **Expiring soon report** (`/reports/expiring`) — lists all in-stock entries with `best_before_date <= today + 7`, sorted by date ascending; columns: Product, Amount, Location, Due date, Status badge (overdue / due soon / fresh); empty state when nothing due imminently
+- **Print support** — `PrintButton` client component calls `window.print()`; print-specific CSS in `globals.css` hides nav/header/buttons, expands content to full page width, adds clean table borders, and renders a "Printed from Food Wars · {date}" watermark footer
+
+---
+
+## [0.13.5] - 2026-02-23
+
+### Added
+- **Spending report** (`/reports/spending`) — total spend summary card, bar chart by product group, bar chart by store, breakdown table with % of total; `getHouseholdSpending(days?)` server action in `analytics-actions.ts`
+- **Stock value report** (`/reports/stock-value`) — total inventory value card, bar chart by product group, breakdown table (batches, value, % of total); `getStockValueByGroup()` server action in `analytics-actions.ts`
+- **`SpendingChart`** client component (`src/components/reports/SpendingChart.tsx`) — shared recharts `BarChart` used by both reports; accepts `color` prop for theming
+
+---
+
+## [0.13.4] - 2026-02-23
+
+### Added
+- **Reports section** (v0.13.4) — new `/reports` route with horizontal tab nav (Waste | Spending | Stock Value | Expiring Soon); "Reports" link (BarChart2 icon) added to `UserMenu` between Journal and Settings
+- **Waste report** (`/reports/waste`) — summary cards (total items spoiled, estimated value wasted), weekly spoiled-items bar chart (recharts), breakdown table by product group; empty state when no spoils recorded
+  - `getHouseholdWaste(days?)` server action in `analytics-actions.ts` — queries `stock_log WHERE spoiled = true AND undone = false`, joins `products → product_groups`, computes weekly (`WasteByWeek[]`) and group (`WasteByGroup[]`) breakdowns
+  - `WasteChart` client component (`src/components/reports/WasteChart.tsx`) — recharts `BarChart` of spoiled count per ISO week
+
+---
+
+## [0.13.3] - 2026-02-23
+
+### Added
+- **Price history chart** (v0.13.3) — `PriceHistoryChart` component using `recharts` renders in the History tab when 2 or more priced purchase rows exist
+  - `LineChart` with one coloured line per shopping location; x-axis = purchase date, y-axis = price per stock unit
+  - `Tooltip` shows formatted price per unit (e.g. "£1.50 / 100g"); `Legend` shown when multiple stores are present
+  - `ResponsiveContainer` fills full tab width at a fixed 200px height; gracefully returns `null` when fewer than 2 priced data points exist
+  - Added `recharts` dependency
+
+---
+
+## [0.13.2] - 2026-02-23
+
+### Added
+- **Consumption analytics tab populated** (v0.13.2) — `ProductDetailModal` Analytics tab now shows real data from `getProductConsumptionStats()` in `analytics-actions.ts`
+  - Stat pills: Last consumed date, Spoil rate (colour-coded: green < 10%, amber 10–29%, red ≥ 30%), Average shelf life in days
+  - Consumption log table: Date | Amount | Status badge (consumed / spoiled), newest-first, up to 200 rows
+  - Empty state shown when no consume or spoiled events exist for the product
+
+---
+
+## [0.13.1] - 2026-02-23
+
+### Added
+- **Purchase logging** (v0.13.1) — every stock addition now writes a `stock_log` row with `transaction_type = 'purchase'`, capturing `price`, `shopping_location_id`, `amount`, `stock_entry_id`, and `purchased_date`
+  - `AddStockEntryModal.handleSubmit` inserts into `stock_log` after the `stock_entries` insert (best-effort; non-blocking on failure)
+  - `bulkCreateStockEntries` (used by receipt/barcode scan bulk-add) also writes a purchase log row per successful entry
+  - Migration `017_analytics_index.sql` adds a composite index on `stock_log(household_id, product_id, transaction_type, created_at DESC)` for fast per-product analytics queries
+- **History tab populated** — `ProductDetailModal` History tab now shows real data from `getProductPurchaseHistory()` in `analytics-actions.ts`
+  - Stat pills: Last purchased date, Last price per stock unit, Average price across all purchases
+  - Purchase log table: Date | Store | Amount | Price/unit (newest-first, up to 100 rows)
+  - Falls back gracefully to `stock_entries` data (`lastPrice`, `lastPurchasedAt`) for users who added stock before v0.13.1 introduced purchase logging
+  - Empty state retained when no purchase rows exist
+
+---
+
+## [0.13.0] - 2026-02-23
+
+### Added
+- **Product analytics: modal tabs + quick links** (v0.13.0) — restructures `ProductDetailModal` into a tabbed layout with navigation shortcuts
+  - **Three-tab layout** (Stock | History | Analytics) using shadcn `Tabs` — Stock tab holds all existing content; History and Analytics show placeholder empty states (data arrives in v0.13.1 and v0.13.2 respectively)
+  - **Per-location stock breakdown** — when a product's stock spans multiple locations, pill badges appear below the summary stats showing `{location}: {amount} {unit}` for each location
+  - **Quick links footer** — always-visible action row at the bottom of the modal: "Journal" (navigates to `/journal`), "Add Stock" (opens an inline `AddStockEntryModal` pre-filled with this product and its defaults), "Edit Product" (navigates to `/products/{id}/edit`)
+  - **Inline Add Stock modal** — `AddStockEntryModal` rendered as a sibling dialog, pre-filled with the product using a single-product list derived from the already-fetched product data; `qu_purchase` resolved from the fetched quantity units; on success, both modals close and stock refreshes
+  - **Responsive dialog shell** — `DialogContent` changed from `sm:max-w-lg overflow-y-auto` to `sm:max-w-2xl flex flex-col max-h-[90vh] overflow-hidden`; tab content panels use `overflow-y-auto` so only the tab area scrolls, keeping the header, summary, and quick links visible
+  - **Bug fix:** `statusColors` map corrected from `expiring_soon` to `due_soon` to match the `ExpiryStatus` type returned by `getExpiryStatus()` — amber badge now correctly shows for items due within 5 days
+
+---
+
 ## [0.12.6] - 2026-02-23
 
 ### Added

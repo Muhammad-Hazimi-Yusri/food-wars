@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.7] - 2026-02-24
+
+### Fixed
+- **Purchase history retroactive data** (v0.13.7) — History tab and Spending report now surface stock added before v0.13.1 introduced purchase logging
+  - `getProductPurchaseHistory()` rewritten to merge two sources: `stock_log` purchase rows (v0.13.1+) and `stock_entries` rows not already represented in the log (pre-v0.13.1); deduplication via `stock_log.stock_entry_id`; merged rows sorted by date descending
+  - `getHouseholdSpending()` updated with the same dual-source approach: always queries `stock_entries` alongside `stock_log`, deduplicates, and aggregates spend from both into the product-group and store breakdowns; `days` filter applied to `stock_log.created_at` and `stock_entries.purchased_date` respectively
+  - Previously the fallback in `getProductPurchaseHistory()` only derived `lastPurchasedAt`/`lastPrice` scalars from a single `stock_entries` row and never populated `rows[]`, so the History tab showed "No purchase history yet" even for products with existing stock entries
+
+---
+
 ## [0.13.6] - 2026-02-23
 
 ### Added

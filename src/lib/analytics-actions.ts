@@ -40,11 +40,12 @@ export type ConsumeRow = {
 // ─────────────────────────────────────────────
 
 /**
- * Returns purchase history for a single product from stock_log.
+ * Returns purchase history for a single product, merging two sources:
+ *  1. stock_log rows with transaction_type='purchase' (written from v0.13.1 onward)
+ *  2. stock_entries rows not already represented in the log (pre-v0.13.1 purchases)
  *
- * Falls back to stock_entries (current in-stock batches) for lastPrice and
- * lastPurchasedAt when no purchase log rows exist yet — this covers users
- * who added stock before v0.13.1 introduced purchase logging.
+ * Deduplication uses stock_log.stock_entry_id vs stock_entries.id so entries
+ * added after v0.13.1 don't appear twice.
  */
 export async function getProductPurchaseHistory(
   productId: string,
@@ -55,7 +56,7 @@ export async function getProductPurchaseHistory(
   } = await supabase.auth.getUser();
   if (!user) return { lastPurchasedAt: null, lastPrice: null, avgPrice: null, rows: [] };
 
-  // Fetch purchase log entries for this product
+  // 1. Fetch purchase log entries from stock_log (post v0.13.1)
   const { data: logRows } = await supabase
     .from("stock_log")
     .select(`
@@ -63,6 +64,7 @@ export async function getProductPurchaseHistory(
       price,
       amount,
       shopping_location_id,
+      stock_entry_id,
       shopping_location:shopping_locations(name)
     `)
     .eq("product_id", productId)
@@ -71,7 +73,12 @@ export async function getProductPurchaseHistory(
     .order("created_at", { ascending: false })
     .limit(100);
 
-  const rows: PurchaseRow[] = (logRows ?? []).map((r) => ({
+  // Track which stock_entries are already covered by a log row
+  const loggedEntryIds = new Set(
+    (logRows ?? []).map((r) => r.stock_entry_id).filter(Boolean),
+  );
+
+  const logMappedRows: PurchaseRow[] = (logRows ?? []).map((r) => ({
     purchasedAt: r.created_at,
     price: r.price,
     amount: r.amount,
@@ -79,38 +86,52 @@ export async function getProductPurchaseHistory(
     storeName: (r.shopping_location as unknown as { name: string } | null)?.name ?? null,
   }));
 
-  let lastPurchasedAt: string | null = rows[0]?.purchasedAt ?? null;
-  let lastPrice: string | number | null = rows[0]?.price ?? null;
+  // 2. Always fetch stock_entries to surface pre-v0.13.1 purchases
+  const { data: entryRows } = await supabase
+    .from("stock_entries")
+    .select(`
+      id,
+      price,
+      purchased_date,
+      amount,
+      shopping_location_id,
+      shopping_location:shopping_locations(name)
+    `)
+    .eq("product_id", productId)
+    .order("purchased_date", { ascending: false });
 
-  // Compute average price from log rows that have a price
+  // 3. Exclude entries already represented by a stock_log purchase row,
+  //    and skip entries with no purchased_date (nothing meaningful to show)
+  const unlogged = (entryRows ?? []).filter(
+    (e) => !loggedEntryIds.has(e.id) && e.purchased_date != null,
+  );
+
+  // 4. Map unlogged stock_entries to PurchaseRow
+  const syntheticRows: PurchaseRow[] = unlogged.map((e) => ({
+    purchasedAt: e.purchased_date!,
+    price: e.price,
+    amount: e.amount,
+    storeId: e.shopping_location_id,
+    storeName: (e.shopping_location as unknown as { name: string } | null)?.name ?? null,
+  }));
+
+  // 5. Merge and sort by date descending
+  const rows = [...logMappedRows, ...syntheticRows].sort((a, b) => {
+    if (!a.purchasedAt) return 1;
+    if (!b.purchasedAt) return -1;
+    return new Date(b.purchasedAt).getTime() - new Date(a.purchasedAt).getTime();
+  });
+
+  // 6. Derive summary stats from the merged rows
+  const lastPurchasedAt = rows[0]?.purchasedAt ?? null;
+  const lastPrice = rows[0]?.price ?? null;
   const priced = rows.filter((r) => r.price != null);
   const avgPrice =
     priced.length > 0
       ? priced.reduce((s, r) => s + r.price!, 0) / priced.length
       : null;
 
-  // Fallback: if no purchase log rows exist, derive from current stock_entries
-  if (rows.length === 0) {
-    const { data: entries } = await supabase
-      .from("stock_entries")
-      .select("price, purchased_date")
-      .eq("product_id", productId)
-      .gt("amount", 0)
-      .order("purchased_date", { ascending: false })
-      .limit(1);
-
-    if (entries && entries.length > 0) {
-      lastPurchasedAt = entries[0].purchased_date ?? null;
-      lastPrice = entries[0].price ?? null;
-    }
-  }
-
-  return {
-    lastPurchasedAt,
-    lastPrice: lastPrice as number | null,
-    avgPrice,
-    rows,
-  };
+  return { lastPurchasedAt, lastPrice, avgPrice, rows };
 }
 
 // ─────────────────────────────────────────────
@@ -290,8 +311,12 @@ export type HouseholdSpending = {
 };
 
 /**
- * Returns purchase spend stats from stock_log purchase rows, optionally
- * filtered to the last `days` days. Used by the Spending report page.
+ * Returns purchase spend stats, merging two sources:
+ *  1. stock_log rows with transaction_type='purchase' (written from v0.13.1 onward)
+ *  2. stock_entries rows not already represented in the log (pre-v0.13.1 purchases)
+ *
+ * The `days` filter applies to stock_log.created_at and stock_entries.purchased_date
+ * respectively. Used by the Spending report page.
  */
 export async function getHouseholdSpending(days?: number): Promise<HouseholdSpending> {
   const supabase = await createClient();
@@ -300,11 +325,13 @@ export async function getHouseholdSpending(days?: number): Promise<HouseholdSpen
   } = await supabase.auth.getUser();
   if (!user) return { totalSpend: 0, byGroup: [], byStore: [] };
 
-  let query = supabase
+  // 1. Fetch purchase log entries from stock_log (post v0.13.1)
+  let logQuery = supabase
     .from("stock_log")
     .select(`
       amount,
       price,
+      stock_entry_id,
       shopping_location:shopping_locations(name),
       product:products(
         product_group:product_groups(name)
@@ -317,28 +344,70 @@ export async function getHouseholdSpending(days?: number): Promise<HouseholdSpen
   if (days) {
     const since = new Date();
     since.setDate(since.getDate() - days);
-    query = query.gte("created_at", since.toISOString());
+    logQuery = logQuery.gte("created_at", since.toISOString());
   }
 
-  const { data } = await query;
-  const rows = data ?? [];
+  const { data: logData } = await logQuery;
+  const logRows = logData ?? [];
 
+  // Track which stock_entries are already covered by a log row
+  const loggedEntryIds = new Set(
+    logRows.map((r) => r.stock_entry_id).filter(Boolean),
+  );
+
+  // 2. Fetch stock_entries to surface pre-v0.13.1 purchases
+  let entryQuery = supabase
+    .from("stock_entries")
+    .select(`
+      id,
+      amount,
+      price,
+      purchased_date,
+      shopping_location:shopping_locations(name),
+      product:products(
+        product_group:product_groups(name)
+      )
+    `)
+    .limit(5000);
+
+  if (days) {
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+    entryQuery = entryQuery.gte("purchased_date", since.toISOString().slice(0, 10));
+  }
+
+  const { data: entryData } = await entryQuery;
+
+  // 3. Exclude entries already covered by a stock_log purchase row
+  const unloggedEntries = (entryData ?? []).filter((e) => !loggedEntryIds.has(e.id));
+
+  // 4. Aggregate spend from both sources
   let totalSpend = 0;
   const groupMap: Record<string, number> = {};
   const storeMap: Record<string, number> = {};
 
-  for (const r of rows) {
+  for (const r of logRows) {
     if (r.price == null) continue;
     const spend = r.price * r.amount;
     totalSpend += spend;
-
     const product = r.product as unknown as { product_group: { name: string } | null } | null;
-    const groupName = product?.product_group?.name ?? "Uncategorised";
-    groupMap[groupName] = (groupMap[groupName] ?? 0) + spend;
-
+    groupMap[product?.product_group?.name ?? "Uncategorised"] =
+      (groupMap[product?.product_group?.name ?? "Uncategorised"] ?? 0) + spend;
     const store = r.shopping_location as unknown as { name: string } | null;
-    const storeName = store?.name ?? "Unknown store";
-    storeMap[storeName] = (storeMap[storeName] ?? 0) + spend;
+    storeMap[store?.name ?? "Unknown store"] =
+      (storeMap[store?.name ?? "Unknown store"] ?? 0) + spend;
+  }
+
+  for (const e of unloggedEntries) {
+    if (e.price == null) continue;
+    const spend = e.price * e.amount;
+    totalSpend += spend;
+    const product = e.product as unknown as { product_group: { name: string } | null } | null;
+    groupMap[product?.product_group?.name ?? "Uncategorised"] =
+      (groupMap[product?.product_group?.name ?? "Uncategorised"] ?? 0) + spend;
+    const store = e.shopping_location as unknown as { name: string } | null;
+    storeMap[store?.name ?? "Unknown store"] =
+      (storeMap[store?.name ?? "Unknown store"] ?? 0) + spend;
   }
 
   const byGroup: SpendingByGroup[] = Object.entries(groupMap)

@@ -594,6 +594,7 @@ export function MealPlanClient({
 
       {/* Sections with DnD */}
       <DndContext
+        id="meal-plan-mobile-dnd"
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragStart={handleMobileDragStart}

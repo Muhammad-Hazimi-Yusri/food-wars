@@ -273,6 +273,7 @@ export function MealPlanSectionsManager({ open, onOpenChange, sections }: Props)
             </p>
           ) : (
             <DndContext
+              id="meal-plan-sections-dnd"
               sensors={sensors}
               collisionDetection={closestCenter}
               onDragEnd={handleDragEnd}

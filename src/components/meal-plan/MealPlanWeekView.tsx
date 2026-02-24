@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import {
   DndContext,
@@ -172,6 +172,7 @@ export function MealPlanWeekView({
 
   return (
     <DndContext
+      id="meal-plan-week-dnd"
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragStart={handleDragStart}
@@ -214,7 +215,7 @@ export function MealPlanWeekView({
 
         {/* ── Section rows ───────────────────────────────────────── */}
         {sections.map((section) => (
-          <>
+          <React.Fragment key={section.id}>
             {/* Section label */}
             <div
               key={`label-${section.id}`}
@@ -268,7 +269,7 @@ export function MealPlanWeekView({
                 </DroppableCell>
               );
             })}
-          </>
+          </React.Fragment>
         ))}
 
         {/* Unsectioned row — only if relevant entries exist */}

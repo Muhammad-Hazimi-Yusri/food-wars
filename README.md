@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.13.9-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.13.10-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.13.9
+Current version is v0.13.10
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -652,6 +652,11 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Deleted stock entries no longer leave ghost records in the History tab price chart
 - [x] Purchase transactions in the Stock Journal are now undoable (removes the stock entry + marks the log row undone)
 - [x] Product Detail modal accessible from Master Data > Products List (click product name or image); zero-stock products fully supported
+
+**Bug fixes & UX polish (v0.13.10):**
+- [x] dnd-kit hydration mismatch warning resolved — stable `id` props added to all three `DndContext` instances in the Meal Plan page (`MealPlanWeekView`, `MealPlanClient`, `MealPlanSectionsManager`)
+- [x] Missing React `key` prop warning resolved — `sections.map()` in `MealPlanWeekView` now uses `<React.Fragment key={section.id}>` instead of a keyless shorthand fragment
+- [x] Recipe meal entries in the week grid and mobile day view are now clickable links to `/recipes/{id}`
 
 #### v0.14 - Grocycode & Label Printing (was v1.4)
 

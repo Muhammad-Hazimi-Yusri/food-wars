@@ -3,6 +3,7 @@
 import { ChefHat, Package, FileText, Trash2, CheckCircle, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { removeMealPlanEntry, undoRemoveMealPlanEntry } from "@/lib/meal-plan-actions";
 import type { MealPlanEntryWithRelations } from "@/types/database";
@@ -48,6 +49,7 @@ export function MealPlanEntryCard({ entry, compact = false, canMake }: Props) {
   const Icon = TYPE_ICONS[entry.type];
   const label = entryLabel(entry);
   const sub = servingsLabel(entry);
+  const recipeHref = entry.type === "recipe" && entry.recipe_id ? `/recipes/${entry.recipe_id}` : null;
 
   const handleDelete = async () => {
     const result = await removeMealPlanEntry(entry.id);
@@ -80,7 +82,17 @@ export function MealPlanEntryCard({ entry, compact = false, canMake }: Props) {
     return (
       <div className="group flex items-center gap-1.5 rounded bg-background px-2 py-1 text-xs border border-border">
         <Icon className="h-3 w-3 shrink-0 text-muted-foreground" />
-        <span className="flex-1 min-w-0 font-medium text-megumi truncate">{label}</span>
+        {recipeHref ? (
+          <Link
+            href={recipeHref}
+            className="flex-1 min-w-0 font-medium text-megumi truncate hover:underline"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {label}
+          </Link>
+        ) : (
+          <span className="flex-1 min-w-0 font-medium text-megumi truncate">{label}</span>
+        )}
         {entry.type === "recipe" && canMake !== undefined && (
           canMake
             ? <CheckCircle className="h-3 w-3 shrink-0 text-green-500" />
@@ -102,7 +114,17 @@ export function MealPlanEntryCard({ entry, compact = false, canMake }: Props) {
       <Icon className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <p className="font-medium text-megumi truncate">{label}</p>
+          {recipeHref ? (
+            <Link
+              href={recipeHref}
+              className="font-medium text-megumi truncate hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {label}
+            </Link>
+          ) : (
+            <p className="font-medium text-megumi truncate">{label}</p>
+          )}
           {entry.type === "recipe" && canMake !== undefined && (
             canMake
               ? <CheckCircle className="h-3.5 w-3.5 shrink-0 text-green-500" />

@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.10] - 2026-02-24
+
+### Fixed
+- **dnd-kit hydration mismatch on Meal Plan page** (v0.13.10) — dev-mode `aria-describedby` mismatch warning eliminated
+  - `DndContext` in `MealPlanWeekView`, `MealPlanClient`, and `MealPlanSectionsManager` now each receive a stable string `id` prop (`"meal-plan-week-dnd"`, `"meal-plan-mobile-dnd"`, `"meal-plan-sections-dnd"`); dnd-kit's internal ID counter no longer differs between SSR and CSR renders
+- **Missing `key` prop warning in MealPlanWeekView** (v0.13.10) — React console warning about keyless children in a list resolved
+  - `sections.map()` used a shorthand `<>` Fragment as its direct return element, which cannot accept a `key` prop; replaced with `<React.Fragment key={section.id}>` so React can correctly track each section row across re-renders
+
+### Changed
+- **Recipe meal entries link to recipe detail page** (v0.13.10) — recipe names in both the week grid and mobile day view are now clickable
+  - `MealPlanEntryCard` imports `Link` from `next/link`; when `entry.type === "recipe"` and `entry.recipe_id` is set, the name label renders as `<Link href="/recipes/{id}">` with `hover:underline`; other entry types (product, note) are unchanged
+  - `e.stopPropagation()` on the link prevents interference with dnd-kit's pointer listeners on the surrounding sortable chip
+
+---
+
 ## [0.13.9] - 2026-02-24
 
 ### Fixed

@@ -35,7 +35,8 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { getProductPictureSignedUrl, deleteProductPicture } from "@/lib/supabase/storage";
 import { cn } from "@/lib/utils";
-import { ProductGroup } from "@/types/database";
+import { ProductGroup, StockEntryWithProduct, ProductWithRelations as DBProductWithRelations } from "@/types/database";
+import { ProductDetailModal } from "@/components/inventory/ProductDetailModal";
 
 type ProductWithRelations = {
   id: string;
@@ -44,6 +45,8 @@ type ProductWithRelations = {
   active: boolean;
   picture_file_name: string | null;
   min_stock_amount: number;
+  qu_id_stock: string | null;
+  qu_id_purchase: string | null;
   location: { id: string; name: string } | null;
   product_group: { id: string; name: string } | null;
   qu_stock: { id: string; name: string; name_plural: string | null } | null;
@@ -248,6 +251,22 @@ export function ProductsListClient({
   // Column visibility
   const [visibleColumns, setVisibleColumns] = useState<ColumnKey[]>(DEFAULT_VISIBLE_COLUMNS);
 
+  // Product detail modal
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalEntries, setModalEntries] = useState<StockEntryWithProduct[]>([]);
+  const [modalProduct, setModalProduct] = useState<DBProductWithRelations | null>(null);
+
+  const handleOpenProduct = async (product: ProductWithRelations) => {
+    const supabase = createClient();
+    const { data: entries } = await supabase
+      .from("stock_entries")
+      .select("*, product:products(*), location:locations(id, name), shopping_location:shopping_locations(id, name)")
+      .eq("product_id", product.id);
+    setModalEntries((entries ?? []) as unknown as StockEntryWithProduct[]);
+    setModalProduct(product as unknown as DBProductWithRelations);
+    setModalOpen(true);
+  };
+
   // Load preferences from localStorage
   useEffect(() => {
     const savedColumns = localStorage.getItem("products-visible-columns");
@@ -446,17 +465,24 @@ export function ProductsListClient({
   const getCellValue = (product: ProductWithRelations, key: ColumnKey): React.ReactNode => {
     switch (key) {
       case "picture":
-        return <ProductImage fileName={product.picture_file_name} name={product.name} />;
+        return (
+          <button onClick={() => handleOpenProduct(product)} className="block focus:outline-none">
+            <ProductImage fileName={product.picture_file_name} name={product.name} />
+          </button>
+        );
       case "name":
         return (
-          <div className="flex items-center gap-2">
+          <button
+            onClick={() => handleOpenProduct(product)}
+            className="flex items-center gap-2 text-left hover:text-soma transition-colors focus:outline-none"
+          >
             <span className={cn("font-medium", !product.active && "line-through text-gray-500")}>
               {product.name}
             </span>
             {!product.active && (
               <span className="text-xs bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded">inactive</span>
             )}
-          </div>
+          </button>
         );
       case "location":
         return product.location?.name ?? "—";
@@ -797,10 +823,19 @@ export function ProductsListClient({
                     >
                       {isColumnVisible("picture") && (
                         <td className="px-2 py-2">
-                          <ProductImage fileName={product.picture_file_name} name={product.name} />
+                          <button onClick={() => handleOpenProduct(product)} className="block focus:outline-none">
+                            <ProductImage fileName={product.picture_file_name} name={product.name} />
+                          </button>
                         </td>
                       )}
-                      <td className="px-2 py-2 text-sm font-medium">{product.name}</td>
+                      <td className="px-2 py-2 text-sm font-medium">
+                        <button
+                          onClick={() => handleOpenProduct(product)}
+                          className="text-left hover:text-soma transition-colors focus:outline-none"
+                        >
+                          {product.name}
+                        </button>
+                      </td>
                       <td className="px-2 py-2 text-sm text-gray-600">{product.location?.name ?? "—"}</td>
                       <td className="px-2 py-2 text-sm text-gray-600">{product.min_stock_amount || "—"}</td>
                       <td className="px-2 py-2 text-sm text-gray-600">{product.qu_stock?.name ?? "—"}</td>
@@ -843,6 +878,19 @@ export function ProductsListClient({
           </tbody>
         </table>
       </div>
+
+      {modalProduct && (
+        <ProductDetailModal
+          entries={modalEntries}
+          product={modalProduct}
+          open={modalOpen}
+          onClose={() => {
+            setModalOpen(false);
+            setModalEntries([]);
+            setModalProduct(null);
+          }}
+        />
+      )}
     </>
   );
 }

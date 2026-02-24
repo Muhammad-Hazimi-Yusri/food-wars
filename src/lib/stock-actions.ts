@@ -840,6 +840,60 @@ export async function undoTransfer(
 }
 
 /**
+ * Undo a purchase transaction by correlation ID.
+ * Marks the stock_log row as undone, then deletes the associated stock entry.
+ * If stock has been partially consumed since purchase, the remaining amount is deleted.
+ */
+export async function undoPurchase(
+  correlationId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = createClient();
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: 'Not authenticated' };
+
+    const { data: logRows, error: fetchError } = await supabase
+      .from('stock_log')
+      .select('stock_entry_id')
+      .eq('correlation_id', correlationId)
+      .eq('transaction_type', 'purchase')
+      .eq('undone', false);
+    if (fetchError) throw fetchError;
+    if (!logRows || logRows.length === 0) {
+      return { success: false, error: 'Nothing to undo' };
+    }
+
+    // Mark as undone first so the history query stops showing this row
+    // even if the entry deletion below is slow
+    const { error: undoError } = await supabase
+      .from('stock_log')
+      .update({ undone: true, undone_timestamp: new Date().toISOString() })
+      .eq('correlation_id', correlationId)
+      .eq('transaction_type', 'purchase');
+    if (undoError) throw undoError;
+
+    // Delete the associated stock entries (DB FK will set stock_entry_id=NULL)
+    for (const row of logRows) {
+      if (row.stock_entry_id) {
+        const { error: deleteError } = await supabase
+          .from('stock_entries')
+          .delete()
+          .eq('id', row.stock_entry_id);
+        if (deleteError) throw deleteError;
+      }
+    }
+
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to undo purchase',
+    };
+  }
+}
+
+/**
  * Dispatcher: undo any transaction by its correlation_id and type.
  * Routes to the correct undo function based on transaction_type.
  */
@@ -857,6 +911,8 @@ export async function undoTransaction(
       return undoTransfer(correlationId);
     case 'inventory-correction':
       return undoCorrectInventory(correlationId);
+    case 'purchase':
+      return undoPurchase(correlationId);
     default:
       return { success: false, error: 'Cannot undo this transaction type' };
   }

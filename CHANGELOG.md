@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.9] - 2026-02-24
+
+### Fixed
+- **Orphaned price history on stock entry deletion** (v0.13.9) — deleting a stock entry no longer leaves ghost purchase records in the History tab
+  - `stock_log.stock_entry_id` is set to `NULL` by the database (`ON DELETE SET NULL`) when a stock entry is deleted; `getProductPurchaseHistory()` in `analytics-actions.ts` now filters `.not("stock_entry_id", "is", null)` so orphaned log rows are excluded from the purchase log table and price chart
+  - Pre-v0.13.1 retroactive rows (sourced from `stock_entries` directly) are unaffected — they never had a `stock_log` row and continue to come from the second merge source
+
+### Added
+- **Undo purchase transactions in Stock Journal** (v0.13.9) — "Purchased" entries in the Stock Journal can now be fully reversed via the undo button
+  - `undoPurchase(correlationId)` added to `stock-actions.ts`: marks the `stock_log` row as `undone = true` first (so it disappears from history queries immediately), then deletes the associated `stock_entries` row; if stock was partially consumed before undoing, the remaining amount is removed
+  - `case 'purchase'` added to `undoTransaction()` dispatcher — previously fell through to "Cannot undo this transaction type"
+  - The `undone = false` filter on `getProductPurchaseHistory()` ensures an undone purchase also vanishes from the History tab price chart
+
+### Changed
+- **Product Detail modal accessible from Master Data > Products List** (v0.13.9) — product names and images in the Products List are now clickable and open the same `ProductDetailModal` used on the Stock Overview
+  - Clicking a product name or picture queries `stock_entries` for that product and opens the modal; zero-stock products are fully supported — the Stock tab shows "No stock entries" while History and Analytics tabs still populate from their own queries
+  - `ProductDetailModal` accepts a new optional `product?: ProductWithRelations` prop so the modal can render without requiring at least one stock entry; the render guard changed from `entries.length === 0 || !product` to `!product`; backward-compatible — existing callers on Stock Overview are unchanged
+  - Desktop and mobile tables in `ProductsListClient` both updated with `hover:text-soma` clickable name/image buttons matching the Stock Overview pattern
+
+---
+
 ## [0.13.8] - 2026-02-24
 
 ### Changed

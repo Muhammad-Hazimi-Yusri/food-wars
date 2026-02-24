@@ -70,6 +70,7 @@ export async function getProductPurchaseHistory(
     .eq("product_id", productId)
     .eq("transaction_type", "purchase")
     .eq("undone", false)
+    .not("stock_entry_id", "is", null)
     .order("created_at", { ascending: false })
     .limit(100);
 

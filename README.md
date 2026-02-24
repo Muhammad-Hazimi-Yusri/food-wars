@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.13.8-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.13.9-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.13.8
+Current version is v0.13.9
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -42,10 +42,10 @@ Current version is v0.13.8
 - **Status Warnings** — Clickable expired/overdue/due soon/below minimum alert banners
 - **Stock Filters** — Search by name, filter by location, product group, status
 - **Master Data** — Manage locations, product groups, quantity units, stores (CRUD + drag reorder)
-- **Products List** — Sortable/filterable product table with column options
+- **Products List** — Sortable/filterable product table with column options; click any product name or image to open the Product Detail modal (History and Analytics work even for zero-stock products)
 - **Stock Actions** — Consume, Open, Transfer, and Inventory Correction with FIFO logic
 - **Quick Actions** — One-tap Consume/Open buttons using product defaults
-- **Undo Toasts** — Every destructive action is reversible with an 8-second undo window
+- **Undo Toasts** — Every destructive action is reversible with an 8-second undo window, including Purchase transactions in the Stock Journal
 - **Stock Journal** — Full transaction history with filters, pagination, and summary view
 - **Shopping Lists** — Create lists, add product-linked or freeform items, group by aisle/store, drag-and-drop reorder
 - **Purchase from List** — Check off items to auto-add to stock with unit conversion and product defaults
@@ -647,6 +647,11 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Spending report (by product group, by store, over time)
 - [x] Stock value report (total inventory value)
 - [x] Expiring soon report (printable)
+
+**Bug fixes & data integrity (v0.13.9):**
+- [x] Deleted stock entries no longer leave ghost records in the History tab price chart
+- [x] Purchase transactions in the Stock Journal are now undoable (removes the stock entry + marks the log row undone)
+- [x] Product Detail modal accessible from Master Data > Products List (click product name or image); zero-stock products fully supported
 
 #### v0.14 - Grocycode & Label Printing (was v1.4)
 

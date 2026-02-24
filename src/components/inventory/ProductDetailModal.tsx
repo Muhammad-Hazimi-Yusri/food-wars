@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import {
   StockEntryWithProduct,
+  ProductWithRelations,
   Location,
   ShoppingLocation,
   ProductNutrition,
@@ -58,6 +59,7 @@ import {
 
 type ProductDetailModalProps = {
   entries: StockEntryWithProduct[];
+  product?: ProductWithRelations;
   open: boolean;
   onClose: () => void;
 };
@@ -71,6 +73,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export function ProductDetailModal({
   entries,
+  product: propProduct,
   open,
   onClose,
 }: ProductDetailModalProps) {
@@ -101,7 +104,7 @@ export function ProductDetailModal({
   const [consumptionStats, setConsumptionStats] = useState<ProductConsumptionStats | null>(null);
   const [priceView, setPriceView] = useState<"purchase" | "stock">("purchase");
 
-  const product = entries[0]?.product;
+  const product = propProduct ?? entries[0]?.product;
 
   useEffect(() => {
     if (product?.picture_file_name) {
@@ -308,7 +311,7 @@ export function ProductDetailModal({
     }
   };
 
-  if (!open || entries.length === 0 || !product) return null;
+  if (!open || !product) return null;
 
   const totalAmount = entries.reduce((sum, e) => sum + e.amount, 0);
   const openedAmount = entries.filter((e) => e.open).reduce((sum, e) => sum + e.amount, 0);

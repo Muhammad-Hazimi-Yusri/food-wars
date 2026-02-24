@@ -99,6 +99,7 @@ export function ProductDetailModal({
   const [addingStock, setAddingStock] = useState(false);
   const [purchaseHistory, setPurchaseHistory] = useState<ProductPurchaseHistory | null>(null);
   const [consumptionStats, setConsumptionStats] = useState<ProductConsumptionStats | null>(null);
+  const [priceView, setPriceView] = useState<"purchase" | "stock">("purchase");
 
   const product = entries[0]?.product;
 
@@ -114,6 +115,7 @@ export function ProductDetailModal({
     if (!open) {
       setPurchaseHistory(null);
       setConsumptionStats(null);
+      setPriceView("purchase");
       return;
     }
     const supabase = createClient();
@@ -160,6 +162,20 @@ export function ProductDetailModal({
       qu_purchase: quantityUnits.find((u) => u.id === product.qu_id_purchase) ?? null,
     }];
   }, [product, quantityUnits]);
+
+  // Conversion factor: how many stock units = 1 purchase unit (null = no conversion / same unit)
+  const purchaseFactor = useMemo(() => {
+    if (!product) return null;
+    const { qu_id_purchase, qu_id_stock } = product;
+    if (!qu_id_purchase || !qu_id_stock || qu_id_purchase === qu_id_stock) return null;
+    const specific = conversions.find(
+      (c) => c.from_qu_id === qu_id_purchase && c.to_qu_id === qu_id_stock && c.product_id === product.id,
+    );
+    const global = conversions.find(
+      (c) => c.from_qu_id === qu_id_purchase && c.to_qu_id === qu_id_stock && c.product_id === null,
+    );
+    return specific?.factor ?? global?.factor ?? null;
+  }, [product, conversions]);
 
   const handleDeleteEntry = async (entry: StockEntryWithProduct) => {
     setDeleting(entry.id);
@@ -299,6 +315,15 @@ export function ProductDetailModal({
   const totalValue = entries.reduce((sum, e) => sum + (e.price ?? 0) * e.amount, 0);
   const unitName = product.qu_stock?.name ?? "unit";
   const unitNamePlural = product.qu_stock?.name_plural ?? unitName + "s";
+
+  // Price view: multiply raw stock-unit price by the purchase factor for "per purchase unit" display
+  const purchaseUnitName = quantityUnits.find((u) => u.id === product.qu_id_purchase)?.name ?? unitName;
+  const activeFactor = priceView === "purchase" && purchaseFactor !== null ? purchaseFactor : 1;
+  const activeUnitName = priceView === "purchase" && purchaseFactor !== null ? purchaseUnitName : unitName;
+  const displayRows = purchaseHistory?.rows.map((r) => ({
+    ...r,
+    price: r.price != null ? r.price * activeFactor : null,
+  })) ?? [];
 
   return (
     <>
@@ -601,7 +626,7 @@ export function ProductDetailModal({
                       <p className="text-xs text-gray-500 mb-1">Last price</p>
                       <p className="text-sm font-medium">
                         {purchaseHistory.lastPrice != null
-                          ? `£${purchaseHistory.lastPrice.toFixed(2)}`
+                          ? `£${(purchaseHistory.lastPrice * activeFactor).toFixed(2)}`
                           : "—"}
                       </p>
                     </div>
@@ -609,18 +634,33 @@ export function ProductDetailModal({
                       <p className="text-xs text-gray-500 mb-1">Avg price</p>
                       <p className="text-sm font-medium">
                         {purchaseHistory.avgPrice != null
-                          ? `£${purchaseHistory.avgPrice.toFixed(2)}`
+                          ? `£${(purchaseHistory.avgPrice * activeFactor).toFixed(2)}`
                           : "—"}
                       </p>
                     </div>
                   </div>
 
-                  {/* Price history chart (shown when 2+ priced rows) */}
-                  <PriceHistoryChart rows={purchaseHistory.rows} unitName={unitName} />
-
                   {/* Purchase log table */}
                   <div>
-                    <h4 className="font-medium mb-2 text-sm">Purchase log</h4>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-medium text-sm">Purchase log</h4>
+                      {purchaseFactor !== null && (
+                        <div className="flex rounded-full bg-gray-100 p-0.5 text-xs">
+                          <button
+                            className={cn("rounded-full px-2 py-0.5 transition-colors", priceView === "purchase" ? "bg-gray-900 text-white" : "text-gray-600")}
+                            onClick={() => setPriceView("purchase")}
+                          >
+                            Per {purchaseUnitName}
+                          </button>
+                          <button
+                            className={cn("rounded-full px-2 py-0.5 transition-colors", priceView === "stock" ? "bg-gray-900 text-white" : "text-gray-600")}
+                            onClick={() => setPriceView("stock")}
+                          >
+                            Per {unitName}
+                          </button>
+                        </div>
+                      )}
+                    </div>
                     <div className="rounded-lg border overflow-hidden">
                       <table className="w-full text-sm">
                         <thead className="bg-gray-50 border-b">
@@ -628,11 +668,11 @@ export function ProductDetailModal({
                             <th className="text-left px-3 py-2 font-medium text-gray-500">Date</th>
                             <th className="text-left px-3 py-2 font-medium text-gray-500">Store</th>
                             <th className="text-right px-3 py-2 font-medium text-gray-500">Amount</th>
-                            <th className="text-right px-3 py-2 font-medium text-gray-500">Price/unit</th>
+                            <th className="text-right px-3 py-2 font-medium text-gray-500">Price/{activeUnitName}</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y">
-                          {purchaseHistory.rows.map((row, i) => (
+                          {displayRows.map((row, i) => (
                             <tr key={i} className="hover:bg-gray-50">
                               <td className="px-3 py-2 text-gray-700">
                                 {new Date(row.purchasedAt).toLocaleDateString()}
@@ -650,6 +690,18 @@ export function ProductDetailModal({
                       </table>
                     </div>
                   </div>
+
+                  {/* Price history chart — collapsible, shown when 2+ priced rows */}
+                  {purchaseHistory.rows.filter((r) => r.price != null).length >= 2 && (
+                    <details open>
+                      <summary className="text-sm font-medium cursor-pointer select-none">
+                        Price over time
+                      </summary>
+                      <div className="mt-2">
+                        <PriceHistoryChart rows={displayRows} unitName={activeUnitName} />
+                      </div>
+                    </details>
+                  )}
                 </>
               )}
             </TabsContent>

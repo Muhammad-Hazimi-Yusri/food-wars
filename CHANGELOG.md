@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.8] - 2026-02-24
+
+### Changed
+- **Purchase unit price in History tab** (v0.13.8) — the History tab in `ProductDetailModal` now shows price in **purchase quantity units** by default (e.g. `£1.10/pack`) instead of the raw stock-unit price stored in the database (e.g. `£0.01/g`)
+  - `purchaseFactor` computed client-side via a `useMemo` that looks up `quantity_unit_conversions` for a row where `from_qu_id = product.qu_id_purchase` and `to_qu_id = product.qu_id_stock`; product-specific conversions take priority over global ones; returns `null` when the two QUs are the same unit or no conversion row exists
+  - `priceView` state (`"purchase"` | `"stock"`, defaults to `"purchase"`) drives a pill segmented control that appears in the "Purchase log" heading row only when a non-trivial conversion factor is found
+  - Toggle labels read `Per {purchaseUnitName}` / `Per {unitName}` (e.g. `Per pack` / `Per g`); resets to `"purchase"` whenever the modal closes
+  - `displayRows` derived from `purchaseHistory.rows` with `price * activeFactor` applied; fed to both the table and the chart so both update together
+  - "Last price" and "Avg price" stat pills also multiply by `activeFactor`
+  - Price/unit column header now reads `Price/{activeUnitName}` (e.g. `Price/pack`) rather than the static `Price/unit` string
+  - Products whose `qu_id_purchase === qu_id_stock`, or whose conversion is not defined, show stock-unit price unchanged and no toggle is rendered
+- **Price history chart repositioned and made collapsible** (v0.13.8) — `PriceHistoryChart` moved from above the purchase log table to below it
+  - Wrapped in a native `<details open>` element so users can collapse it on small screens; the `<summary>` ("Price over time") replaces the internal `<h4>` heading that was removed from the component
+  - Chart continues to require ≥ 2 priced rows to render; outer gate uses `purchaseHistory.rows` so visibility is stable regardless of the active price view
+  - Chart receives `displayRows` and `activeUnitName`, so its Y-axis and tooltip label reflect the same toggle state as the table
+
+---
+
 ## [0.13.7] - 2026-02-24
 
 ### Fixed

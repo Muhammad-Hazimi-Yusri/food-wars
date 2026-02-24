@@ -63,7 +63,6 @@ export function PriceHistoryChart({ rows, unitName }: Props) {
 
   return (
     <div>
-      <h4 className="font-medium mb-3 text-sm">Price over time</h4>
       <ResponsiveContainer width="100%" height={200}>
         <LineChart data={merged} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />

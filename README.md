@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.13.7-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.13.8-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.13.7
+Current version is v0.13.8
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -71,6 +71,7 @@ Current version is v0.13.7
 - **Pantry Scanning** — Photograph pantry shelves or fridge contents, Vision AI identifies products and estimates quantities, review and bulk-import to stock
 - **Edit Stock Entry Pricing** — Per-unit or total price toggle with unit selector and conversion factor display when editing stock entries
 - **Fractional Quick Consume** — Quick consume supports decimal amounts (e.g. 0.5 kg) for sub-unit consumption
+- **Purchase Unit Price in History** — Product History tab shows price per purchase unit by default (e.g. "£1.10/pack"), with a pill toggle to switch to per stock unit view; only shown when a QU conversion is defined; price history chart moved below the purchase log table and made collapsible
 
 ### For Contributors
 - **Documentation** — README, BRANDING.md, CONTRIBUTING.md, CHANGELOG.md
@@ -622,6 +623,13 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Last price paid
 - [x] Average price (all time)
 - [x] Price history chart (by store, over time)
+
+**History tab polish (v0.13.8):**
+- [x] Price/unit column shows purchase QU price by default (e.g. £1.10/pack) — converted client-side from stored stock-unit price via `quantity_unit_conversions`
+- [x] Toggle between per-purchase-unit and per-stock-unit views (pill segmented control; only shown when a conversion factor is defined)
+- [x] Stat pills (Last price, Avg price) reflect the active price view
+- [x] Price history chart repositioned below the purchase log table and wrapped in a collapsible `<details>` section
+- [x] Chart Y-axis and tooltip update to match the toggle (purchase or stock unit)
 
 **Consumption analytics (v0.13.2):**
 - [x] Last used/consumed date

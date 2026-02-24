@@ -94,7 +94,6 @@ export default async function MealPlanPage({ searchParams }: PageProps) {
       supabase
         .from("recipes")
         .select("id, name, base_servings, picture_file_name")
-        .eq("active", true)
         .order("name"),
       supabase
         .from("products")

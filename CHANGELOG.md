@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.12] - 2026-02-25
+
+### Fixed
+- **Recipe instructions markdown numbered lists not rendering** (v0.13.12) — ordered (numbered) lists in recipe instructions were displaying as unstyled plain text in both the Edit/Preview tab and the saved recipe detail page
+  - Root cause: `@tailwindcss/typography` was not installed; the `prose prose-sm` wrapper classes applied to both `<ReactMarkdown>` containers were generating no CSS, leaving Tailwind's preflight reset (`ol, ul { list-style: none }`) with no counter-rule to restore list markers
+  - Fix: installed `@tailwindcss/typography` (`pnpm add -D @tailwindcss/typography`) and registered it via `@plugin "@tailwindcss/typography"` in `src/app/globals.css` — the Tailwind v4 plugin registration syntax
+  - No component changes required; `prose prose-sm max-w-none` in `RecipeForm.tsx` (preview tab) and `src/app/recipes/[id]/page.tsx` (detail view) already correctly wrap the markdown output
+
+---
+
 ## [0.13.11] - 2026-02-24
 
 ### Fixed

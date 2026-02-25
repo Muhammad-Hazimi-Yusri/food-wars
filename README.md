@@ -9,7 +9,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.13.11-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.13.12-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +30,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.13.11
+Current version is v0.13.12
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -660,6 +660,9 @@ Food Wars targets a different audience: people who want Grocy-like features with
 
 **Test fix (v0.13.11):**
 - [x] Stale `undoTransaction` test updated — probe value changed from `'purchase'` (now handled) to `'transfer-to'` (genuinely unhandled), restoring green CI
+
+**Bug fix (v0.13.12):**
+- [x] Recipe instructions markdown numbered lists now render correctly — `@tailwindcss/typography` installed and registered via `@plugin` in `globals.css`; Tailwind preflight was stripping `list-style` with no counter-rule since the plugin was missing
 
 #### v0.14 - Grocycode & Label Printing (was v1.4)
 

@@ -12,11 +12,19 @@ export async function GET(request: Request) {
     
     if (!authError) {
       // Check if user already has a household
-      const { data: existing } = await supabase
+      const { data: existing, error: existingError } = await supabase
         .from("households")
         .select("id")
         .limit(1)
         .single();
+
+      // PGRST116 = "no rows returned", which is expected for new users.
+      // Any other error means a real DB problem — abort to avoid creating
+      // a duplicate household for an existing user.
+      if (existingError && existingError.code !== "PGRST116") {
+        console.error("Failed to query households:", existingError);
+        return NextResponse.redirect(`${origin}/auth/error?reason=household`);
+      }
 
       // Create household for new users
       if (!existing) {

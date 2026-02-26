@@ -74,13 +74,29 @@ export async function PUT(request: NextRequest) {
 
     const { ollama_url, text_model, vision_model } = await request.json();
 
-    // Basic URL validation
+    // URL validation: must be valid and must not target internal/cloud metadata services
     if (ollama_url) {
+      let parsed: URL;
       try {
-        new URL(ollama_url);
+        parsed = new URL(ollama_url);
       } catch {
         return NextResponse.json(
           { error: "Invalid Ollama URL format" },
+          { status: 400 }
+        );
+      }
+
+      const BLOCKED_HOSTNAMES = /^(localhost|127\.\d+\.\d+\.\d+|::1|0\.0\.0\.0|169\.254\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|192\.168\.\d+\.\d+)$/i;
+      if (BLOCKED_HOSTNAMES.test(parsed.hostname)) {
+        return NextResponse.json(
+          { error: "Ollama URL must not point to an internal or private network address" },
+          { status: 400 }
+        );
+      }
+
+      if (!["http:", "https:"].includes(parsed.protocol)) {
+        return NextResponse.json(
+          { error: "Ollama URL must use http or https" },
           { status: 400 }
         );
       }

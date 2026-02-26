@@ -93,7 +93,9 @@ export async function consumeStock(
     }
 
     // Auto-add to shopping list if below min stock (fire-and-forget)
-    checkAutoAddToShoppingList(productId, entries, plan.totalConsumed, householdId, supabase).catch(() => {});
+    checkAutoAddToShoppingList(productId, entries, plan.totalConsumed, householdId, supabase).catch((err) => {
+      console.error("[stock-actions] checkAutoAddToShoppingList failed:", err);
+    });
 
     return { success: true, consumed: plan.totalConsumed, correlationId };
   } catch (err) {

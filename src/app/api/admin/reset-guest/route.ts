@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 
 // Use service role to bypass RLS and call the function
 const supabaseAdmin = createClient(
@@ -11,7 +12,14 @@ export async function POST(request: NextRequest) {
   try {
     const { secret } = await request.json();
 
-    if (secret !== process.env.ADMIN_SECRET) {
+    const adminSecret = process.env.ADMIN_SECRET ?? "";
+    const secretsMatch =
+      secret &&
+      adminSecret.length > 0 &&
+      secret.length === adminSecret.length &&
+      timingSafeEqual(Buffer.from(secret), Buffer.from(adminSecret));
+
+    if (!secretsMatch) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

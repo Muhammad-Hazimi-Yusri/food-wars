@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **README early-access note** (v0.13.13) — blockquote added below the Live Demo link noting single-user early access and pointing visitors to guest mode or self-hosting
 - **README privacy notice** (v0.13.13) — "Hosted version" paragraph updated to note that access is currently restricted to a single account, with guest mode and self-hosting as alternatives
-- **README roadmap note** (v0.13.13) — blockquote added before the v0.14 section noting that v0.14 (Grocycode) and v1.0 (PWA, feature flags, dark mode, accessibility) are deferred while the app is in single-user early access
+- **README roadmap trimmed** (v0.13.13) — v0.14 (Grocycode & label printing) and v1.0 (PWA, feature flags, dark mode, accessibility) sections removed from the roadmap; these are not planned for the near term while the app is in single-user early access
 
 ---
 

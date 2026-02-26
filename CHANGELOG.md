@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.13] - 2026-02-26
+
+### Added
+- **Access control middleware** (v0.13.13) — new `src/middleware.ts` restricts the hosted instance to an email allowlist while keeping guest mode and unauthenticated access open
+  - Runs on all page routes; static assets and `/api/*` are excluded from the matcher and are unaffected
+  - Gets the current user via `supabase.auth.getUser()` (server-side JWT validation, not the client-side session cache)
+  - Reads allowed emails from the `ALLOWED_EMAILS` env var (comma-separated; supports multiple emails)
+  - If a non-anonymous authenticated user's email is not in the allowlist → redirect to `/restricted`
+  - Anonymous (`is_anonymous === true`) and unauthenticated users pass through without restriction
+  - `/restricted` and `/auth/**` are excluded from the check to prevent redirect loops
+  - Fails safe: if `ALLOWED_EMAILS` is unset or empty, all non-anonymous authenticated users are blocked
+
+- **Restricted access page** (v0.13.13) — new `src/app/restricted/page.tsx` shown to blocked authenticated users
+  - Follows the Japanese diner aesthetic: `Noren` header, `bg-hayama-light` background, `font-display` title, `text-megumi` brand colour
+  - Title: "Early Access 限定公開"
+  - Three clearly separated options:
+    - **Guest Mode** — "Continue as Guest" signs out the current account, signs in anonymously, and redirects to `/`; restores full app access as a demo user
+    - **Request Access** — contact links for email, LinkedIn, GitHub, and Reddit using Lucide icons (no emoji)
+    - **Self-Host** — link to the `#self-hosting` section of the GitHub README
+  - **Sign Out** button (outline) signs out and redirects to `/` so the WelcomeModal appears for a fresh login
+  - Loading state on both action buttons while async sign-out/sign-in is in progress
+
+### Changed
+- **README early-access note** (v0.13.13) — blockquote added below the Live Demo link noting single-user early access and pointing visitors to guest mode or self-hosting
+- **README privacy notice** (v0.13.13) — "Hosted version" paragraph updated to note that access is currently restricted to a single account, with guest mode and self-hosting as alternatives
+- **README roadmap note** (v0.13.13) — blockquote added before the v0.14 section noting that v0.14 (Grocycode) and v1.0 (PWA, feature flags, dark mode, accessibility) are deferred while the app is in single-user early access
+
+---
+
 ## [0.13.12] - 2026-02-25
 
 ### Fixed

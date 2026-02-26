@@ -4,12 +4,15 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 **[Live Demo →](https://food-wars.muhammadhazimiyusri.uk)** *(coming soon)*
 
+> **Note:** The hosted version is currently in single-user early access.
+> Use guest mode to explore, or [self-host](#self-hosting) for your own full-access instance.
+
 > *Inspired by the creative cooking spirit of Shokugeki no Soma*
 
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.13.12-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.13.13-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -30,7 +33,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.13.12
+Current version is v0.13.13
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -129,7 +132,7 @@ Food Wars targets a different audience: people who want Grocy-like features with
 
 ### Privacy Notice
 
-**Hosted version:** Your data is stored in the developer's Supabase database. While secured with Row Level Security (you can only access your own household's data), if you prefer full data ownership, please use the self-hosting option.
+**Hosted version:** Your data is stored in the developer's Supabase database. While secured with Row Level Security (you can only access your own household's data), if you prefer full data ownership, please use the self-hosting option. Access to the hosted version is currently restricted to a single account — other visitors can use guest mode (shared demo data) or self-host for full access.
 
 **Self-hosted:** Your data stays in your own Supabase project. See [Self-Hosting](#self-hosting) for setup instructions.
 
@@ -663,6 +666,8 @@ Food Wars targets a different audience: people who want Grocy-like features with
 
 **Bug fix (v0.13.12):**
 - [x] Recipe instructions markdown numbered lists now render correctly — `@tailwindcss/typography` installed and registered via `@plugin` in `globals.css`; Tailwind preflight was stripping `list-style` with no counter-rule since the plugin was missing
+
+> **Note:** v0.14 (Grocycode & label printing) and v1.0 (PWA, feature flags, dark mode, accessibility) remain planned but are deferred while the hosted app is in single-user early access.
 
 #### v0.14 - Grocycode & Label Printing (was v1.4)
 

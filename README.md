@@ -12,7 +12,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.13.13-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.13.14-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -33,7 +33,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.13.13
+Current version is v0.13.14
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -559,11 +559,8 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] "Create a recipe from my stock" chip on chat welcome screen
 </details>
 
----
-
-### In Progress
-
-#### v0.12 - Meal Planning (was v1.2)
+<details>
+<summary><strong>v0.12 - Meal Planning ✓</strong></summary>
 
 **Goal:** Calendar-based meal organization
 
@@ -606,12 +603,10 @@ Food Wars targets a different audience: people who want Grocy-like features with
 **v0.12.6 — "What's for Dinner?" + Nutrition:** ✓
 - [x] "What's for dinner?" card on stock overview home page
 - [x] Daily calorie estimate in day view header
+</details>
 
----
-
-### In Progress
-
-#### v0.13 - Product Analytics (was v1.3)
+<details>
+<summary><strong>v0.13 - Product Analytics ✓</strong></summary>
 
 **Goal:** Rich insights per product
 
@@ -619,7 +614,7 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Stock amount (total + per location)
 - [x] Stock value (amount × last price)
 - [x] Amount opened
-- [ ] Default location display
+- [x] Default location display
 
 **Purchase history (v0.13.1):**
 - [x] Last purchased date
@@ -666,6 +661,10 @@ Food Wars targets a different audience: people who want Grocy-like features with
 
 **Bug fix (v0.13.12):**
 - [x] Recipe instructions markdown numbered lists now render correctly — `@tailwindcss/typography` installed and registered via `@plugin` in `globals.css`; Tailwind preflight was stripping `list-style` with no counter-rule since the plugin was missing
+
+**Default location display (v0.13.14):**
+- [x] Product detail modal hero now shows the product's default storage location
+</details>
 
 ---
 

@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.14] - 2026-02-26
+
+### Added
+- **Default location display in Product Detail modal** (v0.13.14) — the product's default storage location now appears in the summary stats grid alongside total stock, stock value, and batch count; only shown when a default location is set; resolves the last open item from the v0.13 milestone, marking the version complete
+
+---
+
 ## [0.13.13] - 2026-02-26
 
 ### Added

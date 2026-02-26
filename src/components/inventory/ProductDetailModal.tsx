@@ -391,6 +391,16 @@ export function ProductDetailModal({
                   <span className="text-gray-500">Batches</span>
                   <span>{entries.length}</span>
                 </div>
+                {product.location_id && (
+                  <div className="flex justify-between col-span-2 sm:col-span-1">
+                    <span className="text-gray-500">Default location</span>
+                    <span>
+                      {product.location?.name ??
+                        locations.find((l) => l.id === product.location_id)?.name ??
+                        "—"}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 

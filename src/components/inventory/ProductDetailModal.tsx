@@ -322,8 +322,12 @@ export function ProductDetailModal({
 
   // Price view: multiply raw stock-unit price by the purchase factor for "per purchase unit" display
   const purchaseUnitName = quantityUnits.find((u) => u.id === product.qu_id_purchase)?.name ?? unitName;
-  const activeFactor = priceView === "purchase" && purchaseFactor !== null ? purchaseFactor : 1;
-  const activeUnitName = priceView === "purchase" && purchaseFactor !== null ? purchaseUnitName : unitName;
+  const rawStockPrice = purchaseHistory?.avgPrice ?? purchaseHistory?.lastPrice ?? null;
+  const useScaledStock = rawStockPrice != null && rawStockPrice < 0.10;
+  const scaledStockFactor = useScaledStock ? 100 : 1;
+  const scaledStockUnitName = useScaledStock ? `100${unitName}` : unitName;
+  const activeFactor = priceView === "purchase" && purchaseFactor !== null ? purchaseFactor : scaledStockFactor;
+  const activeUnitName = priceView === "purchase" && purchaseFactor !== null ? purchaseUnitName : scaledStockUnitName;
   const displayRows = purchaseHistory?.rows.map((r) => ({
     ...r,
     price: r.price != null ? r.price * activeFactor : null,
@@ -674,7 +678,7 @@ export function ProductDetailModal({
                             className={cn("rounded-full px-2 py-0.5 transition-colors", priceView === "stock" ? "bg-gray-900 text-white" : "text-gray-600")}
                             onClick={() => setPriceView("stock")}
                           >
-                            Per {unitName}
+                            Per {scaledStockUnitName}
                           </button>
                         </div>
                       )}

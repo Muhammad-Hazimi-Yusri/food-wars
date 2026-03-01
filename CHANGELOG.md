@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.17] - 2026-03-01
+
+### Changed
+- **History tab "Per g" view auto-scales to "per 100g" for small per-unit prices** (v0.13.17) — toggling from "Per bottle" to the stock-unit view in the History tab previously displayed prices like £0.01/g for products such as a 300g sauce bottle (£1.89), which is both misleading (rounding silently drops a significant digit from £0.0063) and unfamiliar — UK supermarkets uniformly show such prices per 100g or per 100ml, not per gram
+  - Root cause: raw prices are stored per stock unit (e.g. £0.0063/g); the "Per g" view applied a factor of 1 and formatted with `.toFixed(2)`, rounding £0.0063 to £0.01 and losing precision
+  - Fix: `ProductDetailModal.tsx` now derives `scaledStockFactor` (100 or 1) and `scaledStockUnitName` ("100g" or "g") from the product's average or last purchase price per stock unit; if that raw price is below the £0.10 threshold, the stock-unit view multiplies prices by 100 and relabels the unit accordingly; the toggle button ("Per 100g"), table column header ("Price/100g"), stat pills ("Last price", "Avg price"), and price history chart axis all update automatically because they all consume `activeFactor` and `activeUnitName` — no separate display changes required
+  - Threshold of £0.10/unit covers all practical small-unit cases (g, ml) without false positives for items priced above £0.10 per unit, where the existing per-unit label is already meaningful
+  - The "Per bottle" (purchase-unit) view is completely unaffected; the toggle remains hidden when no QU conversion is defined (existing behaviour unchanged)
+
+---
+
 ## [0.13.16] - 2026-03-01
 
 ### Fixed

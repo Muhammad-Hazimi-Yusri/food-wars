@@ -12,7 +12,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.13.16-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.13.17-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -33,7 +33,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.13.16
+Current version is v0.13.17
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -75,7 +75,7 @@ Current version is v0.13.16
 - **Edit Stock Entry Pricing** — Per-unit or total price toggle with unit selector and conversion factor display when editing stock entries
 - **Fractional Quick Consume** — Quick consume supports decimal amounts (e.g. 0.5 kg) for sub-unit consumption; percentage-based quick consume always calculates against the original purchase amount (not current remaining stock), so the same absolute amount is removed every time; results rounded to 2 decimal places
 - **Stock used vs. purchased display** — ProductDetailModal "Total stock" row shows `current/original` format (e.g. `270/300 g`) when stock has been partially consumed, giving instant visibility into usage
-- **Purchase Unit Price in History** — Product History tab shows price per purchase unit by default (e.g. "£1.10/pack"), with a pill toggle to switch to per stock unit view; only shown when a QU conversion is defined; price history chart moved below the purchase log table and made collapsible
+- **Purchase Unit Price in History** — Product History tab shows price per purchase unit by default (e.g. "£1.10/pack"), with a pill toggle to switch to per stock unit view; when the per-unit price is below £0.10 (e.g. £0.0063/g for a 300g sauce bottle), the stock-unit view automatically scales to per-100 units (e.g. "per 100g", displaying £0.63/100g) following UK supermarket convention; only shown when a QU conversion is defined; price history chart moved below the purchase log table and made collapsible
 
 ### For Contributors
 - **Documentation** — README, BRANDING.md, CONTRIBUTING.md, CHANGELOG.md

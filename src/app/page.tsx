@@ -107,8 +107,29 @@ async function getStockData(): Promise<{
       .select("*"),
   ]);
 
+  // Fetch original purchase amounts from stock_log for percentage-based consume calculations.
+  // stock_log purchase rows store the amount at purchase time; stock_entries.amount is current remaining.
+  const rawEntries = entriesRes.data ?? [];
+  const stockIds = rawEntries.map((e) => e.stock_id).filter(Boolean) as string[];
+  let origMap: Record<string, number> = {};
+  if (stockIds.length > 0) {
+    const { data: purchaseLogs } = await supabase
+      .from("stock_log")
+      .select("stock_id, amount")
+      .in("stock_id", stockIds)
+      .eq("transaction_type", "purchase")
+      .eq("undone", false);
+    origMap = Object.fromEntries(
+      (purchaseLogs ?? []).map((r) => [r.stock_id!, r.amount])
+    );
+  }
+  const entries = rawEntries.map((e) => ({
+    ...e,
+    originalAmount: origMap[e.stock_id] ?? null,
+  }));
+
   return {
-    entries: entriesRes.data ?? [],
+    entries,
     locations: locationsRes.data ?? [],
     productGroups: productGroupsRes.data ?? [],
     productsWithMinStock: productsWithMinStockRes.data ?? [],

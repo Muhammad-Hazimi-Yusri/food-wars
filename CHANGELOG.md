@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.16] - 2026-03-01
+
+### Fixed
+- **Percentage-based quick consume using shrinking remaining stock instead of original purchase amount** (v0.13.16) — when a product's quick consume amount is set as a percentage (e.g. 1%), the calculation was based on the current remaining stock; as stock was consumed the absolute amount per click grew progressively smaller, meaning the product could never fully empty (asymptotic decay)
+  - Root cause: `handleConsume` in `MobileStockList.tsx` and `DesktopStockTable.tsx` multiplied `product.totalAmount` (current remaining) by the percentage, rather than the original purchased quantity
+  - Fix: `getStockData()` in `src/app/page.tsx` now runs a secondary `stock_log` query after fetching `stock_entries`, matching on `stock_id` with `transaction_type = 'purchase'` and `undone = false`; the original purchase amount is attached to each entry as `originalAmount`; `handleConsume` in both list components now sums `entry.originalAmount ?? entry.amount` across all entries to derive a stable `originalTotal`, then uses that as the percentage base — so a 1% consume on a 300 g product always removes 3 g regardless of how much has already been consumed
+  - Pre-v0.13.1 entries that have no matching `stock_log` purchase row receive `originalAmount = null` and fall back to the current `entry.amount` (best-effort; same behaviour as before)
+- **Absurd decimal precision in percentage-calculated consume amounts** (v0.13.16) — amounts such as `2.6627721397200004 g` were being passed to `consumeStock` and shown in the toast notification
+  - Fix: result of the percentage multiply is now wrapped in `parseFloat(...toFixed(2))`, rounding to a maximum of 2 decimal places while stripping trailing zeros (e.g. `3.00 → 3`, `3.50 → 3.5`)
+
+### Changed
+- **Stock detail modal shows consumed vs. original amount** (v0.13.16) — the "Total stock" row in the `ProductDetailModal` hero now displays `current/original unit` (e.g. `270/300 g`) when the product has been partially consumed, giving instant visibility into how much has been used; displays the plain `270 g` format when nothing has been consumed yet or `originalAmount` data is unavailable
+
+---
+
 ## [0.13.15] - 2026-02-28
 
 ### Fixed

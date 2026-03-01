@@ -175,8 +175,11 @@ export function MobileStockList({ entries, locations, zeroStockProducts = [] }: 
   const handleConsume = async (product: AggregatedProduct) => {
     setConsuming(product.productId);
     const p = product.entries[0].product;
+    const originalTotal = product.entries.reduce(
+      (sum, e) => sum + (e.originalAmount ?? e.amount), 0
+    );
     const amount = p.quick_consume_as_percentage
-      ? product.totalAmount * (p.quick_consume_amount / 100)
+      ? parseFloat((originalTotal * (p.quick_consume_amount / 100)).toFixed(2))
       : p.quick_consume_amount;
     const result = await consumeStock(product.productId, product.entries, amount);
     setConsuming(null);

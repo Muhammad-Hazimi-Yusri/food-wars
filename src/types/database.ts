@@ -457,6 +457,8 @@ export type ProductWithRelations = Product & {
 export type StockEntryWithProduct = StockEntry & {
   product: ProductWithRelations;
   location?: Location | null;
+  /** Original purchase amount from stock_log. Null for pre-v0.13.1 entries. */
+  originalAmount?: number | null;
 };
 
 export type ShoppingListItemWithRelations = ShoppingListItem & {

@@ -314,6 +314,7 @@ export function ProductDetailModal({
   if (!open || !product) return null;
 
   const totalAmount = entries.reduce((sum, e) => sum + e.amount, 0);
+  const originalTotal = entries.reduce((sum, e) => sum + (e.originalAmount ?? e.amount), 0);
   const openedAmount = entries.filter((e) => e.open).reduce((sum, e) => sum + e.amount, 0);
   const totalValue = entries.reduce((sum, e) => sum + (e.price ?? 0) * e.amount, 0);
   const unitName = product.qu_stock?.name ?? "unit";
@@ -373,7 +374,11 @@ export function ProductDetailModal({
               <div className="flex-1 grid grid-cols-2 gap-x-6 gap-y-1 text-sm content-center">
                 <div className="flex justify-between col-span-2 sm:col-span-1">
                   <span className="text-gray-500">Total stock</span>
-                  <span className="font-medium">{totalAmount} {totalAmount === 1 ? unitName : unitNamePlural}</span>
+                  <span className="font-medium">
+                    {originalTotal > totalAmount
+                      ? `${totalAmount}/${originalTotal} ${unitNamePlural}`
+                      : `${totalAmount} ${totalAmount === 1 ? unitName : unitNamePlural}`}
+                  </span>
                 </div>
                 {openedAmount > 0 && (
                   <div className="flex justify-between col-span-2 sm:col-span-1">

@@ -70,7 +70,6 @@ export async function getProductPurchaseHistory(
     .eq("product_id", productId)
     .eq("transaction_type", "purchase")
     .eq("undone", false)
-    .not("stock_entry_id", "is", null)
     .order("created_at", { ascending: false })
     .limit(100);
 
@@ -108,6 +107,9 @@ export async function getProductPurchaseHistory(
   );
 
   // 4. Map unlogged stock_entries to PurchaseRow
+  //    Note: stock_entries.amount is the current remaining amount, not the original
+  //    purchase amount — this is a known limitation for pre-v0.13.1 data where no
+  //    stock_log row exists. Post-v0.13.1 entries are covered by source 1 above.
   const syntheticRows: PurchaseRow[] = unlogged.map((e) => ({
     purchasedAt: e.purchased_date!,
     price: e.price,

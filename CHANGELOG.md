@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.15] - 2026-02-28
+
+### Fixed
+- **Purchase history showing remaining stock instead of original amount** (v0.13.15) — the History tab in ProductDetailModal was displaying the current remaining stock quantity instead of the original purchased amount for entries sourced from `stock_log`
+  - Root cause: a `.not("stock_entry_id", "is", null)` filter added in v0.13.9 to suppress ghost records from deleted entries was also silently excluding valid purchase log rows whose `stock_entry_id` is NULL (e.g. purchases made after the linked stock entry was deleted); `stock_log.amount` stores the original purchase amount and is always correct, but these rows were never reaching the UI
+  - Fix: removed the NULL filter from the `stock_log` query in `getProductPurchaseHistory()` (`src/lib/analytics-actions.ts`); the existing `undone = false` filter is sufficient to exclude ghost/undone records, making the NULL check redundant and harmful
+  - Deduplication is unaffected — the `loggedEntryIds` set already uses `.filter(Boolean)` so NULL `stock_entry_id` values are never added to the set and cannot cause false deduplication against `stock_entries` rows
+  - Added a comment to the `stock_entries` fallback mapping noting that `stock_entries.amount` reflects current remaining stock (not original purchase amount) — a known limitation for pre-v0.13.1 data where no `stock_log` row exists
+
+---
+
 ## [0.13.14] - 2026-02-26
 
 ### Added

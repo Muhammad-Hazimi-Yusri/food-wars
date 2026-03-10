@@ -26,9 +26,22 @@ export async function middleware(request: NextRequest) {
     }
   );
 
+  // Snapshot auth cookie presence BEFORE getUser(), because a failed refresh
+  // may clear them via setAll.
+  const hadAuthCookies = request.cookies
+    .getAll()
+    .some((c) => c.name.includes("auth-token"));
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // Auto-recover expired sessions: if the request had auth cookies but
+  // getUser() returned no user, the session has expired. Sign in anonymously
+  // so the page renders with guest data instead of an empty state.
+  if (!user && hadAuthCookies) {
+    await supabase.auth.signInAnonymously();
+  }
 
   // Skip access check for restricted and auth pages to avoid redirect loops
   const { pathname } = request.nextUrl;
@@ -47,7 +60,11 @@ export async function middleware(request: NextRequest) {
     if (!isAllowed) {
       const url = request.nextUrl.clone();
       url.pathname = "/restricted";
-      return NextResponse.redirect(url);
+      const redirectResponse = NextResponse.redirect(url);
+      supabaseResponse.cookies.getAll().forEach((cookie) => {
+        redirectResponse.cookies.set(cookie.name, cookie.value, cookie);
+      });
+      return redirectResponse;
     }
   }
 

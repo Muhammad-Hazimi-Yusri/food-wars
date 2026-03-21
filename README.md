@@ -40,7 +40,7 @@ Current version is v0.13.17
 - **Responsive Views** — Mobile/desktop tables with Grocy-style quick actions (Consume, Open)
 - **Add Products** — 5-tab form (basic, stock defaults, locations, QU conversions, barcodes)
 - **Product Pictures** — Upload from camera or gallery (mobile-optimized)
-- **Add Stock** — Quick-add entries with location, expiry, price
+- **Add Stock** — Quick-add entries with location, expiry, price; scanning an unknown barcode creates the product and returns directly to the stock modal pre-filled
 - **Stock Details** — View and edit individual batches per product
 - **Status Warnings** — Clickable expired/overdue/due soon/below minimum alert banners
 - **Stock Filters** — Search by name, filter by location, product group, status
@@ -383,6 +383,7 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Scan button on stock overview page
 - [x] Known barcode: open AddStockEntryModal pre-filled with product + barcode defaults
 - [x] Unknown barcode: OFF lookup, quick-create product, then add stock
+- [x] Return-to-stock after product creation: scan unknown barcode → create product → auto-redirect back to stock overview with AddStockEntryModal pre-filled
 
 **Shopping list scan workflow (v0.8.3):**
 - [x] Floating scan button on shopping list detail page

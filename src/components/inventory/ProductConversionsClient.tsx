@@ -184,7 +184,11 @@ export function ProductConversionsClient({
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild>
-          <Link href={returnTo === "receipt-scan" ? "/?receiptReturn=1" : "/master-data/products"}>
+          <Link href={
+            returnTo === "receipt-scan" ? "/?receiptReturn=1" :
+            returnTo === "stock" ? "/" :
+            "/master-data/products"
+          }>
             <ArrowLeft className="h-5 w-5" />
           </Link>
         </Button>
@@ -329,8 +333,14 @@ export function ProductConversionsClient({
       {/* Footer */}
       <div className="flex justify-end">
         <Button asChild>
-          <Link href={returnTo === "receipt-scan" ? "/?receiptReturn=1" : "/master-data/products"}>
-            {returnTo === "receipt-scan" ? "Back to Receipt" : "Done"}
+          <Link href={
+            returnTo === "receipt-scan" ? "/?receiptReturn=1" :
+            returnTo === "stock" ? `/?addStock=${product.id}` :
+            "/master-data/products"
+          }>
+            {returnTo === "receipt-scan" ? "Back to Receipt" :
+             returnTo === "stock" ? "Add to Stock" :
+             "Done"}
           </Link>
         </Button>
       </div>

@@ -562,6 +562,14 @@ export function ProductForm({
         // Save & continue → conversions, preserving returnTo
         router.push(`/products/${productId}/conversions?returnTo=receipt-scan`);
       }
+    } else if (returnTo === "stock") {
+      if (returnToList) {
+        // Save & return → stock overview with AddStockEntryModal auto-open
+        router.push(`/?addStock=${productId}`);
+      } else {
+        // Save & continue → conversions, preserving returnTo
+        router.push(`/products/${productId}/conversions?returnTo=stock`);
+      }
     } else if (returnToList) {
       router.push("/master-data/products");
     } else {

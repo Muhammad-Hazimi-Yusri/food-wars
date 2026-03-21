@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ScanBarcode } from "lucide-react";
 import { toast } from "sonner";
@@ -52,6 +52,17 @@ export function ScanToStockFlow({
   const [prefill, setPrefill] = useState<Prefill | null>(null);
   const [resolving, setResolving] = useState(false);
 
+  // Auto-open stock modal when returning from product creation
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const addStockProductId = params.get("addStock");
+    if (addStockProductId) {
+      setPrefill({ productId: addStockProductId });
+      setStockModalOpen(true);
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
   const handleScan = async (barcode: string) => {
     setScannerOpen(false);
     setResolving(true);
@@ -88,7 +99,7 @@ export function ScanToStockFlow({
       }
 
       // Redirect to product creation with barcode pre-filled
-      router.push(`/products/new?barcode=${encodeURIComponent(barcode)}`);
+      router.push(`/products/new?barcode=${encodeURIComponent(barcode)}&returnTo=stock`);
     } catch {
       toast.error("Failed to look up barcode");
     } finally {

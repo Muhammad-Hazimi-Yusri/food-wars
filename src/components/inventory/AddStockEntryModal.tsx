@@ -295,36 +295,51 @@ export function AddStockEntryModal({
         }
       }
 
-      const { data: newEntry, error: insertError } = await supabase.from("stock_entries").insert({
-        household_id: householdId,
-        product_id: productId,
-        amount: stockAmount,
-        location_id: locationId || null,
-        shopping_location_id: storeId && storeId !== "none" ? storeId : null,
-        best_before_date: neverExpires ? "2999-12-31" : (bestBeforeDate || null),
-        price: finalPrice,
-        note: note || null,
-        purchased_date: new Date().toISOString().split("T")[0],
-      }).select("id, stock_id").single();
+      // Split into individual entries when amount is a whole number > 1
+      const shouldSplit = Number.isInteger(enteredAmount) && enteredAmount > 1;
+      const count = shouldSplit ? enteredAmount : 1;
+      const perRowStockAmount = shouldSplit ? conversionFactor : stockAmount;
 
-      if (insertError) throw insertError;
+      const purchasedDate = new Date().toISOString().split("T")[0];
+      const bestBefore = neverExpires ? "2999-12-31" : (bestBeforeDate || null);
+      const shoppingLocId = storeId && storeId !== "none" ? storeId : null;
 
-      // Log the purchase in stock_log (best-effort — don't block on failure)
-      await supabase.from("stock_log").insert({
-        household_id: householdId,
-        product_id: productId,
-        amount: stockAmount,
-        transaction_type: "purchase",
-        price: finalPrice,
-        shopping_location_id: storeId && storeId !== "none" ? storeId : null,
-        purchased_date: new Date().toISOString().split("T")[0],
-        stock_entry_id: newEntry?.id ?? null,
-        stock_id: newEntry?.stock_id ?? null,
-        correlation_id: crypto.randomUUID(),
-        transaction_id: crypto.randomUUID(),
-        undone: false,
-        user_id: user.id,
-      });
+      for (let i = 0; i < count; i++) {
+        const { data: newEntry, error: insertError } = await supabase
+          .from("stock_entries")
+          .insert({
+            household_id: householdId,
+            product_id: productId,
+            amount: perRowStockAmount,
+            location_id: locationId || null,
+            shopping_location_id: shoppingLocId,
+            best_before_date: bestBefore,
+            price: finalPrice,
+            note: note || null,
+            purchased_date: purchasedDate,
+          })
+          .select("id, stock_id")
+          .single();
+
+        if (insertError) throw insertError;
+
+        // Log the purchase in stock_log (best-effort — don't block on failure)
+        await supabase.from("stock_log").insert({
+          household_id: householdId,
+          product_id: productId,
+          amount: perRowStockAmount,
+          transaction_type: "purchase",
+          price: finalPrice,
+          shopping_location_id: shoppingLocId,
+          purchased_date: purchasedDate,
+          stock_entry_id: newEntry?.id ?? null,
+          stock_id: newEntry?.stock_id ?? null,
+          correlation_id: crypto.randomUUID(),
+          transaction_id: crypto.randomUUID(),
+          undone: false,
+          user_id: user.id,
+        });
+      }
 
       addRecent(productId);
       setOpen(false);

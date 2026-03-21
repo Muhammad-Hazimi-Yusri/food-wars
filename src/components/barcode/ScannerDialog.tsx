@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BarcodeScanner } from "@/components/barcode/BarcodeScanner";
-import { Keyboard } from "lucide-react";
+import { Keyboard, SwitchCamera } from "lucide-react";
 
 type ScannerDialogProps = {
   open: boolean;
@@ -30,6 +30,45 @@ export function ScannerDialog({
 }: ScannerDialogProps) {
   const [manualValue, setManualValue] = useState("");
   const [showManual, setShowManual] = useState(false);
+  const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string>();
+
+  // Enumerate video input devices when the dialog opens
+  useEffect(() => {
+    if (!open) return;
+
+    let cancelled = false;
+
+    const enumerate = async () => {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        if (cancelled) return;
+        setCameras(devices.filter((d) => d.kind === "videoinput"));
+      } catch {
+        // enumerateDevices not supported or failed — switch button stays hidden
+      }
+    };
+
+    enumerate();
+    // Re-enumerate after stream starts so labels are populated
+    const timer = setTimeout(enumerate, 1000);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [open]);
+
+  const handleSwitchCamera = useCallback(() => {
+    if (cameras.length < 2) return;
+    const currentIndex = selectedCameraId
+      ? cameras.findIndex((c) => c.deviceId === selectedCameraId)
+      : -1;
+    // If on default (index -1), jump to 1 (index 0 is likely the environment cam)
+    const nextIndex =
+      currentIndex === -1 ? 1 : (currentIndex + 1) % cameras.length;
+    setSelectedCameraId(cameras[nextIndex].deviceId);
+  }, [cameras, selectedCameraId]);
 
   const handleScan = (barcode: string) => {
     onScan(barcode);
@@ -55,6 +94,7 @@ export function ScannerDialog({
         if (!val) {
           setManualValue("");
           setShowManual(false);
+          setSelectedCameraId(undefined);
         }
       }}
     >
@@ -63,7 +103,12 @@ export function ScannerDialog({
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
 
-        <BarcodeScanner onScan={handleScan} enabled={open} />
+        <BarcodeScanner
+          key={selectedCameraId ?? "default"}
+          onScan={handleScan}
+          enabled={open}
+          deviceId={selectedCameraId}
+        />
 
         {/* Manual entry fallback */}
         {showManual ? (
@@ -82,14 +127,30 @@ export function ScannerDialog({
             </Button>
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={() => setShowManual(true)}
-            className="flex items-center justify-center gap-2 text-sm text-gray-500 hover:text-gray-700 py-1"
-          >
-            <Keyboard className="h-4 w-4" />
-            Type barcode manually
-          </button>
+          <div className="flex items-center justify-between">
+            {cameras.length >= 2 ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={handleSwitchCamera}
+                title="Switch camera"
+                className="h-8 w-8 text-gray-500 hover:text-gray-700"
+              >
+                <SwitchCamera className="h-4 w-4" />
+              </Button>
+            ) : (
+              <div />
+            )}
+            <button
+              type="button"
+              onClick={() => setShowManual(true)}
+              className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 py-1"
+            >
+              <Keyboard className="h-4 w-4" />
+              Type barcode manually
+            </button>
+          </div>
         )}
 
         {continuous && (

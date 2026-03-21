@@ -10,6 +10,8 @@ type BarcodeScannerProps = {
   onError?: (message: string) => void;
   enabled?: boolean;
   className?: string;
+  /** When set, use this specific camera instead of the default environment-facing one. */
+  deviceId?: string;
 };
 
 export function BarcodeScanner({
@@ -17,6 +19,7 @@ export function BarcodeScanner({
   onError,
   enabled = true,
   className,
+  deviceId,
 }: BarcodeScannerProps) {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [lastScanned, setLastScanned] = useState<string | null>(null);
@@ -66,11 +69,10 @@ export function BarcodeScanner({
   );
 
   const { ref } = useZxing({
+    ...(deviceId
+      ? { deviceId }
+      : { constraints: { video: { facingMode: "environment" }, audio: false } }),
     paused: !enabled,
-    constraints: {
-      video: { facingMode: "environment" },
-      audio: false,
-    },
     timeBetweenDecodingAttempts: 300,
     onDecodeResult: handleDecodeResult,
     onError: handleError,

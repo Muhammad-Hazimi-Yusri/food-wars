@@ -5,6 +5,7 @@ import { AddStockEntryModal } from "@/components/inventory/AddStockEntryModal";
 import { StockOverviewClient } from "@/components/inventory/StockOverviewClient";
 import { StockEntryWithProduct, Location, ProductGroup, Product, QuantityUnit, ShoppingLocation } from "@/types/database";
 import { ScanToStockFlow } from "@/components/barcode/ScanToStockFlow";
+import { ExportForAIButton } from "@/components/inventory/ExportForAIButton";
 import { TodaysDinnerCard } from "@/components/meal-plan/TodaysDinnerCard";
 import Link from "next/link";
 import { Plus } from "lucide-react";
@@ -157,7 +158,10 @@ export default async function Home() {
       <Noren />
       <main className="p-4 sm:p-6 max-w-5xl mx-auto">
         {/* Header */}
-        <h1 className="text-2xl font-bold text-megumi mb-1">Stock Overview</h1>
+        <div className="flex items-center justify-between mb-1">
+          <h1 className="text-2xl font-bold text-megumi">Stock Overview</h1>
+          <ExportForAIButton />
+        </div>
 
         {/* Action Buttons */}
         <div className="grid grid-cols-3 gap-3 mb-4">

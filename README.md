@@ -74,6 +74,7 @@ Current version is v0.13.18
 - **Pantry Scanning** — Photograph pantry shelves or fridge contents, Vision AI identifies products and estimates quantities, review and bulk-import to stock
 - **Edit Stock Entry Pricing** — Per-unit or total price toggle with unit selector and conversion factor display when editing stock entries
 - **Fractional Quick Consume** — Quick consume supports decimal amounts (e.g. 0.5 kg) for sub-unit consumption; percentage-based quick consume always calculates against the original purchase amount (not current remaining stock), so the same absolute amount is removed every time; results rounded to 2 decimal places
+- **Export for AI** — One-click button copies a token-efficient inventory summary (compact JSON sorted by expiry) to clipboard, ready to paste into any LLM chat for recipe recommendations
 - **Stock used vs. purchased display** — ProductDetailModal "Total stock" row shows `current/original` format (e.g. `270/300 g`) when stock has been partially consumed, giving instant visibility into usage
 - **Purchase Unit Price in History** — Product History tab shows price per purchase unit by default (e.g. "£1.10/pack"), with a pill toggle to switch to per stock unit view; when the per-unit price is below £0.10 (e.g. £0.0063/g for a 300g sauce bottle), the stock-unit view automatically scales to per-100 units (e.g. "per 100g", displaying £0.63/100g) following UK supermarket convention; only shown when a QU conversion is defined; price history chart moved below the purchase log table and made collapsible
 

@@ -873,6 +873,7 @@ export function ProductDetailModal({
         quantityUnits={quantityUnits}
         shoppingLocations={shoppingLocations}
         conversions={conversions}
+        stockSummary={product ? new Map([[product.id, entries.reduce((sum, e) => sum + e.amount, 0)]]) : undefined}
         prefill={{ productId: product?.id }}
         externalOpen={addingStock}
         onExternalOpenChange={setAddingStock}

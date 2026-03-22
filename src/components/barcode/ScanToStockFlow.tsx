@@ -29,6 +29,7 @@ type Props = {
   quantityUnits: QuantityUnit[];
   shoppingLocations: ShoppingLocation[];
   conversions: QuantityUnitConversion[];
+  stockSummary?: Map<string, number>;
 };
 
 type Prefill = {
@@ -45,6 +46,7 @@ export function ScanToStockFlow({
   quantityUnits,
   shoppingLocations,
   conversions,
+  stockSummary,
 }: Props) {
   const router = useRouter();
   const [scannerOpen, setScannerOpen] = useState(false);
@@ -132,6 +134,7 @@ export function ScanToStockFlow({
         quantityUnits={quantityUnits}
         shoppingLocations={shoppingLocations}
         conversions={conversions}
+        stockSummary={stockSummary}
         prefill={prefill}
         externalOpen={stockModalOpen}
         onExternalOpenChange={(val) => {

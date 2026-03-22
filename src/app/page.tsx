@@ -153,6 +153,12 @@ export default async function Home() {
     conversions,
   } = await getStockData();
 
+  // Aggregate stock per product for the Add Stock modal's insight panel
+  const stockSummary = new Map<string, number>();
+  for (const e of entries) {
+    stockSummary.set(e.product_id, (stockSummary.get(e.product_id) ?? 0) + e.amount);
+  }
+
   return (
     <div className="min-h-screen bg-hayama">
       <Noren />
@@ -171,6 +177,7 @@ export default async function Home() {
             quantityUnits={quantityUnits}
             shoppingLocations={shoppingLocations}
             conversions={conversions}
+            stockSummary={stockSummary}
           />
           <ScanToStockFlow
             products={products}
@@ -178,6 +185,7 @@ export default async function Home() {
             quantityUnits={quantityUnits}
             shoppingLocations={shoppingLocations}
             conversions={conversions}
+            stockSummary={stockSummary}
           />
           <Link
             href="/products/new"

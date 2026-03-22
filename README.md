@@ -632,6 +632,11 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Price history chart repositioned below the purchase log table and wrapped in a collapsible `<details>` section
 - [x] Chart Y-axis and tooltip update to match the toggle (purchase or stock unit)
 
+**Inline price editing (v0.13.11):**
+- [x] Click any price cell in the History tab purchase log to edit it inline (dashed underline on hover)
+- [x] Saves to `stock_log` and syncs the linked `stock_entry` price; stat pills update immediately
+- [x] Pre-v0.13.1 retroactive rows (sourced from `stock_entries`, no `stock_log` row) are read-only
+
 **Consumption analytics (v0.13.2):**
 - [x] Last used/consumed date
 - [x] Average shelf life (calculated from history)

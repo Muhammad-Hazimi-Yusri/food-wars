@@ -53,8 +53,9 @@ import { PriceHistoryChart } from "./PriceHistoryChart";
 import { refetchProductFromOFF, applyOFFUpdates } from "@/lib/product-actions";
 import type { OFFProduct } from "@/lib/openfoodfacts";
 import {
-  getProductPurchaseHistory, type ProductPurchaseHistory,
+  getProductPurchaseHistory, type ProductPurchaseHistory, type PurchaseRow,
   getProductConsumptionStats, type ProductConsumptionStats,
+  updatePurchaseLogPrice,
 } from "@/lib/analytics-actions";
 
 type ProductDetailModalProps = {
@@ -103,6 +104,9 @@ export function ProductDetailModal({
   const [purchaseHistory, setPurchaseHistory] = useState<ProductPurchaseHistory | null>(null);
   const [consumptionStats, setConsumptionStats] = useState<ProductConsumptionStats | null>(null);
   const [priceView, setPriceView] = useState<"purchase" | "stock">("purchase");
+  const [editingPriceRowIdx, setEditingPriceRowIdx] = useState<number | null>(null);
+  const [editingPriceValue, setEditingPriceValue] = useState("");
+  const [savingPriceIdx, setSavingPriceIdx] = useState<number | null>(null);
 
   const product = propProduct ?? entries[0]?.product;
 
@@ -332,6 +336,46 @@ export function ProductDetailModal({
     ...r,
     price: r.price != null ? r.price * activeFactor : null,
   })) ?? [];
+
+  const recomputeStats = (newRows: PurchaseRow[]) => {
+    const priced = newRows.filter((r) => r.price != null);
+    const avg = priced.length > 0 ? priced.reduce((s, r) => s + r.price!, 0) / priced.length : null;
+    return {
+      lastPurchasedAt: newRows[0]?.purchasedAt ?? null,
+      lastPrice: newRows[0]?.price ?? null,
+      avgPrice: avg,
+    };
+  };
+
+  const handleSaveInlinePrice = async (rowIdx: number) => {
+    const row = purchaseHistory?.rows[rowIdx];
+    if (!row?.logId) return;
+
+    const parsed = parseFloat(editingPriceValue);
+    if (isNaN(parsed) || parsed < 0) {
+      setEditingPriceRowIdx(null);
+      return;
+    }
+
+    // Convert from display unit back to stock unit for storage
+    const storagePrice = activeFactor !== 0 ? parsed / activeFactor : parsed;
+
+    setSavingPriceIdx(rowIdx);
+    const result = await updatePurchaseLogPrice(row.logId, storagePrice);
+    setSavingPriceIdx(null);
+
+    if (result.success) {
+      setPurchaseHistory((prev) => {
+        if (!prev) return prev;
+        const newRows = [...prev.rows];
+        newRows[rowIdx] = { ...newRows[rowIdx], price: storagePrice };
+        return { ...prev, rows: newRows, ...recomputeStats(newRows) };
+      });
+      setEditingPriceRowIdx(null);
+    } else {
+      toast.error(result.error ?? "Failed to save price");
+    }
+  };
 
   return (
     <>
@@ -695,7 +739,7 @@ export function ProductDetailModal({
                         </thead>
                         <tbody className="divide-y">
                           {displayRows.map((row, i) => (
-                            <tr key={i} className="hover:bg-gray-50">
+                            <tr key={row.logId ?? i} className="hover:bg-gray-50">
                               <td className="px-3 py-2 text-gray-700">
                                 {new Date(row.purchasedAt).toLocaleDateString()}
                               </td>
@@ -704,7 +748,37 @@ export function ProductDetailModal({
                                 {row.amount} {row.amount === 1 ? unitName : unitNamePlural}
                               </td>
                               <td className="px-3 py-2 text-right text-gray-700">
-                                {row.price != null ? `£${row.price.toFixed(2)}` : "—"}
+                                {editingPriceRowIdx === i ? (
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={editingPriceValue}
+                                    onChange={(e) => setEditingPriceValue(e.target.value)}
+                                    onBlur={() => handleSaveInlinePrice(i)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") handleSaveInlinePrice(i);
+                                      if (e.key === "Escape") setEditingPriceRowIdx(null);
+                                    }}
+                                    className="h-7 w-20 text-xs text-right inline-block ml-auto"
+                                    autoFocus
+                                    disabled={savingPriceIdx === i}
+                                  />
+                                ) : (
+                                  <span
+                                    className={cn(
+                                      row.logId != null && "cursor-pointer hover:underline hover:decoration-dashed hover:text-blue-600"
+                                    )}
+                                    onClick={() => {
+                                      if (row.logId == null) return;
+                                      setEditingPriceRowIdx(i);
+                                      setEditingPriceValue(row.price != null ? row.price.toFixed(2) : "");
+                                    }}
+                                    title={row.logId != null ? "Click to edit price" : undefined}
+                                  >
+                                    {row.price != null ? `£${row.price.toFixed(2)}` : "—"}
+                                  </span>
+                                )}
                               </td>
                             </tr>
                           ))}

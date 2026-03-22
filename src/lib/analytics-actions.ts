@@ -12,6 +12,7 @@ export type PurchaseRow = {
   storeName: string | null;  // shopping_location name
   storeId: string | null;
   amount: number;
+  logId: string | null;      // stock_log.id, null for pre-v0.13.1 retroactive rows
 };
 
 export type ProductPurchaseHistory = {
@@ -60,6 +61,7 @@ export async function getProductPurchaseHistory(
   const { data: logRows } = await supabase
     .from("stock_log")
     .select(`
+      id,
       created_at,
       price,
       amount,
@@ -84,6 +86,7 @@ export async function getProductPurchaseHistory(
     amount: r.amount,
     storeId: r.shopping_location_id,
     storeName: (r.shopping_location as unknown as { name: string } | null)?.name ?? null,
+    logId: r.id,
   }));
 
   // 2. Always fetch stock_entries to surface pre-v0.13.1 purchases
@@ -116,6 +119,7 @@ export async function getProductPurchaseHistory(
     amount: e.amount,
     storeId: e.shopping_location_id,
     storeName: (e.shopping_location as unknown as { name: string } | null)?.name ?? null,
+    logId: null,
   }));
 
   // 5. Merge and sort by date descending
@@ -479,4 +483,54 @@ export async function getStockValueByGroup(): Promise<HouseholdStockValue> {
     .sort((a, b) => b.value - a.value);
 
   return { totalValue, byGroup };
+}
+
+// ─────────────────────────────────────────────
+// Inline price editing (History tab)
+// ─────────────────────────────────────────────
+
+/**
+ * Update the price on a single stock_log purchase row and keep the linked
+ * stock_entry in sync. Used by the inline price editor in the History tab.
+ */
+export async function updatePurchaseLogPrice(
+  logId: string,
+  newPrice: number,
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: "Not authenticated" };
+
+  // Fetch the log row to get stock_entry_id (RLS enforces household access)
+  const { data: logRow, error: fetchError } = await supabase
+    .from("stock_log")
+    .select("id, stock_entry_id")
+    .eq("id", logId)
+    .eq("transaction_type", "purchase")
+    .eq("undone", false)
+    .single();
+
+  if (fetchError || !logRow) {
+    return { success: false, error: "Purchase log entry not found" };
+  }
+
+  // Update stock_log price
+  const { error: logUpdateError } = await supabase
+    .from("stock_log")
+    .update({ price: newPrice })
+    .eq("id", logId);
+  if (logUpdateError) {
+    return { success: false, error: "Failed to update log price" };
+  }
+
+  // Best-effort: sync the linked stock_entry price
+  if (logRow.stock_entry_id) {
+    const { error: entryError } = await supabase
+      .from("stock_entries")
+      .update({ price: newPrice })
+      .eq("id", logRow.stock_entry_id);
+    if (entryError) console.error("Failed to sync stock_entry price:", entryError);
+  }
+
+  return { success: true };
 }

@@ -19,7 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Command,
   CommandEmpty,
@@ -400,69 +399,83 @@ export function AddStockEntryModal({
               )}
 
               {/* Product */}
-              <div>
+              <div className="relative">
                 <Label htmlFor="product">Product *</Label>
-                <Popover open={productOpen} onOpenChange={setProductOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={productOpen}
-                      className="w-full justify-between font-normal"
+                <Button
+                  type="button"
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={productOpen}
+                  onClick={() => setProductOpen(!productOpen)}
+                  className="w-full justify-between font-normal"
+                >
+                  {productId
+                    ? products.find((p) => p.id === productId)?.name
+                    : "Select product..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+                {productOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setProductOpen(false)}
+                    />
+                    <div
+                      className="absolute z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md"
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") {
+                          e.preventDefault();
+                          setProductOpen(false);
+                        }
+                      }}
                     >
-                      {productId
-                        ? products.find((p) => p.id === productId)?.name
-                        : "Select product..."}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Search products..." />
-                      <CommandList>
-                        <CommandEmpty>No products found.</CommandEmpty>
-                        {recentIds.length > 0 && (() => {
-                          const recentProducts = recentIds
-                            .map((id) => products.find((p) => p.id === id))
-                            .filter(Boolean) as typeof products;
-                          if (recentProducts.length === 0) return null;
-                          return (
-                            <CommandGroup heading="Recent">
-                              {recentProducts.map((product) => (
-                                <CommandItem
-                                  key={`recent-${product.id}`}
-                                  value={product.name}
-                                  onSelect={() => {
-                                    setProductId(product.id);
-                                    setProductOpen(false);
-                                  }}
-                                >
-                                  <Check className={cn("mr-2 h-4 w-4", productId === product.id ? "opacity-100" : "opacity-0")} />
-                                  {product.name}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          );
-                        })()}
-                        <CommandGroup heading={recentIds.length > 0 ? "All products" : undefined}>
-                          {products.filter((p) => !recentIds.includes(p.id)).map((product) => (
-                            <CommandItem
-                              key={product.id}
-                              value={product.name}
-                              onSelect={() => {
-                                setProductId(product.id);
-                                setProductOpen(false);
-                              }}
-                            >
-                              <Check className={cn("mr-2 h-4 w-4", productId === product.id ? "opacity-100" : "opacity-0")} />
-                              {product.name}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                      <Command>
+                        <CommandInput placeholder="Search products..." autoFocus />
+                        <CommandList className="max-h-[200px]">
+                          <CommandEmpty>No products found.</CommandEmpty>
+                          {recentIds.length > 0 && (() => {
+                            const recentProducts = recentIds
+                              .map((id) => products.find((p) => p.id === id))
+                              .filter(Boolean) as typeof products;
+                            if (recentProducts.length === 0) return null;
+                            return (
+                              <CommandGroup heading="Recent">
+                                {recentProducts.map((product) => (
+                                  <CommandItem
+                                    key={`recent-${product.id}`}
+                                    value={product.name}
+                                    onSelect={() => {
+                                      setProductId(product.id);
+                                      setProductOpen(false);
+                                    }}
+                                  >
+                                    <Check className={cn("mr-2 h-4 w-4", productId === product.id ? "opacity-100" : "opacity-0")} />
+                                    {product.name}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            );
+                          })()}
+                          <CommandGroup heading={recentIds.length > 0 ? "All products" : undefined}>
+                            {products.filter((p) => !recentIds.includes(p.id)).map((product) => (
+                              <CommandItem
+                                key={product.id}
+                                value={product.name}
+                                onSelect={() => {
+                                  setProductId(product.id);
+                                  setProductOpen(false);
+                                }}
+                              >
+                                <Check className={cn("mr-2 h-4 w-4", productId === product.id ? "opacity-100" : "opacity-0")} />
+                                {product.name}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Amount + Unit */}

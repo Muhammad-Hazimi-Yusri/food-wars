@@ -40,7 +40,7 @@ Current version is v0.13.17
 - **Responsive Views** — Mobile/desktop tables with Grocy-style quick actions (Consume, Open)
 - **Add Products** — 5-tab form (basic, stock defaults, locations, QU conversions, barcodes)
 - **Product Pictures** — Upload from camera or gallery (mobile-optimized)
-- **Add Stock** — Quick-add entries with location, expiry, price; scanning an unknown barcode creates the product and returns directly to the stock modal pre-filled
+- **Add Stock** — Quick-add entries with searchable product selector, location, expiry, price; scanning an unknown barcode creates the product and returns directly to the stock modal pre-filled
 - **Stock Details** — View and edit individual batches per product
 - **Status Warnings** — Clickable expired/overdue/due soon/below minimum alert banners
 - **Stock Filters** — Search by name, filter by location, product group, status

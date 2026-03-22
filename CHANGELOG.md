@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.18] - 2026-03-22
+
+### Added
+- **Current stock display in Add Stock modal's Product Insight Panel** (v0.13.18) — the placeholder paragraph ("Stock amount, value, last purchased... coming in v0.6") is replaced with a live current stock indicator
+  - When a product has stock: displays "Current stock: X units" in prominent `font-semibold text-megumi` styling
+  - When a product has no stock: displays "Not in stock" in muted `text-gray-400`
+  - New optional `stockSummary?: Map<string, number>` prop on `AddStockEntryModal` — parent pages pass a product-id-to-total-amount map; defaults to an empty Map when not provided (backwards-compatible)
+  - Parent render sites that need to supply `stockSummary`: `page.tsx`, `ScanToStockFlow.tsx`, `ProductDetailModal.tsx`
+
+---
+
 ## [0.13.17] - 2026-03-01
 
 ### Changed

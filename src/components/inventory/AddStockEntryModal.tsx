@@ -68,6 +68,7 @@ type Props = {
   externalOpen?: boolean;
   onExternalOpenChange?: (open: boolean) => void;
   onSuccess?: () => void;
+  stockSummary?: Map<string, number>;
 };
 
 export function AddStockEntryModal({
@@ -80,6 +81,7 @@ export function AddStockEntryModal({
   externalOpen,
   onExternalOpenChange,
   onSuccess,
+  stockSummary = new Map(),
 }: Props) {
   const router = useRouter();
   const [internalOpen, setInternalOpen] = useState(false);
@@ -723,11 +725,18 @@ export function AddStockEntryModal({
                     </div>
                   </div>
 
-                  {/* Placeholder for future features */}
+                  {/* Current stock */}
                   <div className="border-t pt-4 mt-4">
-                    <p className="text-xs text-gray-400 italic">
-                      Stock amount, value, last purchased, last price, average price, price history coming in v0.6
-                    </p>
+                    {(() => {
+                      const currentStock = stockSummary.get(selectedProduct.id) ?? 0;
+                      return currentStock > 0 ? (
+                        <p className="font-semibold text-megumi">
+                          Current stock: {currentStock} {currentStock === 1 ? stockUnitName : stockUnitNamePlural}
+                        </p>
+                      ) : (
+                        <p className="text-gray-400">Not in stock</p>
+                      );
+                    })()}
                   </div>
                 </div>
               ) : (

@@ -22,6 +22,7 @@ import {
 import { toast } from "sonner";
 import { StockEntryWithProduct } from "@/types/database";
 import { correctInventory, undoCorrectInventory } from "@/lib/stock-actions";
+import { formatAmount } from "@/lib/format-utils";
 
 type CorrectionModalProps = {
   entries: StockEntryWithProduct[] | null;
@@ -99,7 +100,7 @@ export function CorrectionModal({ entries, onClose }: CorrectionModalProps) {
       const unit = numAmount === 1 ? unitName : unitNamePlural;
       handleClose();
       router.refresh();
-      toast(`Corrected ${product!.name}: ${currentAmount} → ${numAmount} ${unit}`, {
+      toast(`Corrected ${product!.name}: ${formatAmount(currentAmount)} → ${formatAmount(numAmount)} ${unit}`, {
         action: {
           label: "Undo",
           onClick: async () => {
@@ -129,7 +130,7 @@ export function CorrectionModal({ entries, onClose }: CorrectionModalProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Current amount display */}
           <div className="text-sm text-muted-foreground">
-            Current stock: <span className="font-medium text-foreground">{currentAmount} {currentAmount === 1 ? unitName : unitNamePlural}</span>
+            Current stock: <span className="font-medium text-foreground">{formatAmount(currentAmount)} {currentAmount === 1 ? unitName : unitNamePlural}</span>
           </div>
 
           {/* New amount */}
@@ -144,7 +145,7 @@ export function CorrectionModal({ entries, onClose }: CorrectionModalProps) {
               min="0"
               value={newAmount}
               onChange={(e) => setNewAmount(e.target.value)}
-              placeholder={`Currently ${currentAmount}`}
+              placeholder={`Currently ${formatAmount(currentAmount)}`}
               autoFocus
             />
           </div>

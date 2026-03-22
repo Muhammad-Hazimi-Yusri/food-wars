@@ -23,6 +23,7 @@ import { AlertTriangle, Snowflake } from "lucide-react";
 import { toast } from "sonner";
 import { StockEntryWithProduct, Location } from "@/types/database";
 import { transferStock, undoTransfer } from "@/lib/stock-actions";
+import { formatAmount } from "@/lib/format-utils";
 
 type TransferModalProps = {
   entries: StockEntryWithProduct[] | null;
@@ -198,7 +199,7 @@ export function TransferModal({
                       "No location";
                     return (
                       <SelectItem key={entry.id} value={entry.id}>
-                        {entry.amount}{" "}
+                        {formatAmount(entry.amount)}{" "}
                         {entry.amount === 1 ? unitName : unitNamePlural} @{" "}
                         {locName}
                         {entry.open ? " (opened)" : ""}

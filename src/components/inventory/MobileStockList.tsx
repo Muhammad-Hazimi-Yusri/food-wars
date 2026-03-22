@@ -10,6 +10,7 @@ import { StockEntryWithProduct, Product, Location } from "@/types/database";
 import { getExpiryStatus, getExpiryLabel } from "@/lib/inventory-utils";
 import { getProductPictureSignedUrl } from "@/lib/supabase/storage";
 import { cn } from "@/lib/utils";
+import { formatAmount } from "@/lib/format-utils";
 import { ProductDetailModal } from "./ProductDetailModal";
 import { ConsumeModal } from "./ConsumeModal";
 import { TransferModal } from "./TransferModal";
@@ -186,7 +187,7 @@ export function MobileStockList({ entries, locations, zeroStockProducts = [] }: 
     if (result.success) {
       router.refresh();
       const unit = amount === 1 ? product.unitName : product.unitNamePlural;
-      toast(`Consumed ${amount} ${unit} of ${product.productName}`, {
+      toast(`Consumed ${formatAmount(amount)} ${unit} of ${product.productName}`, {
         action: {
           label: "Undo",
           onClick: async () => {
@@ -211,7 +212,7 @@ export function MobileStockList({ entries, locations, zeroStockProducts = [] }: 
     if (result.success) {
       router.refresh();
       const unit = product.totalAmount === 1 ? product.unitName : product.unitNamePlural;
-      toast(`Consumed all ${product.totalAmount} ${unit} of ${product.productName}`, {
+      toast(`Consumed all ${formatAmount(product.totalAmount)} ${unit} of ${product.productName}`, {
         action: {
           label: "Undo",
           onClick: async () => {
@@ -331,10 +332,10 @@ export function MobileStockList({ entries, locations, zeroStockProducts = [] }: 
                     </div>
                   </td>
                   <td className="px-1 py-1 text-sm text-gray-600 border-r border-gray-100">
-                    {product.totalAmount} {product.totalAmount === 1 ? product.unitName : product.unitNamePlural}
+                    {formatAmount(product.totalAmount)} {product.totalAmount === 1 ? product.unitName : product.unitNamePlural}
                     {product.openedAmount > 0 && (
                       <span className="text-blue-600 text-xs ml-1">
-                        ({product.openedAmount} open)
+                        ({formatAmount(product.openedAmount)} open)
                       </span>
                     )}
                   </td>
@@ -347,22 +348,22 @@ export function MobileStockList({ entries, locations, zeroStockProducts = [] }: 
                         <button
                           onClick={() => handleConsume(product)}
                           disabled={consuming === product.productId}
-                          title={`Consume ${product.entries[0]?.product.quick_consume_as_percentage ? `${product.entries[0]?.product.quick_consume_amount ?? 1}%` : (product.entries[0]?.product.quick_consume_amount ?? 1)}`}
+                          title={`Consume ${product.entries[0]?.product.quick_consume_as_percentage ? `${formatAmount(product.entries[0]?.product.quick_consume_amount ?? 1)}%` : formatAmount(product.entries[0]?.product.quick_consume_amount ?? 1)}`}
                           className={cn(
-                            "h-6 px-1.5 text-xs font-medium rounded bg-green-600 text-white flex items-center gap-0.5",
+                            "h-6 px-1.5 text-xs font-medium rounded bg-green-600 text-white flex items-center gap-0.5 min-w-[2.75rem] justify-center",
                             consuming === product.productId
                               ? "opacity-50 cursor-wait"
                               : "hover:bg-green-700 transition-colors"
                           )}
                         >
-                          <Utensils className="h-3 w-3" />{product.entries[0]?.product.quick_consume_as_percentage ? `${product.entries[0]?.product.quick_consume_amount ?? 1}%` : (product.entries[0]?.product.quick_consume_amount ?? 1)}
+                          <Utensils className="h-3 w-3" />{product.entries[0]?.product.quick_consume_as_percentage ? `${formatAmount(product.entries[0]?.product.quick_consume_amount ?? 1)}%` : formatAmount(product.entries[0]?.product.quick_consume_amount ?? 1)}
                         </button>
                         <button
                           onClick={() => handleConsumeAll(product)}
                           disabled={consuming === product.productId}
                           title="Consume All"
                           className={cn(
-                            "h-6 px-1.5 text-xs font-medium rounded bg-green-600 text-white flex items-center gap-0.5",
+                            "h-6 px-1.5 text-xs font-medium rounded bg-green-600 text-white flex items-center gap-0.5 min-w-[2.75rem] justify-center",
                             consuming === product.productId
                               ? "opacity-50 cursor-wait"
                               : "hover:bg-green-700 transition-colors"
@@ -373,9 +374,9 @@ export function MobileStockList({ entries, locations, zeroStockProducts = [] }: 
                         <button
                           onClick={() => handleOpen(product)}
                           disabled={opening === product.productId || !product.entries.some(e => !e.open)}
-                          title={`Open ${product.entries[0]?.product.quick_open_amount ?? 1}`}
+                          title={`Open ${formatAmount(product.entries[0]?.product.quick_open_amount ?? 1)}`}
                           className={cn(
-                            "h-6 px-1.5 text-xs font-medium rounded bg-takumi text-white flex items-center gap-0.5",
+                            "h-6 px-1.5 text-xs font-medium rounded bg-takumi text-white flex items-center gap-0.5 min-w-[2.75rem] justify-center",
                             opening === product.productId
                               ? "opacity-50 cursor-wait"
                               : !product.entries.some(e => !e.open)
@@ -383,7 +384,7 @@ export function MobileStockList({ entries, locations, zeroStockProducts = [] }: 
                                 : "hover:bg-takumi/90 transition-colors"
                           )}
                         >
-                          <PackageOpen className="h-3 w-3" />{product.entries[0]?.product.quick_open_amount ?? 1}
+                          <PackageOpen className="h-3 w-3" />{formatAmount(product.entries[0]?.product.quick_open_amount ?? 1)}
                         </button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -454,7 +455,7 @@ export function MobileStockList({ entries, locations, zeroStockProducts = [] }: 
                           )}
                         </td>
                         <td className="px-1 py-1 text-sm text-gray-600 border-r border-gray-100">
-                          {entry.amount} {entry.amount === 1 ? product.unitName : product.unitNamePlural}
+                          {formatAmount(entry.amount)} {entry.amount === 1 ? product.unitName : product.unitNamePlural}
                         </td>
                         <td className="px-2 py-2">
                           <span
@@ -502,13 +503,13 @@ export function MobileStockList({ entries, locations, zeroStockProducts = [] }: 
             <td className="px-1 py-1 bg-white sticky right-0 shadow-[-4px_0_8px_-4px_rgba(0,0,0,0.1)]">
               {actionsExpanded ? (
                 <div className="flex items-center gap-0.5">
-                  <button disabled title="Consume 1" className="h-6 px-1.5 text-xs font-medium rounded bg-green-600 text-white opacity-50 cursor-not-allowed flex items-center gap-0.5">
+                  <button disabled title="Consume 1" className="h-6 px-1.5 text-xs font-medium rounded bg-green-600 text-white opacity-50 cursor-not-allowed flex items-center gap-0.5 min-w-[2.75rem] justify-center">
                     <Utensils className="h-3 w-3" />1
                   </button>
-                  <button disabled title="Consume All" className="h-6 px-1.5 text-xs font-medium rounded bg-green-600 text-white opacity-50 cursor-not-allowed flex items-center gap-0.5">
+                  <button disabled title="Consume All" className="h-6 px-1.5 text-xs font-medium rounded bg-green-600 text-white opacity-50 cursor-not-allowed flex items-center gap-0.5 min-w-[2.75rem] justify-center">
                     <Utensils className="h-3 w-3" />All
                   </button>
-                  <button disabled title="Open 1" className="h-6 px-1.5 text-xs font-medium rounded bg-takumi text-white opacity-50 cursor-not-allowed flex items-center gap-0.5">
+                  <button disabled title="Open 1" className="h-6 px-1.5 text-xs font-medium rounded bg-takumi text-white opacity-50 cursor-not-allowed flex items-center gap-0.5 min-w-[2.75rem] justify-center">
                     <PackageOpen className="h-3 w-3" />1
                   </button>
                   <DropdownMenu>

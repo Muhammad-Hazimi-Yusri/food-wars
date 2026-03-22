@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { formatAmount } from "@/lib/format-utils";
 
 type AggregatedItem = {
   n: string;
@@ -87,7 +88,7 @@ export async function exportInventoryForAI(): Promise<{
 
   // Format as compact JSON
   const items: AggregatedItem[] = sorted.map(([name, data]) => {
-    const qty = `${parseFloat(data.totalAmount.toFixed(2))} ${data.unit}`;
+    const qty = `${formatAmount(data.totalAmount)} ${data.unit}`;
     const item: AggregatedItem = { n: name, qty };
     if (data.nearestExpiry) item.exp = data.nearestExpiry;
     if (data.locations.size > 0) item.loc = [...data.locations].join(", ");

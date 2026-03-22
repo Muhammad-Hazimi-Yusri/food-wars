@@ -1,3 +1,5 @@
+import { formatAmount as fmtNum } from "@/lib/format-utils";
+
 export const TYPE_LABELS: Record<string, string> = {
   consume: "Consumed",
   spoiled: "Spoiled",
@@ -42,5 +44,5 @@ export function formatAmount(
 ): string {
   const unitName =
     amount === 1 ? (unit?.name ?? "") : (unit?.name_plural ?? unit?.name ?? "");
-  return `${amount}${unitName ? ` ${unitName}` : ""}`;
+  return `${fmtNum(amount)}${unitName ? ` ${unitName}` : ""}`;
 }

@@ -22,6 +22,7 @@ import {
 import { toast } from "sonner";
 import { StockEntryWithProduct } from "@/types/database";
 import { consumeStock, undoConsume } from "@/lib/stock-actions";
+import { formatAmount } from "@/lib/format-utils";
 
 type ConsumeModalProps = {
   entries: StockEntryWithProduct[] | null;
@@ -85,7 +86,7 @@ export function ConsumeModal({ entries, onClose }: ConsumeModalProps) {
       return;
     }
     if (numAmount > maxAmount) {
-      setError(`Maximum available: ${maxAmount}`);
+      setError(`Maximum available: ${formatAmount(maxAmount)}`);
       return;
     }
 
@@ -103,7 +104,7 @@ export function ConsumeModal({ entries, onClose }: ConsumeModalProps) {
       const action = spoiled ? "Marked as spoiled" : "Consumed";
       handleClose();
       router.refresh();
-      toast(`${action}: ${numAmount} ${unit} of ${product!.name}`, {
+      toast(`${action}: ${formatAmount(numAmount)} ${unit} of ${product!.name}`, {
         action: {
           label: "Undo",
           onClick: async () => {
@@ -134,7 +135,7 @@ export function ConsumeModal({ entries, onClose }: ConsumeModalProps) {
           {/* Amount */}
           <div className="space-y-2">
             <Label htmlFor="consume-amount">
-              Amount ({maxAmount} {maxAmount === 1 ? unitName : unitNamePlural} available)
+              Amount ({formatAmount(maxAmount)} {maxAmount === 1 ? unitName : unitNamePlural} available)
             </Label>
             <Input
               id="consume-amount"
@@ -144,7 +145,7 @@ export function ConsumeModal({ entries, onClose }: ConsumeModalProps) {
               max={maxAmount}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              placeholder={`Up to ${maxAmount}`}
+              placeholder={`Up to ${formatAmount(maxAmount)}`}
               autoFocus
             />
           </div>

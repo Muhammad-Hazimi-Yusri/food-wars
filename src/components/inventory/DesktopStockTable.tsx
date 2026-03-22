@@ -11,6 +11,7 @@ import { StockEntryWithProduct, Location } from "@/types/database";
 import { getExpiryStatus, getExpiryLabel } from "@/lib/inventory-utils";
 import { getProductPictureSignedUrl } from "@/lib/supabase/storage";
 import { cn } from "@/lib/utils";
+import { formatAmount } from "@/lib/format-utils";
 import { ProductDetailModal } from "./ProductDetailModal";
 import { ConsumeModal } from "./ConsumeModal";
 import { TransferModal } from "./TransferModal";
@@ -192,7 +193,7 @@ export function DesktopStockTable({ entries, locations, zeroStockProducts = [] }
     if (result.success) {
       router.refresh();
       const unit = amount === 1 ? product.unitName : product.unitNamePlural;
-      toast(`Consumed ${amount} ${unit} of ${product.productName}`, {
+      toast(`Consumed ${formatAmount(amount)} ${unit} of ${product.productName}`, {
         action: {
           label: "Undo",
           onClick: async () => {
@@ -217,7 +218,7 @@ export function DesktopStockTable({ entries, locations, zeroStockProducts = [] }
     if (result.success) {
       router.refresh();
       const unit = product.totalAmount === 1 ? product.unitName : product.unitNamePlural;
-      toast(`Consumed all ${product.totalAmount} ${unit} of ${product.productName}`, {
+      toast(`Consumed all ${formatAmount(product.totalAmount)} ${unit} of ${product.productName}`, {
         action: {
           label: "Undo",
           onClick: async () => {
@@ -335,11 +336,11 @@ export function DesktopStockTable({ entries, locations, zeroStockProducts = [] }
                     {/* Amount */}
                     <td className="text-right px-4 py-2">
                       <div>
-                        {product.totalAmount} {product.totalAmount === 1 ? product.unitName : product.unitNamePlural}
+                        {formatAmount(product.totalAmount)} {product.totalAmount === 1 ? product.unitName : product.unitNamePlural}
                       </div>
                       {product.openedAmount > 0 && (
                         <div className="text-xs text-blue-600">
-                          {product.openedAmount} opened
+                          {formatAmount(product.openedAmount)} opened
                         </div>
                       )}
                     </td>
@@ -355,22 +356,22 @@ export function DesktopStockTable({ entries, locations, zeroStockProducts = [] }
                         <button
                           onClick={() => handleConsume(product)}
                           disabled={consuming === product.productId}
-                          title={`Consume ${product.entries[0]?.product.quick_consume_as_percentage ? `${product.entries[0]?.product.quick_consume_amount ?? 1}%` : (product.entries[0]?.product.quick_consume_amount ?? 1)}`}
+                          title={`Consume ${product.entries[0]?.product.quick_consume_as_percentage ? `${formatAmount(product.entries[0]?.product.quick_consume_amount ?? 1)}%` : formatAmount(product.entries[0]?.product.quick_consume_amount ?? 1)}`}
                           className={cn(
-                            "h-7 px-2 text-xs font-medium rounded bg-green-600 text-white flex items-center gap-1",
+                            "h-7 px-2 text-xs font-medium rounded bg-green-600 text-white flex items-center gap-1 min-w-[3.5rem] justify-center",
                             consuming === product.productId
                               ? "opacity-50 cursor-wait"
                               : "hover:bg-green-700 transition-colors"
                           )}
                         >
-                          <Utensils className="h-3 w-3" />{product.entries[0]?.product.quick_consume_as_percentage ? `${product.entries[0]?.product.quick_consume_amount ?? 1}%` : (product.entries[0]?.product.quick_consume_amount ?? 1)}
+                          <Utensils className="h-3 w-3" />{product.entries[0]?.product.quick_consume_as_percentage ? `${formatAmount(product.entries[0]?.product.quick_consume_amount ?? 1)}%` : formatAmount(product.entries[0]?.product.quick_consume_amount ?? 1)}
                         </button>
                         <button
                           onClick={() => handleConsumeAll(product)}
                           disabled={consuming === product.productId}
                           title="Consume All"
                           className={cn(
-                            "h-7 px-2 text-xs font-medium rounded bg-green-600 text-white flex items-center gap-1",
+                            "h-7 px-2 text-xs font-medium rounded bg-green-600 text-white flex items-center gap-1 min-w-[3.5rem] justify-center",
                             consuming === product.productId
                               ? "opacity-50 cursor-wait"
                               : "hover:bg-green-700 transition-colors"
@@ -381,9 +382,9 @@ export function DesktopStockTable({ entries, locations, zeroStockProducts = [] }
                         <button
                           onClick={() => handleOpen(product)}
                           disabled={opening === product.productId || !product.entries.some(e => !e.open)}
-                          title={`Open ${product.entries[0]?.product.quick_open_amount ?? 1}`}
+                          title={`Open ${formatAmount(product.entries[0]?.product.quick_open_amount ?? 1)}`}
                           className={cn(
-                            "h-7 px-2 text-xs font-medium rounded bg-takumi text-white flex items-center gap-1",
+                            "h-7 px-2 text-xs font-medium rounded bg-takumi text-white flex items-center gap-1 min-w-[3.5rem] justify-center",
                             opening === product.productId
                               ? "opacity-50 cursor-wait"
                               : !product.entries.some(e => !e.open)
@@ -391,7 +392,7 @@ export function DesktopStockTable({ entries, locations, zeroStockProducts = [] }
                                 : "hover:bg-takumi/90 transition-colors"
                           )}
                         >
-                          <PackageOpen className="h-3 w-3" />{product.entries[0]?.product.quick_open_amount ?? 1}
+                          <PackageOpen className="h-3 w-3" />{formatAmount(product.entries[0]?.product.quick_open_amount ?? 1)}
                         </button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -437,7 +438,7 @@ export function DesktopStockTable({ entries, locations, zeroStockProducts = [] }
                           )}
                         </td>
                         <td className="text-right px-4 py-2 text-sm text-gray-600">
-                          {entry.amount} {entry.amount === 1 ? product.unitName : product.unitNamePlural}
+                          {formatAmount(entry.amount)} {entry.amount === 1 ? product.unitName : product.unitNamePlural}
                         </td>
                         <td className="text-right px-4 py-2">
                           <span className={cn(
@@ -482,13 +483,13 @@ export function DesktopStockTable({ entries, locations, zeroStockProducts = [] }
                 </td>
                 <td className="px-2 py-2">
                   <div className="flex items-center gap-1 justify-end">
-                    <button disabled className="h-7 px-2 text-xs font-medium rounded bg-green-600 text-white opacity-50 cursor-not-allowed flex items-center gap-1">
+                    <button disabled className="h-7 px-2 text-xs font-medium rounded bg-green-600 text-white opacity-50 cursor-not-allowed flex items-center gap-1 min-w-[3.5rem] justify-center">
                       <Utensils className="h-3 w-3" />1
                     </button>
-                    <button disabled className="h-7 px-2 text-xs font-medium rounded bg-green-600 text-white opacity-50 cursor-not-allowed flex items-center gap-1">
+                    <button disabled className="h-7 px-2 text-xs font-medium rounded bg-green-600 text-white opacity-50 cursor-not-allowed flex items-center gap-1 min-w-[3.5rem] justify-center">
                       <Utensils className="h-3 w-3" />All
                     </button>
-                    <button disabled className="h-7 px-2 text-xs font-medium rounded bg-takumi text-white opacity-50 cursor-not-allowed flex items-center gap-1">
+                    <button disabled className="h-7 px-2 text-xs font-medium rounded bg-takumi text-white opacity-50 cursor-not-allowed flex items-center gap-1 min-w-[3.5rem] justify-center">
                       <PackageOpen className="h-3 w-3" />1
                     </button>
                     <DropdownMenu>

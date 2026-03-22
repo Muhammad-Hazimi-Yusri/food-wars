@@ -44,6 +44,7 @@ import { consumeStock, undoConsume, undoDeleteEntry } from "@/lib/stock-actions"
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { formatAmount } from "@/lib/format-utils";
 import { EditStockEntryModal } from "./EditStockEntryModal";
 import { TransferModal } from "./TransferModal";
 import { AddStockEntryModal } from "./AddStockEntryModal";
@@ -209,7 +210,7 @@ export function ProductDetailModal({
       const unit = entry.amount === 1 ? unitName : unitNamePlural;
       onClose();
       router.refresh();
-      toast(`Deleted ${entry.amount} ${unit} of ${product?.name}`, {
+      toast(`Deleted ${formatAmount(entry.amount)} ${unit} of ${product?.name}`, {
         action: {
           label: "Undo",
           onClick: async () => {
@@ -230,7 +231,7 @@ export function ProductDetailModal({
   const handleConsumeEntry = async (entry: StockEntryWithProduct) => {
     const numAmount = parseFloat(consumingEntry?.amount ?? "");
     if (isNaN(numAmount) || numAmount <= 0 || numAmount > entry.amount) {
-      alert(`Enter a valid amount (1–${entry.amount})`);
+      alert(`Enter a valid amount (1–${formatAmount(entry.amount)})`);
       return;
     }
     setActionLoading(entry.id);
@@ -243,7 +244,7 @@ export function ProductDetailModal({
       const unit = numAmount === 1 ? unitName : unitNamePlural;
       onClose();
       router.refresh();
-      toast(`Consumed ${numAmount} ${unit} of ${product?.name}`, {
+      toast(`Consumed ${formatAmount(numAmount)} ${unit} of ${product?.name}`, {
         action: {
           label: "Undo",
           onClick: async () => {
@@ -268,7 +269,7 @@ export function ProductDetailModal({
     if (result.success) {
       onClose();
       router.refresh();
-      toast(`Marked ${entry.amount} ${unit} of ${product?.name} as spoiled`, {
+      toast(`Marked ${formatAmount(entry.amount)} ${unit} of ${product?.name} as spoiled`, {
         action: {
           label: "Undo",
           onClick: async () => {
@@ -424,14 +425,14 @@ export function ProductDetailModal({
                   <span className="text-gray-500">Total stock</span>
                   <span className="font-medium">
                     {originalTotal > totalAmount
-                      ? `${totalAmount}/${originalTotal} ${unitNamePlural}`
-                      : `${totalAmount} ${totalAmount === 1 ? unitName : unitNamePlural}`}
+                      ? `${formatAmount(totalAmount)}/${formatAmount(originalTotal)} ${unitNamePlural}`
+                      : `${formatAmount(totalAmount)} ${totalAmount === 1 ? unitName : unitNamePlural}`}
                   </span>
                 </div>
                 {openedAmount > 0 && (
                   <div className="flex justify-between col-span-2 sm:col-span-1">
                     <span className="text-gray-500">Opened</span>
-                    <span>{openedAmount} {openedAmount === 1 ? unitName : unitNamePlural}</span>
+                    <span>{formatAmount(openedAmount)} {openedAmount === 1 ? unitName : unitNamePlural}</span>
                   </div>
                 )}
                 {totalValue > 0 && (
@@ -466,7 +467,7 @@ export function ProductDetailModal({
                     className="inline-flex items-center gap-1 text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full"
                   >
                     <MapPin className="h-3 w-3" />
-                    {loc.name}: {loc.amount} {loc.amount === 1 ? unitName : unitNamePlural}
+                    {loc.name}: {formatAmount(loc.amount)} {loc.amount === 1 ? unitName : unitNamePlural}
                   </span>
                 ))}
               </div>
@@ -554,7 +555,7 @@ export function ProductDetailModal({
                         <div className="space-y-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-medium">
-                              {entry.amount} {entry.amount === 1 ? unitName : unitNamePlural}
+                              {formatAmount(entry.amount)} {entry.amount === 1 ? unitName : unitNamePlural}
                             </span>
                             {entry.open && (
                               <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">

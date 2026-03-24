@@ -12,7 +12,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.13.19-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.14.0-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -672,6 +672,17 @@ Food Wars targets a different audience: people who want Grocy-like features with
 
 **Default location display (v0.13.14):**
 - [x] Product detail modal hero now shows the product's default storage location
+</details>
+
+<details>
+<summary><strong>v0.14 - Cook Now</strong></summary>
+
+**Goal:** Cooking framework inspired by Ethan Chlebowski — seasoning system → protein → form factor
+
+**Schema & scaffolding (v0.14.0):**
+- [x] `cooking_role` column on products table (protein, vegetable, starch, seasoning_system, sauce, produce, form_factor_base, other)
+- [x] Cook Now nav entry and empty page
+- [x] Guest seed data tagged with cooking roles
 </details>
 
 ---

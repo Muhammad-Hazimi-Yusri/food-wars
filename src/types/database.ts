@@ -78,6 +78,8 @@ export type DueType = 1 | 2; // 1=best_before, 2=expiration
 
 export type StockLabelType = 0 | 1 | 2; // 0=per purchase, 1=per stock entry, 2=none
 
+export type CookingRole = 'protein' | 'vegetable' | 'starch' | 'seasoning_system' | 'sauce' | 'produce' | 'form_factor_base' | 'other';
+
 export type Product = {
   id: string;
   household_id: string;
@@ -124,6 +126,9 @@ export type Product = {
 
   // Nutrition
   calories: number | null;
+
+  // Cooking role (Cook Now feature)
+  cooking_role: CookingRole | null;
   
   // Tare weight handling (for containers)
   enable_tare_weight_handling: boolean;

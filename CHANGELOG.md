@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0] - 2026-03-24
+
+### Added
+- **Cook Now feature scaffolding** (v0.14.0) — new `cooking_role` column on the `products` table with CHECK constraint for valid values (`protein`, `vegetable`, `starch`, `seasoning_system`, `sauce`, `produce`, `form_factor_base`, `other`); nullable so existing products are unaffected
+  - Cook Now nav entry in UserMenu (between Meal Plan and Reports)
+  - Empty `/cook-now` page with setup prompt and link to `/cook-now/setup`
+  - Guest seed data updated with cooking role assignments for all 25 products
+
+---
+
 ## [0.13.18] - 2026-03-22
 
 ### Added

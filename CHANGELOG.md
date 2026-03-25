@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.2] - 2026-03-25
+
+### Added
+- **Cook Now Dashboard** (`/cook-now`) — visual overview of in-stock products organized by cooking role
+  - 7 role-based bucket sections: Seasoning System, Protein, Form Factor, Produce, Starch, Other, Untagged
+  - Product cards with stock amounts and color-coded expiry badges (expired, overdue, due soon, fresh)
+  - Sorted by expiry urgency within each bucket (most urgent first)
+  - Collapsible accordion sections on mobile
+  - Drag-and-drop meal idea staging area: drag products from buckets to assemble combinations
+  - Staging area groups items by role with clear button
+  - Mobile: pinned bottom staging bar; Desktop: sticky sidebar
+  - Empty states: prompts to tag products or add stock
+  - Attribution: "Inspired by Ethan Chlebowski's cooking framework"
+
+---
+
 ## [0.14.1] - 2026-03-25
 
 ### Added

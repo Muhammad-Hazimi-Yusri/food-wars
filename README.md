@@ -12,7 +12,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.14.2-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.14.3-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -33,7 +33,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 
 ## Current Features
 
-Current version is v0.14.2
+Current version is v0.14.3
 
 ### For Users
 - **Stock Overview** — View all inventory with expiry status badges
@@ -695,6 +695,12 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] Compact product cards with expiry badges sorted by urgency
 - [x] Drag-and-drop meal idea staging area (desktop sidebar / mobile bottom bar)
 - [x] Staged items grouped by role with clear & remove actions
+
+**Quick combos (v0.14.3):**
+- [x] Algorithmic combo suggestions on home page "What's for Dinner?" card (inspired by Ethan Chlebowski's seasoning system → protein → form factor framework)
+- [x] Up to 3 combos prioritized by expiry, displayed as compact pill groups
+- [x] `generateQuickCombos()` pure utility with unit tests
+- [x] "Open Cook Now →" link from home page card
 </details>
 
 ---
@@ -842,6 +848,19 @@ food-wars/
 │   │   │       ├── page.tsx       # Recipe detail view
 │   │   │       └── edit/
 │   │   │           └── page.tsx   # Edit recipe
+│   │   ├── cook-now/
+│   │   │   ├── page.tsx           # Cook Now dashboard (role buckets + staging)
+│   │   │   └── setup/
+│   │   │       └── page.tsx       # Batch tagger for cooking roles
+│   │   ├── meal-plan/
+│   │   │   └── page.tsx           # Meal plan weekly view
+│   │   ├── reports/
+│   │   │   ├── layout.tsx         # Reports layout with tab nav
+│   │   │   ├── page.tsx           # Reports overview
+│   │   │   ├── expiring/          # Expiring products report
+│   │   │   ├── spending/          # Spending analytics report
+│   │   │   ├── stock-value/       # Stock value report
+│   │   │   └── waste/             # Waste tracking report
 │   │   ├── shopping-lists/
 │   │   │   ├── page.tsx           # Shopping lists overview
 │   │   │   └── [id]/
@@ -911,6 +930,19 @@ food-wars/
 │   │   │   ├── RecipesListClient.tsx # Recipe card grid with search + A-Z/due-score sort + undo delete
 │   │   │   ├── ProducesProduct.tsx # Product picker linking recipe output to a stock product
 │   │   │   └── ServingScaler.tsx  # Serving size stepper with quick-set multipliers
+│   │   ├── cook-now/              # Cook Now components
+│   │   │   ├── DashboardClient.tsx  # Dashboard with drag-and-drop staging
+│   │   │   ├── ProductCard.tsx      # Draggable product card with expiry badge
+│   │   │   ├── RoleBucket.tsx       # Collapsible role bucket accordion
+│   │   │   ├── SetupClient.tsx      # Batch tagger UI
+│   │   │   └── StagingArea.tsx      # Desktop sidebar + mobile bottom bar
+│   │   ├── meal-plan/             # Meal plan components
+│   │   │   ├── AddMealEntryDialog.tsx
+│   │   │   ├── MealPlanClient.tsx
+│   │   │   ├── MealPlanEntryCard.tsx
+│   │   │   ├── MealPlanSectionsManager.tsx
+│   │   │   ├── MealPlanWeekView.tsx
+│   │   │   └── TodaysDinnerCard.tsx # "What's for Dinner?" card (dinner recipes + quick combos)
 │   │   ├── shopping/              # Shopping list components
 │   │   │   ├── ShoppingListsClient.tsx    # Lists overview (CRUD)
 │   │   │   └── ShoppingListDetailClient.tsx # List detail (items, grouping, purchase)
@@ -938,8 +970,10 @@ food-wars/
 │   │   │   └── storage.ts         # File upload utilities (product + recipe pictures)
 │   │   ├── __tests__/
 │   │   │   ├── barcode-actions.test.ts    # Barcode CRUD tests
-│   │   │   ├── date-shorthands.test.ts   # Date shorthand tests
+│   │   │   ├── cook-now-utils.test.ts     # Quick combo generation tests
+│   │   │   ├── date-shorthands.test.ts    # Date shorthand tests
 │   │   │   ├── inventory-utils.test.ts    # Inventory utils unit tests
+│   │   │   ├── meal-plan-utils.test.ts    # Meal plan utility tests
 │   │   │   ├── nutrition-mapping.test.ts  # OFF→nutrition mapping tests
 │   │   │   ├── openfoodfacts.test.ts      # OFF API client tests
 │   │   │   ├── shopping-list-actions.test.ts  # Shopping list action tests
@@ -948,20 +982,28 @@ food-wars/
 │   │   │   └── store-brand-map.test.ts    # Store-brand detection tests
 │   │   ├── ai-parse-items.ts       # Resilient JSON parser for AI stock entry responses
 │   │   ├── ai-utils.ts            # Ollama helpers (getAiSettings, callOllama, isAiConfigured)
+│   │   ├── analytics-actions.ts   # Report analytics server actions
 │   │   ├── barcode-actions.ts     # Barcode CRUD + local lookup
-│   │   ├── constants.ts           # Shared constants (GUEST_HOUSEHOLD_ID)
-│   │   ├── fuzzy-match.ts        # Bigram Dice coefficient for fuzzy string matching
-│   │   ├── date-shorthands.ts    # Date input shorthand parser
+│   │   ├── constants.ts           # Shared constants (GUEST_HOUSEHOLD_ID, cooking roles)
+│   │   ├── cook-now-actions.ts    # Cook Now server actions (updateCookingRole)
+│   │   ├── cook-now-utils.ts      # Quick combo generation (generateQuickCombos)
+│   │   ├── date-shorthands.ts     # Date input shorthand parser
+│   │   ├── format-utils.ts        # Number formatting (formatAmount)
+│   │   ├── fuzzy-match.ts         # Bigram Dice coefficient for fuzzy string matching
+│   │   ├── inventory-export.ts    # CSV/PDF export for inventory
 │   │   ├── inventory-utils.ts     # Stock aggregation, expiry & FIFO helpers
-│   │   ├── openfoodfacts.ts      # Open Food Facts API client
-│   │   ├── store-brand-map.ts    # UK store-brand detection config
+│   │   ├── meal-plan-actions.ts   # Meal plan server actions
+│   │   ├── meal-plan-utils.ts     # Meal plan utilities
+│   │   ├── openfoodfacts.ts       # Open Food Facts API client
+│   │   ├── product-actions.ts     # Product server actions (OFF refetch, image download)
 │   │   ├── recipe-actions.ts      # Recipe CRUD + undo + addRecipeMissingToDefaultList (AI chat action)
 │   │   ├── recipe-utils.ts        # Pure recipe utilities (scaleAmount, formatScaledAmount)
 │   │   ├── shopping-list-actions.ts # Shopping list server actions
 │   │   ├── shopping-list-utils.ts   # Auto-generation gap calculators
-│   │   ├── product-actions.ts     # Product server actions (OFF refetch, image download)
 │   │   ├── stock-actions.ts       # Stock actions (consume, open, transfer, correct, undo)
 │   │   ├── stock-entry-utils.ts   # Shared bulk import (bulkCreateStockEntries) & unit conversion
+│   │   ├── store-brand-map.ts     # UK store-brand detection config
+│   │   ├── unit-conversions.ts    # Unit conversion helpers
 │   │   └── utils.ts               # cn() and general utilities
 │   └── types/
 │       ├── ai.ts                  # AI response types (RecipeRef, RecipeAction, RecipeDraft, RecipeDraftIngredient)
@@ -980,7 +1022,12 @@ food-wars/
 │   │   ├── 010_brand_fields.sql     # Add brand + is_store_brand to products
 │   │   ├── 011_product_nutrition.sql # Nutrition facts table with RLS
 │   │   ├── 012_household_ai_settings.sql # AI settings table with RLS
-│   │   └── 013_recipes.sql        # recipes, recipe_ingredients, recipe_nestings tables + RLS
+│   │   ├── 013_recipes.sql        # recipes, recipe_ingredients, recipe_nestings tables + RLS
+│   │   ├── 014_recipe_instructions.sql # Recipe instructions column
+│   │   ├── 015_meal_plan.sql      # Meal plan sections + entries tables + RLS
+│   │   ├── 016_unit_improvements.sql  # Quantity unit enhancements
+│   │   ├── 017_analytics_index.sql    # Analytics query indexes
+│   │   └── 018_cooking_role.sql   # cooking_role column on products
 │   └── scripts/
 │       └── cleanup_orphan_households.sql  # Manual cleanup script
 ├── BRANDING.md                    # Design system & color palette

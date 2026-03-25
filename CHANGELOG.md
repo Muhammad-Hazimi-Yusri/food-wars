@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.3] - 2026-03-25
+
+### Added
+- **Quick combo suggestions** on the home page "What's for Dinner?" card — algorithmically generated meal combos (protein/produce + seasoning + optional base) prioritized by expiry date
+  - Displays up to 3 combos as compact horizontal pill groups (e.g., "🔥 Chicken + Gochujang + Rice")
+  - Falls back to "Tag products to get suggestions" link when no tagged products exist
+  - Card now renders even without dinner entries when combos are available
+- **`generateQuickCombos()`** pure utility in `cook-now-utils.ts` with unit tests — deterministic combo generation from in-stock tagged products
+- **"Open Cook Now →"** link from the home page card to `/cook-now` for deeper exploration
+
+---
+
 ## [0.14.2] - 2026-03-25
 
 ### Added

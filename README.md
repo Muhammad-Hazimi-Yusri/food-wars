@@ -12,7 +12,7 @@ A free, open-source kitchen inventory and meal planning app — fighting food wa
 ---
 
 [![License](https://img.shields.io/badge/license-MIT-green.svg)]()
-[![Version](https://img.shields.io/badge/version-0.14.0-blue.svg)]()
+[![Version](https://img.shields.io/badge/version-0.14.1-blue.svg)]()
 [![Status](https://img.shields.io/badge/status-In%20Development-yellow.svg)]()
 
 <details>
@@ -683,6 +683,12 @@ Food Wars targets a different audience: people who want Grocy-like features with
 - [x] `cooking_role` column on products table (protein, vegetable, starch, seasoning_system, sauce, produce, form_factor_base, other)
 - [x] Cook Now nav entry and empty page
 - [x] Guest seed data tagged with cooking roles
+
+**Batch tagger (v0.14.1):**
+- [x] `/cook-now/setup` page — tag products with stock using 6 cooking roles
+- [x] Auto-suggest from product group keywords
+- [x] Mobile-first card layout with 44px+ tap targets; compact table on desktop
+- [x] Progress bar, filter toggle, optimistic saves
 </details>
 
 ---

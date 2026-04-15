@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { GUEST_HOUSEHOLD_ID } from "@/lib/constants";
 import { Noren } from "@/components/diner/Noren";
 import { AiSettingsClient } from "@/components/settings/AiSettingsClient";
+import { ApiTokenSection } from "@/components/settings/ApiTokenSection";
 import { HouseholdAiSettings } from "@/types/database";
 
 async function getSettingsData(): Promise<{
@@ -47,6 +48,7 @@ export default async function SettingsPage() {
       <main className="p-4 sm:p-6 max-w-3xl mx-auto">
         <h1 className="text-2xl font-bold text-megumi mb-6">Settings</h1>
         <AiSettingsClient initialSettings={aiSettings} isGuest={isGuest} />
+        <ApiTokenSection isGuest={isGuest} />
       </main>
     </div>
   );

@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Bot, Loader2, CheckCircle2, AlertTriangle, ShieldAlert, Mail } from "lucide-react";
+import { Bot, Loader2, CheckCircle2, AlertTriangle, ShieldAlert, Mail, BellRing } from "lucide-react";
 import { toast } from "sonner";
 import { HouseholdAiSettings } from "@/types/database";
 
@@ -35,6 +35,16 @@ export function AiSettingsClient({ initialSettings, isGuest }: Props) {
   );
   const [visionModel, setVisionModel] = useState(
     initialSettings?.vision_model ?? ""
+  );
+
+  const [notifyDaysBefore, setNotifyDaysBefore] = useState<number>(
+    initialSettings?.notify_days_before ?? 3
+  );
+  const [notifyBell, setNotifyBell] = useState<boolean>(
+    initialSettings?.notify_bell ?? true
+  );
+  const [notifyBrowser, setNotifyBrowser] = useState<boolean>(
+    initialSettings?.notify_browser ?? true
   );
 
   const [models, setModels] = useState<OllamaModel[]>([]);
@@ -98,6 +108,9 @@ export function AiSettingsClient({ initialSettings, isGuest }: Props) {
           ollama_url: ollamaUrl.trim() || null,
           text_model: textModel || null,
           vision_model: visionModel || null,
+          notify_days_before: notifyDaysBefore,
+          notify_bell: notifyBell,
+          notify_browser: notifyBrowser,
         }),
       });
 
@@ -298,6 +311,77 @@ export function AiSettingsClient({ initialSettings, isGuest }: Props) {
           </div>
         </div>
       )}
+
+      {/* Notifications Section */}
+      <div className="pt-4 border-t">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="p-2 rounded-lg bg-takumi/10">
+            <BellRing className="h-5 w-5 text-takumi" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-megumi">Expiry Notifications</h2>
+            <p className="text-sm text-gray-500">
+              Get alerted about food that&apos;s about to expire so nothing goes to waste.
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="notify-days">Warn me this many days before expiry</Label>
+            <Input
+              id="notify-days"
+              type="number"
+              min={0}
+              max={30}
+              step={1}
+              value={notifyDaysBefore}
+              onChange={(e) => {
+                const n = parseInt(e.target.value, 10);
+                if (!Number.isNaN(n)) setNotifyDaysBefore(Math.max(0, Math.min(30, n)));
+              }}
+              className="w-24"
+            />
+            <p className="text-xs text-gray-500">
+              0 = only alert on expired items. Maximum 30 days.
+            </p>
+          </div>
+
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={notifyBell}
+              onChange={(e) => setNotifyBell(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-megumi focus:ring-megumi"
+            />
+            <div>
+              <div className="text-sm font-medium text-gray-800">
+                Show expiry bell on dashboard
+              </div>
+              <div className="text-xs text-gray-500">
+                A badge icon on the home page listing items to use up.
+              </div>
+            </div>
+          </label>
+
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={notifyBrowser}
+              onChange={(e) => setNotifyBrowser(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-megumi focus:ring-megumi"
+            />
+            <div>
+              <div className="text-sm font-medium text-gray-800">
+                Browser notifications
+              </div>
+              <div className="text-xs text-gray-500">
+                Desktop/mobile OS alerts (once per day). You&apos;ll be asked for permission.
+              </div>
+            </div>
+          </label>
+        </div>
+      </div>
 
       {/* Save */}
       <div className="flex gap-2 pt-2">

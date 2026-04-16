@@ -14,6 +14,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { copyText } from "@/lib/clipboard";
 
 type TokenStatus = {
   hasToken: boolean;
@@ -93,14 +94,14 @@ export function ApiTokenSection({ isGuest }: Props) {
 
   const handleCopy = async () => {
     if (!visibleToken) return;
-    try {
-      await navigator.clipboard.writeText(visibleToken);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      toast.success("Token copied");
-    } catch {
+    const ok = await copyText(visibleToken);
+    if (!ok) {
       toast.error("Could not copy to clipboard");
+      return;
     }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    toast.success("Token copied");
   };
 
   return (

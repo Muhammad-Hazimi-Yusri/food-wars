@@ -6,6 +6,8 @@ import { StockOverviewClient } from "@/components/inventory/StockOverviewClient"
 import { StockEntryWithProduct, Location, ProductGroup, Product, QuantityUnit, ShoppingLocation } from "@/types/database";
 import { ScanToStockFlow } from "@/components/barcode/ScanToStockFlow";
 import { ExportForAIButton } from "@/components/inventory/ExportForAIButton";
+import { NotificationBell } from "@/components/inventory/NotificationBell";
+import { ExpiryAnnouncer } from "@/components/inventory/ExpiryAnnouncer";
 import { TodaysDinnerCard } from "@/components/meal-plan/TodaysDinnerCard";
 import Link from "next/link";
 import { Plus } from "lucide-react";
@@ -166,8 +168,14 @@ export default async function Home() {
         {/* Header */}
         <div className="flex items-center justify-between mb-1">
           <h1 className="text-2xl font-bold text-megumi">Stock Overview</h1>
-          <ExportForAIButton />
+          <div className="flex items-center gap-1">
+            <NotificationBell />
+            <ExportForAIButton />
+          </div>
         </div>
+
+        {/* Browser-notification permission prompt (renders only when needed) */}
+        <ExpiryAnnouncer />
 
         {/* Action Buttons */}
         <div className="grid grid-cols-3 gap-3 mb-4">

@@ -72,7 +72,14 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const { ollama_url, text_model, vision_model } = await request.json();
+    const {
+      ollama_url,
+      text_model,
+      vision_model,
+      notify_days_before,
+      notify_browser,
+      notify_bell,
+    } = await request.json();
 
     // Basic URL validation
     if (ollama_url) {
@@ -86,18 +93,37 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    // Validate notification preferences if provided
+    if (notify_days_before !== undefined) {
+      if (
+        typeof notify_days_before !== "number" ||
+        !Number.isInteger(notify_days_before) ||
+        notify_days_before < 0 ||
+        notify_days_before > 30
+      ) {
+        return NextResponse.json(
+          { error: "notify_days_before must be an integer between 0 and 30" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const upsertPayload: Record<string, any> = {
+      household_id: householdId,
+      ollama_url: ollama_url || null,
+      text_model: text_model || null,
+      vision_model: vision_model || null,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (notify_days_before !== undefined) upsertPayload.notify_days_before = notify_days_before;
+    if (notify_browser !== undefined) upsertPayload.notify_browser = !!notify_browser;
+    if (notify_bell !== undefined) upsertPayload.notify_bell = !!notify_bell;
+
     const { data, error } = await supabase
       .from("household_ai_settings")
-      .upsert(
-        {
-          household_id: householdId,
-          ollama_url: ollama_url || null,
-          text_model: text_model || null,
-          vision_model: vision_model || null,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "household_id" }
-      )
+      .upsert(upsertPayload, { onConflict: "household_id" })
       .select()
       .single();
 

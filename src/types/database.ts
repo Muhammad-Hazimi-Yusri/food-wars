@@ -335,6 +335,10 @@ export type HouseholdAiSettings = {
   ollama_url: string | null;
   text_model: string | null;
   vision_model: string | null;
+  api_token: string | null;
+  notify_days_before: number;
+  notify_browser: boolean;
+  notify_bell: boolean;
   created_at: string;
   updated_at: string;
 };

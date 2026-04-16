@@ -11,61 +11,61 @@ import {
 import { ClipboardCopy, Check, Link2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { exportInventoryForAI } from "@/lib/inventory-export";
+import { copyDeferredText } from "@/lib/clipboard";
 
 export function ExportForAIButton() {
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  async function handleCopyJson() {
+  function handleCopyJson() {
     setBusy(true);
-    try {
+    const copyPromise = copyDeferredText(async () => {
       const result = await exportInventoryForAI();
-      if (!result.success) {
-        toast.error(result.error ?? "Export failed");
-        return;
-      }
-      try {
-        await navigator.clipboard.writeText(result.text!);
-      } catch {
-        toast.error("Could not copy to clipboard");
-        return;
-      }
-      toast.success("Copied inventory for AI");
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } finally {
-      setBusy(false);
-    }
+      if (!result.success) throw new Error(result.error ?? "Export failed");
+      return result.text!;
+    });
+    copyPromise
+      .then((ok) => {
+        if (!ok) {
+          toast.error("Could not copy to clipboard");
+          return;
+        }
+        toast.success("Copied inventory for AI");
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch((err: unknown) => {
+        toast.error(err instanceof Error ? err.message : "Export failed");
+      })
+      .finally(() => setBusy(false));
   }
 
-  async function handleCopyApiUrl() {
+  function handleCopyApiUrl() {
     setBusy(true);
-    try {
+    const copyPromise = copyDeferredText(async () => {
       const res = await fetch("/api/ai/api-token?reveal=1");
       if (!res.ok) {
-        if (res.status === 403) {
-          toast.error("Sign in to use API tokens");
-        } else {
-          toast.error("Failed to fetch token");
-        }
-        return;
+        if (res.status === 403) throw new Error("Sign in to use API tokens");
+        throw new Error("Failed to fetch token");
       }
       const { token } = await res.json();
       if (!token) {
-        toast.error("No API token. Generate one in Settings first.");
-        return;
+        throw new Error("No API token. Generate one in Settings first.");
       }
-      const url = `${window.location.origin}/api/inventory/export?token=${encodeURIComponent(token)}`;
-      try {
-        await navigator.clipboard.writeText(url);
-      } catch {
-        toast.error("Could not copy to clipboard");
-        return;
-      }
-      toast.success("API URL copied");
-    } finally {
-      setBusy(false);
-    }
+      return `${window.location.origin}/api/inventory/export?token=${encodeURIComponent(token)}`;
+    });
+    copyPromise
+      .then((ok) => {
+        if (!ok) {
+          toast.error("Could not copy to clipboard");
+          return;
+        }
+        toast.success("API URL copied");
+      })
+      .catch((err: unknown) => {
+        toast.error(err instanceof Error ? err.message : "Failed to fetch token");
+      })
+      .finally(() => setBusy(false));
   }
 
   return (

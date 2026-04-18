@@ -78,10 +78,12 @@ export async function buildImportContextBundle(
       "For units especially: if the list has `g`, use `g`, not `grams`.",
   );
   lines.push(
-    "2. Always fill the `product` block completely — describe the product as " +
-      "you see it (name, brand, barcode, nutrition, etc). Existing products " +
-      "are auto-matched on my side by barcode and name, so don't worry about " +
-      "duplicates.",
+    "2. Always include `product.name`. Also include `brand`, `barcode`, " +
+      "`nutrition`, and the `qu_*` / `location_name` / `shopping_location_name` " +
+      "/ `product_group_name` / `default_due_days` / `due_type` / `cooking_role` " +
+      "fields whenever you can infer them — more detail helps me when the product " +
+      "is new. Receipt lines usually give you only name/brand/barcode (Example A); " +
+      "packaging photos should fill everything visible (Example B).",
   );
   lines.push(
     "3. For nutrition, use per-100g or per-100mL values (not per-serving).",
@@ -150,31 +152,137 @@ export async function buildImportContextBundle(
   // Pick example values from the actual fetched lists so the examples can't
   // violate rule #1 (e.g. showing "tin" when the household has "can", or
   // "Tesco" when it has "Tesco Express"). Fallbacks apply for empty lists.
-  const pick = (rows: Row[], preferred: string[], fallback: string): string => {
+  const pickName = (rows: Row[], preferred: string[], fallback: string): string => {
     for (const p of preferred) {
-      const hit = rows.find((r) => (r.name as string | undefined) === p);
-      if (hit) return hit.name as string;
+      if (rows.some((r) => (r.name as string | undefined) === p)) return p;
     }
     return (rows[0]?.name as string | undefined) ?? fallback;
   };
-  const pickOther = (rows: Row[], not: string, fallback: string): string => {
-    const other = rows.find((r) => (r.name as string | undefined) !== not);
-    return (other?.name as string | undefined) ?? fallback;
+  const findFirst = (rows: Row[], preferred: string[]): string | null => {
+    for (const p of preferred) {
+      if (rows.some((r) => (r.name as string | undefined) === p)) return p;
+    }
+    return null;
   };
 
-  const exA_unit = pick(units, ["L", "l", "ml", "mL"], "L");
-  const exA_store = pick(stores, [], "Tesco");
-  const exA_location = pick(locations, ["Fridge", "Refrigerator"], "Fridge");
+  const exA_unit = pickName(units, ["L", "l", "ml", "mL"], "L");
+  const exA_store = pickName(stores, [], "Tesco");
+  const exA_location = pickName(locations, ["Fridge", "Refrigerator"], "Fridge");
 
-  const exB_stockUnit = pick(units, ["g", "kg"], "g");
-  const exB_purchaseUnit = pickOther(units, exB_stockUnit, exB_stockUnit);
-  const exB_location = pick(locations, ["Pantry", "Cupboard"], "Pantry");
-  const exB_store = pick(stores, [], exA_store);
-  const exB_group = pick(groups, ["Tinned Goods", "Canned Goods"], "Tinned Goods");
+  // Archetype registry for Example B: each archetype is a coherent real-world
+  // product whose units/location/group we try to match against the household's
+  // master-data. The first archetype where ALL four slots hit is used; if none
+  // hit, Example B falls back to a short prose note (teaching-by-example only
+  // works when the example is internally consistent).
+  type Archetype = {
+    name: string;
+    brand: string;
+    barcode: string;
+    stockUnitPrefs: string[];
+    purchaseUnitPrefs: string[];
+    locationPrefs: string[];
+    groupPrefs: string[];
+    purchaseToStockFactor: number;
+    defaultDueDays: number;
+    dueType: "best_before" | "expiration";
+    cookingRole: string;
+    nutrition: string; // inline JSON fragment
+    stockAmount: number;
+    stockNote: string;
+    bestBefore: string;
+    price: number;
+  };
+  const ARCHETYPES: Archetype[] = [
+    {
+      name: "Heinz Baked Beans",
+      brand: "Heinz",
+      barcode: "5000157024671",
+      stockUnitPrefs: ["g", "kg"],
+      purchaseUnitPrefs: ["can", "tin"],
+      locationPrefs: ["Cupboard Main", "Cupboard", "Pantry", "Kitchen Cupboard", "Shelf"],
+      groupPrefs: ["Pantry Staples", "Tinned", "Canned", "Tinned Goods", "Canned Goods"],
+      purchaseToStockFactor: 415,
+      defaultDueDays: 730,
+      dueType: "best_before",
+      cookingRole: "protein",
+      nutrition: `{
+          "energy_kcal": 75, "fat": 0.2, "saturated_fat": 0.1,
+          "carbohydrates": 13, "sugars": 5, "fibre": 3.8,
+          "protein": 4.7, "salt": 0.6, "nutrition_grade": "a"
+        }`,
+      stockAmount: 4,
+      stockNote: "4-pack",
+      bestBefore: "2027-03-01",
+      price: 3.8,
+    },
+    {
+      name: "Extra Virgin Olive Oil",
+      brand: "Filippo Berio",
+      barcode: "8002580001006",
+      stockUnitPrefs: ["ml", "mL", "L", "l"],
+      purchaseUnitPrefs: ["bottle"],
+      locationPrefs: ["Cupboard Main", "Cupboard", "Pantry", "Kitchen Cupboard"],
+      groupPrefs: ["Oils", "Pantry Staples", "Cooking", "Condiments"],
+      purchaseToStockFactor: 500,
+      defaultDueDays: 540,
+      dueType: "best_before",
+      cookingRole: "sauce",
+      nutrition: `{
+          "energy_kcal": 824, "fat": 91.6, "saturated_fat": 13,
+          "carbohydrates": 0, "sugars": 0,
+          "protein": 0, "salt": 0, "nutrition_grade": "d"
+        }`,
+      stockAmount: 1,
+      stockNote: "",
+      bestBefore: "2027-06-01",
+      price: 6.5,
+    },
+    {
+      name: "Plain Flour",
+      brand: "Allinson",
+      barcode: "5011157001001",
+      stockUnitPrefs: ["g", "kg"],
+      purchaseUnitPrefs: ["bag", "pack", "packet"],
+      locationPrefs: ["Cupboard Main", "Cupboard", "Pantry", "Kitchen Cupboard"],
+      groupPrefs: ["Baking", "Pantry Staples", "Flour", "Baking Supplies"],
+      purchaseToStockFactor: 1500,
+      defaultDueDays: 365,
+      dueType: "best_before",
+      cookingRole: "starch",
+      nutrition: `{
+          "energy_kcal": 340, "fat": 1.3, "saturated_fat": 0.2,
+          "carbohydrates": 75, "sugars": 1.5, "fibre": 3.1,
+          "protein": 10, "salt": 0, "nutrition_grade": "b"
+        }`,
+      stockAmount: 2,
+      stockNote: "",
+      bestBefore: "2026-11-01",
+      price: 2.4,
+    },
+  ];
+
+  type ResolvedArchetype = Archetype & {
+    stockUnit: string;
+    purchaseUnit: string;
+    location: string;
+    group: string;
+  };
+  const archetype: ResolvedArchetype | null = (() => {
+    for (const a of ARCHETYPES) {
+      const stockUnit = findFirst(units, a.stockUnitPrefs);
+      const purchaseUnit = findFirst(units, a.purchaseUnitPrefs);
+      const location = findFirst(locations, a.locationPrefs);
+      const group = findFirst(groups, a.groupPrefs);
+      if (stockUnit && purchaseUnit && stockUnit !== purchaseUnit && location && group) {
+        return { ...a, stockUnit, purchaseUnit, location, group };
+      }
+    }
+    return null;
+  })();
 
   lines.push("## Examples");
   lines.push("");
-  lines.push("### Example A — receipt line for a common product");
+  lines.push("### Example A — receipt line (minimal product block)");
   lines.push("");
   lines.push("```json");
   lines.push(`{
@@ -183,7 +291,7 @@ export async function buildImportContextBundle(
     {
       "product": {
         "name": "Semi-skimmed Milk",
-        "brand": "Tesco",
+        "brand": "${exA_store}",
         "barcode": "5000436589217"
       },
       "stock": {
@@ -196,42 +304,47 @@ export async function buildImportContextBundle(
   lines.push("```");
   lines.push("");
 
-  lines.push("### Example B — new product from packaging photo");
-  lines.push("");
-  lines.push("```json");
-  lines.push(`{
+  if (archetype) {
+    lines.push("### Example B — packaging photo (full product block)");
+    lines.push("");
+    lines.push("```json");
+    lines.push(`{
   "version": "1",
   "items": [
     {
       "product": {
-        "name": "Heinz Baked Beans",
-        "brand": "Heinz",
-        "barcode": "5000157024671",
-        "qu_stock_name": "${exB_stockUnit}",
-        "qu_purchase_name": "${exB_purchaseUnit}",
-        "purchase_to_stock_factor": 415,
-        "location_name": "${exB_location}",
-        "shopping_location_name": "${exB_store}",
-        "product_group_name": "${exB_group}",
-        "default_due_days": 730,
-        "due_type": "best_before",
-        "cooking_role": "protein",
-        "nutrition": {
-          "energy_kcal": 75, "fat": 0.2, "saturated_fat": 0.1,
-          "carbohydrates": 13, "sugars": 5, "fibre": 3.8,
-          "protein": 4.7, "salt": 0.6, "nutrition_grade": "a"
-        }
+        "name": "${archetype.name}",
+        "brand": "${archetype.brand}",
+        "barcode": "${archetype.barcode}",
+        "qu_stock_name": "${archetype.stockUnit}",
+        "qu_purchase_name": "${archetype.purchaseUnit}",
+        "purchase_to_stock_factor": ${archetype.purchaseToStockFactor},
+        "location_name": "${archetype.location}",
+        "shopping_location_name": "${exA_store}",
+        "product_group_name": "${archetype.group}",
+        "default_due_days": ${archetype.defaultDueDays},
+        "due_type": "${archetype.dueType}",
+        "cooking_role": "${archetype.cookingRole}",
+        "nutrition": ${archetype.nutrition}
       },
       "stock": {
-        "amount": 4, "unit_name": "${exB_purchaseUnit}", "best_before_date": "2027-03-01",
-        "price": 3.80, "store_name": "${exB_store}", "location_name": "${exB_location}",
-        "note": "4-pack"
+        "amount": ${archetype.stockAmount}, "unit_name": "${archetype.purchaseUnit}", "best_before_date": "${archetype.bestBefore}",
+        "price": ${archetype.price}, "store_name": "${exA_store}", "location_name": "${archetype.location}"${archetype.stockNote ? `,\n        "note": "${archetype.stockNote}"` : ""}
       }
     }
   ]
 }`);
-  lines.push("```");
-  lines.push("");
+    lines.push("```");
+    lines.push("");
+  } else {
+    lines.push(
+      "_(No full-product example generated — your master-data doesn't yet " +
+        "contain a coherent unit/location/group combination for a canned / " +
+        "bottled / bagged archetype. For packaging photos, fill every field " +
+        "from the schema using values from the master-data tables above.)_",
+    );
+    lines.push("");
+  }
 
   lines.push(
     "Now wait for my photo(s) or receipt, then reply with the JSON object only.",

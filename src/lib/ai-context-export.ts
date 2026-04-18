@@ -147,6 +147,31 @@ export async function buildImportContextBundle(
   lines.push("```");
   lines.push("");
 
+  // Pick example values from the actual fetched lists so the examples can't
+  // violate rule #1 (e.g. showing "tin" when the household has "can", or
+  // "Tesco" when it has "Tesco Express"). Fallbacks apply for empty lists.
+  const pick = (rows: Row[], preferred: string[], fallback: string): string => {
+    for (const p of preferred) {
+      const hit = rows.find((r) => (r.name as string | undefined) === p);
+      if (hit) return hit.name as string;
+    }
+    return (rows[0]?.name as string | undefined) ?? fallback;
+  };
+  const pickOther = (rows: Row[], not: string, fallback: string): string => {
+    const other = rows.find((r) => (r.name as string | undefined) !== not);
+    return (other?.name as string | undefined) ?? fallback;
+  };
+
+  const exA_unit = pick(units, ["L", "l", "ml", "mL"], "L");
+  const exA_store = pick(stores, [], "Tesco");
+  const exA_location = pick(locations, ["Fridge", "Refrigerator"], "Fridge");
+
+  const exB_stockUnit = pick(units, ["g", "kg"], "g");
+  const exB_purchaseUnit = pickOther(units, exB_stockUnit, exB_stockUnit);
+  const exB_location = pick(locations, ["Pantry", "Cupboard"], "Pantry");
+  const exB_store = pick(stores, [], exA_store);
+  const exB_group = pick(groups, ["Tinned Goods", "Canned Goods"], "Tinned Goods");
+
   lines.push("## Examples");
   lines.push("");
   lines.push("### Example A — receipt line for a common product");
@@ -162,8 +187,8 @@ export async function buildImportContextBundle(
         "barcode": "5000436589217"
       },
       "stock": {
-        "amount": 2, "unit_name": "L", "best_before_date": "2026-05-10",
-        "price": 2.40, "store_name": "Tesco", "location_name": "Fridge"
+        "amount": 2, "unit_name": "${exA_unit}", "best_before_date": "2026-05-10",
+        "price": 2.40, "store_name": "${exA_store}", "location_name": "${exA_location}"
       }
     }
   ]
@@ -182,12 +207,12 @@ export async function buildImportContextBundle(
         "name": "Heinz Baked Beans",
         "brand": "Heinz",
         "barcode": "5000157024671",
-        "qu_stock_name": "g",
-        "qu_purchase_name": "tin",
+        "qu_stock_name": "${exB_stockUnit}",
+        "qu_purchase_name": "${exB_purchaseUnit}",
         "purchase_to_stock_factor": 415,
-        "location_name": "Pantry",
-        "shopping_location_name": "Tesco",
-        "product_group_name": "Tinned Goods",
+        "location_name": "${exB_location}",
+        "shopping_location_name": "${exB_store}",
+        "product_group_name": "${exB_group}",
         "default_due_days": 730,
         "due_type": "best_before",
         "cooking_role": "protein",
@@ -198,8 +223,8 @@ export async function buildImportContextBundle(
         }
       },
       "stock": {
-        "amount": 4, "unit_name": "tin", "best_before_date": "2027-03-01",
-        "price": 3.80, "store_name": "Tesco", "location_name": "Pantry",
+        "amount": 4, "unit_name": "${exB_purchaseUnit}", "best_before_date": "2027-03-01",
+        "price": 3.80, "store_name": "${exB_store}", "location_name": "${exB_location}",
         "note": "4-pack"
       }
     }

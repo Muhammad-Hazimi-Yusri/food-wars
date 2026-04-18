@@ -46,14 +46,7 @@ export async function buildImportContextBundle(
   supabase: SupabaseClient<any, any, any>,
   householdId: string,
 ): Promise<string> {
-  const [products, units, locations, stores, groups] = await Promise.all([
-    fetchList(
-      supabase,
-      "products",
-      "id, name, brand",
-      householdId,
-      "name",
-    ).then((rows) => rows.filter((r) => (r as Row).active !== false)),
+  const [units, locations, stores, groups] = await Promise.all([
     fetchList(supabase, "quantity_units", "id, name, name_plural", householdId, "name"),
     fetchList(supabase, "locations", "id, name, is_freezer", householdId, "name"),
     fetchList(supabase, "shopping_locations", "id, name", householdId, "name"),
@@ -80,53 +73,37 @@ export async function buildImportContextBundle(
   lines.push("## Rules");
   lines.push("");
   lines.push(
-    "1. When matching against existing products, units, locations, stores, or " +
-      "groups below — use the EXACT name shown, not a variant. " +
+    "1. When matching against units, locations, stores, or groups below — use " +
+      "the EXACT name shown, not a variant. " +
       "For units especially: if the list has `g`, use `g`, not `grams`.",
   );
   lines.push(
-    "2. If a product is clearly one in the PRODUCTS list, set `product.match_id` " +
-      "to its UUID and leave the other product fields empty.",
+    "2. Always fill the `product` block completely — describe the product as " +
+      "you see it (name, brand, barcode, nutrition, etc). Existing products " +
+      "are auto-matched on my side by barcode and name, so don't worry about " +
+      "duplicates.",
   );
   lines.push(
-    "3. Otherwise, fill the `product` block completely so I can create a new " +
-      "product in my database (include nutrition if visible on the label).",
+    "3. For nutrition, use per-100g or per-100mL values (not per-serving).",
   );
   lines.push(
-    "4. For nutrition, use per-100g or per-100mL values (not per-serving).",
-  );
-  lines.push(
-    "5. If the receipt / packaging doesn't say, infer sensibly: " +
+    "4. If the receipt / packaging doesn't say, infer sensibly: " +
       "`qu_stock_name` should be a fine-grained unit (g, mL, piece); " +
       "`qu_purchase_name` should reflect packaging (tin, pack, bottle). " +
       "`purchase_to_stock_factor` converts one purchase unit into stock units.",
   );
   lines.push(
-    "6. For `best_before_date`, use ISO `YYYY-MM-DD`. If the label only shows a " +
+    "5. For `best_before_date`, use ISO `YYYY-MM-DD`. If the label only shows a " +
       "month+year (e.g. \"BB 03/2027\"), pick the 1st of that month.",
   );
   lines.push(
-    "7. Return one item per distinct product. If a receipt lists 3 tins of the " +
+    "6. Return one item per distinct product. If a receipt lists 3 tins of the " +
       "same beans, emit one item with `stock.amount: 3`.",
   );
   lines.push("");
 
   lines.push("## Existing master-data");
   lines.push("");
-  lines.push("### PRODUCTS (use `match_id` for these)");
-  if (products.length === 0) {
-    lines.push("_(none yet — you will always be creating new products)_");
-  } else {
-    lines.push("| id | name | brand |");
-    lines.push("|----|------|-------|");
-    for (const p of products) {
-      lines.push(
-        `| ${p.id} | ${p.name} | ${(p.brand as string | null) ?? ""} |`,
-      );
-    }
-  }
-  lines.push("");
-
   lines.push("### UNITS (use these exact names for `qu_stock_name`, `qu_purchase_name`, `stock.unit_name`)");
   if (units.length === 0) {
     lines.push("_(none defined — propose reasonable units; the app will prompt me to create them)_");
@@ -172,14 +149,18 @@ export async function buildImportContextBundle(
 
   lines.push("## Examples");
   lines.push("");
-  lines.push("### Example A — receipt with 3 existing products");
+  lines.push("### Example A — receipt line for a common product");
   lines.push("");
   lines.push("```json");
   lines.push(`{
   "version": "1",
   "items": [
     {
-      "product": { "match_id": "PASTE-AN-EXISTING-UUID-HERE" },
+      "product": {
+        "name": "Semi-skimmed Milk",
+        "brand": "Tesco",
+        "barcode": "5000436589217"
+      },
       "stock": {
         "amount": 2, "unit_name": "L", "best_before_date": "2026-05-10",
         "price": 2.40, "store_name": "Tesco", "location_name": "Fridge"

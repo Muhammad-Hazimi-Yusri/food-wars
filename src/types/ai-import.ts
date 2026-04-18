@@ -152,7 +152,6 @@ export const IMPORT_JSON_SCHEMA = `{
   "items": [
     {
       "product": {
-        "match_id": "uuid or null — set if this matches an existing product id from the PRODUCTS list below",
         "name": "string — human-readable product name",
         "brand": "string or null",
         "barcode": "string or null — EAN/UPC digits only",

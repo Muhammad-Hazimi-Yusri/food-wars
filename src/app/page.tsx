@@ -6,6 +6,7 @@ import { StockOverviewClient } from "@/components/inventory/StockOverviewClient"
 import { StockEntryWithProduct, Location, ProductGroup, Product, QuantityUnit, ShoppingLocation } from "@/types/database";
 import { ScanToStockFlow } from "@/components/barcode/ScanToStockFlow";
 import { ExportForAIButton } from "@/components/inventory/ExportForAIButton";
+import { AiImportMenu } from "@/components/inventory/AiImportMenu";
 import { NotificationBell } from "@/components/inventory/NotificationBell";
 import { ExpiryAnnouncer } from "@/components/inventory/ExpiryAnnouncer";
 import { TodaysDinnerCard } from "@/components/meal-plan/TodaysDinnerCard";
@@ -170,6 +171,15 @@ export default async function Home() {
           <h1 className="text-2xl font-bold text-megumi">Stock Overview</h1>
           <div className="flex items-center gap-1">
             <NotificationBell />
+            <AiImportMenu
+              householdData={{
+                products,
+                locations,
+                quantityUnits,
+                shoppingLocations,
+                conversions,
+              }}
+            />
             <ExportForAIButton />
           </div>
         </div>

@@ -1224,6 +1224,77 @@ Get these from [Supabase Dashboard](https://supabase.com) → Project Settings �
 
 ---
 
+## MCP Server (Claude integration)
+
+Food-wars exposes its inventory as an MCP (Model Context Protocol) server at
+`/api/mcp`, so Claude can act on the app directly — list stock, consume items,
+parse receipt or pantry photos, find data-quality issues, drive shopping
+lists and recipes. All mutations write to `stock_log` with a `correlation_id`,
+so Claude-driven changes appear in the Journal and the 8-second undo button
+works the same as for in-app actions.
+
+### Generate an API token
+
+Settings → AI → **Generate API Token**. The token is shown once — copy it.
+
+### Claude Code
+
+```bash
+claude mcp add food-wars --transport http https://your-host/api/mcp \
+  --header "Authorization: Bearer fw_..."
+```
+
+Then in any session: `/mcp` should list `food-wars` with its tools.
+
+### Claude Desktop
+
+Add to `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "food-wars": {
+      "url": "https://your-host/api/mcp",
+      "headers": { "Authorization": "Bearer fw_..." }
+    }
+  }
+}
+```
+
+Drag a receipt photo into the chat and ask "add these to my pantry" — Claude
+calls `parse_receipt_image` then `add_stock`.
+
+### claude.ai (web)
+
+Settings → Connectors → Add Custom Connector → MCP URL = `https://your-host/api/mcp`
+and the Authorization header. `https://claude.ai` is in the CORS allowlist.
+
+### Tool surface
+
+`list_inventory`, `search_products`, `list_expiring`, `list_locations`,
+`list_units`, `add_stock`, `consume_stock`, `open_stock`, `transfer_stock`,
+`correct_stock`, `parse_receipt_image`, `scan_pantry_image`,
+`find_data_issues`, `repair_data_issue`, `list_shopping_lists`,
+`get_shopping_list`, `add_to_shopping_list`, `list_recipes`, `get_recipe`,
+`consume_recipe`.
+
+`repair_data_issue` requires `confirm: true` and only deactivates products
+(not hard-delete). Stock deletes write to the Journal for undo.
+
+### Smoke test
+
+```bash
+curl -X POST https://your-host/api/mcp \
+  -H "Authorization: Bearer fw_..." \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize",
+       "params":{"protocolVersion":"2025-03-26","capabilities":{},
+                 "clientInfo":{"name":"curl","version":"1"}}}'
+```
+
+---
+
 ## Testing
 
 ### Unit Tests

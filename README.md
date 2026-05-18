@@ -1264,10 +1264,22 @@ Add to `claude_desktop_config.json`:
 Drag a receipt photo into the chat and ask "add these to my pantry" — Claude
 calls `parse_receipt_image` then `add_stock`.
 
-### claude.ai (web)
+### claude.ai (web) and Claude iOS app — OAuth
 
-Settings → Connectors → Add Custom Connector → MCP URL = `https://your-host/api/mcp`
-and the Authorization header. `https://claude.ai` is in the CORS allowlist.
+claude.ai's web Custom Connector dialog and the iOS Claude app don't accept a
+static bearer header — they only support OAuth. Food-wars ships its own
+OAuth 2.1 authorization server for exactly this case.
+
+In Claude: **Settings → Connectors → Add Custom Connector → URL =
+`https://your-host/api/mcp`**, leave OAuth fields blank. Claude will:
+
+1. Discover the authorization server via `/.well-known/oauth-protected-resource`
+2. Dynamically register itself as a client (RFC 7591)
+3. Open `/oauth/authorize` in a browser → you sign in with Google → tap **Allow**
+4. Receive a long-lived access token and start calling tools
+
+Only Google-signed-in (non-guest) users can authorize. Tokens default to a
+one-year lifetime and can be revoked from the database.
 
 ### Tool surface
 

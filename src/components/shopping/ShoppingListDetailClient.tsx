@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -289,10 +289,12 @@ export function ShoppingListDetailClient({
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [addMode, setAddMode] = useState<"product" | "freeform">("product");
 
-  // Sync items when server data changes (after router.refresh)
-  useEffect(() => {
+  // Sync items when server data changes (after router.refresh) — render-time sync.
+  const [lastInitialItems, setLastInitialItems] = useState(initialItems);
+  if (initialItems !== lastInitialItems) {
+    setLastInitialItems(initialItems);
     setItems(initialItems);
-  }, [initialItems]);
+  }
 
   const { recentIds } = useRecentProducts();
 

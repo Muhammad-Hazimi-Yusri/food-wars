@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, Plus, CalendarDays, Settings2, Copy, CopyCheck, ShoppingCart } from "lucide-react";
 import {
@@ -195,18 +195,23 @@ export function MealPlanClient({
   const [localEntries, setLocalEntries] =
     useState<MealPlanEntryWithRelations[]>(entries);
 
-  // Sync when server re-renders (e.g. after router.refresh())
-  useEffect(() => {
+  // Sync when server re-renders (e.g. after router.refresh()) — render-time sync.
+  const [lastEntries, setLastEntries] = useState(entries);
+  if (entries !== lastEntries) {
+    setLastEntries(entries);
     setLocalEntries(entries);
-  }, [entries]);
+  }
 
   // ── Mobile: selected day + reset on week change ───────────────────────────
   const [selectedDay, setSelectedDay] = useState<string>(() =>
     weekDays.includes(today) ? today : weekDays[0]
   );
-  useEffect(() => {
+  // Re-sync selectedDay when the week changes (render-time sync).
+  const [lastWeekStart, setLastWeekStart] = useState(weekStart);
+  if (weekStart !== lastWeekStart) {
+    setLastWeekStart(weekStart);
     setSelectedDay(weekDays.includes(today) ? today : weekDays[0]);
-  }, [weekStart]); // eslint-disable-line react-hooks/exhaustive-deps
+  }
 
   // ── Dialog state ──────────────────────────────────────────────────────────
   const [dialogOpen, setDialogOpen] = useState(false);

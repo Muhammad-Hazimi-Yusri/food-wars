@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -41,23 +41,27 @@ export function MasterDataForm({
 }: MasterDataFormProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
-  const [formData, setFormData] = useState<Record<string, unknown>>({});
 
-  // Initialize form data
-  useEffect(() => {
-    if (item) {
-      setFormData(item);
-    } else {
-      // Default values for new item
-      const defaults: Record<string, unknown> = {};
-      fields.forEach((f) => {
-        if (f.type === "checkbox") defaults[f.name] = f.name === "active" ? true : false;
-        else if (f.type === "number") defaults[f.name] = 0;
-        else defaults[f.name] = "";
-      });
-      setFormData(defaults);
-    }
-  }, [item, fields]);
+  const buildDefaults = (): Record<string, unknown> => {
+    if (item) return item;
+    const defaults: Record<string, unknown> = {};
+    fields.forEach((f) => {
+      if (f.type === "checkbox") defaults[f.name] = f.name === "active" ? true : false;
+      else if (f.type === "number") defaults[f.name] = 0;
+      else defaults[f.name] = "";
+    });
+    return defaults;
+  };
+
+  // Initialize form data — and re-sync if the item or fields change (sync during render).
+  const [formData, setFormData] = useState<Record<string, unknown>>(buildDefaults);
+  const [lastItem, setLastItem] = useState(item);
+  const [lastFields, setLastFields] = useState(fields);
+  if (item !== lastItem || fields !== lastFields) {
+    setLastItem(item);
+    setLastFields(fields);
+    setFormData(buildDefaults());
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

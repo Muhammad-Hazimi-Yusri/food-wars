@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -109,8 +109,20 @@ export function AddStockEntryModal({
   const [priceType, setPriceType] = useState<"unit" | "total">("unit");
   const [note, setNote] = useState("");
 
+  // Track prior values so we can synchronize state during render instead of
+  // calling setState inside useEffect.
+  const [lastOpen, setLastOpen] = useState(open);
+  const [lastPrefill, setLastPrefill] = useState<Prefill | null | undefined>(prefill);
+  const [lastProductId, setLastProductId] = useState(productId);
+  const [lastNeverExpires, setLastNeverExpires] = useState(neverExpires);
+
+  // Selected product
+  const selectedProduct = products.find((p) => p.id === productId);
+
   // Apply prefill when dialog opens with prefill data
-  useEffect(() => {
+  if (open !== lastOpen || prefill !== lastPrefill) {
+    setLastOpen(open);
+    setLastPrefill(prefill);
     if (open && prefill) {
       if (prefill.productId) setProductId(prefill.productId);
       if (prefill.amount) setAmount(String(prefill.amount));
@@ -118,10 +130,22 @@ export function AddStockEntryModal({
       if (prefill.shoppingLocationId) setStoreId(prefill.shoppingLocationId);
       if (prefill.price) setPrice(String(prefill.price));
     }
-  }, [open, prefill]);
-
-  // Selected product
-  const selectedProduct = products.find((p) => p.id === productId);
+    // Reset form when dialog closes
+    if (!open) {
+      setProductId("");
+      setAmount("");
+      setSelectedQuId("");
+      setLocationId("");
+      setStoreId("");
+      setBestBeforeDate("");
+      setNeverExpires(false);
+      setPrice("");
+      setPriceType("unit");
+      setNote("");
+      setDateShorthand("");
+      setError(null);
+    }
+  }
 
   // Available units for this product (stock unit + all units with conversions)
   const availableUnits = selectedProduct
@@ -208,12 +232,13 @@ export function AddStockEntryModal({
   // Check if date is in the past
   const isDatePast = bestBeforeDate && new Date(bestBeforeDate) < new Date();
 
-  // When product selected, pre-fill defaults
-  useEffect(() => {
+  // When product selected, pre-fill defaults (sync during render).
+  if (productId !== lastProductId) {
+    setLastProductId(productId);
     if (productId && selectedProduct) {
       // Set default unit to purchase unit if available, else stock unit
       setSelectedQuId(selectedProduct.qu_id_purchase || selectedProduct.qu_id_stock || "");
-      
+
       // Set default location
       if (selectedProduct.location_id) {
         setLocationId(selectedProduct.location_id);
@@ -223,7 +248,7 @@ export function AddStockEntryModal({
       if (selectedProduct.shopping_location_id) {
         setStoreId(selectedProduct.shopping_location_id);
       }
-      
+
       // Set default due date
       if (selectedProduct.default_due_days > 0) {
         const date = new Date();
@@ -235,32 +260,15 @@ export function AddStockEntryModal({
         setNeverExpires(true);
       }
     }
-  }, [productId, selectedProduct]);
+  }
 
-  // Handle never expires toggle
-  useEffect(() => {
+  // Handle never expires toggle (sync during render).
+  if (neverExpires !== lastNeverExpires) {
+    setLastNeverExpires(neverExpires);
     if (neverExpires) {
       setBestBeforeDate("");
     }
-  }, [neverExpires]);
-
-  // Reset form when dialog closes
-  useEffect(() => {
-    if (!open) {
-      setProductId("");
-      setAmount("");
-      setSelectedQuId("");
-      setLocationId("");
-      setStoreId("");
-      setBestBeforeDate("");
-      setNeverExpires(false);
-      setPrice("");
-      setPriceType("unit");
-      setNote("");
-      setDateShorthand("");
-      setError(null);
-    }
-  }, [open]);
+  }
 
   const adjustAmount = (delta: number) => {
     const current = parseFloat(amount) || 0;

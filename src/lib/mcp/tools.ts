@@ -568,6 +568,108 @@ export function registerTools(server: McpServer): void {
     },
   );
 
+  server.registerTool(
+    "update_shopping_list_item",
+    {
+      title: "Update a shopping list item",
+      description:
+        "Partially update an item on a shopping list. Any subset of amount, note, and done may be supplied; omitted fields are left unchanged. Use done=true to tick an item off (mark as purchased) without creating a stock entry.",
+      inputSchema: {
+        itemId: z.string().uuid(),
+        amount: z.number().positive().optional(),
+        note: z.string().nullable().optional(),
+        done: z.boolean().optional(),
+      },
+    },
+    async ({ itemId, amount, note, done }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+
+      const { data: existing } = await supabase
+        .from("shopping_list_items")
+        .select("id")
+        .eq("id", itemId)
+        .eq("household_id", householdId)
+        .maybeSingle();
+      if (!existing) return errorResult("Shopping list item not found in this household");
+
+      const patch: Record<string, unknown> = {};
+      if (amount !== undefined) patch.amount = amount;
+      if (note !== undefined) patch.note = note;
+      if (done !== undefined) patch.done = done;
+      if (Object.keys(patch).length === 0) return errorResult("No fields to update");
+
+      const { error } = await supabase
+        .from("shopping_list_items")
+        .update(patch)
+        .eq("id", itemId);
+      if (error) return errorResult(error.message);
+      return jsonResult({ success: true, itemId, updated: Object.keys(patch) });
+    },
+  );
+
+  server.registerTool(
+    "remove_from_shopping_list",
+    {
+      title: "Remove an item from a shopping list",
+      description:
+        "Delete a single item from a shopping list. The deletion is permanent.",
+      inputSchema: {
+        itemId: z.string().uuid(),
+      },
+    },
+    async ({ itemId }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+
+      const { data: existing } = await supabase
+        .from("shopping_list_items")
+        .select("id")
+        .eq("id", itemId)
+        .eq("household_id", householdId)
+        .maybeSingle();
+      if (!existing) return errorResult("Shopping list item not found in this household");
+
+      const { error } = await supabase
+        .from("shopping_list_items")
+        .delete()
+        .eq("id", itemId);
+      if (error) return errorResult(error.message);
+      return jsonResult({ success: true, itemId });
+    },
+  );
+
+  server.registerTool(
+    "clear_done_shopping_list_items",
+    {
+      title: "Clear completed items from a shopping list",
+      description:
+        "Delete every item on the shopping list that is currently marked done. Returns the count deleted.",
+      inputSchema: {
+        listId: z.string().uuid(),
+      },
+    },
+    async ({ listId }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+
+      const { data: list } = await supabase
+        .from("shopping_lists")
+        .select("id")
+        .eq("id", listId)
+        .eq("household_id", householdId)
+        .maybeSingle();
+      if (!list) return errorResult("Shopping list not found in this household");
+
+      const { data, error } = await supabase
+        .from("shopping_list_items")
+        .delete()
+        .eq("household_id", householdId)
+        .eq("shopping_list_id", listId)
+        .eq("done", true)
+        .select("id");
+      if (error) return errorResult(error.message);
+      return jsonResult({ success: true, count: data?.length ?? 0 });
+    },
+  );
+
   // ===== Recipes =====
 
   server.registerTool(

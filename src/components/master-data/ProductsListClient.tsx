@@ -245,11 +245,26 @@ export function ProductsListClient({
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
-  // Group by
-  const [groupBy, setGroupBy] = useState<GroupByField>("none");
+  // Group by (lazy-init from localStorage so we don't need to setState in an effect on mount)
+  const [groupBy, setGroupBy] = useState<GroupByField>(() => {
+    if (typeof window === "undefined") return "none";
+    const saved = localStorage.getItem("products-group-by");
+    return (saved as GroupByField) ?? "none";
+  });
 
-  // Column visibility
-  const [visibleColumns, setVisibleColumns] = useState<ColumnKey[]>(DEFAULT_VISIBLE_COLUMNS);
+  // Column visibility (lazy-init from localStorage)
+  const [visibleColumns, setVisibleColumns] = useState<ColumnKey[]>(() => {
+    if (typeof window === "undefined") return DEFAULT_VISIBLE_COLUMNS;
+    const saved = localStorage.getItem("products-visible-columns");
+    if (saved) {
+      try {
+        return JSON.parse(saved) as ColumnKey[];
+      } catch {
+        // fall through
+      }
+    }
+    return DEFAULT_VISIBLE_COLUMNS;
+  });
 
   // Product detail modal
   const [modalOpen, setModalOpen] = useState(false);
@@ -266,22 +281,6 @@ export function ProductsListClient({
     setModalProduct(product as unknown as DBProductWithRelations);
     setModalOpen(true);
   };
-
-  // Load preferences from localStorage
-  useEffect(() => {
-    const savedColumns = localStorage.getItem("products-visible-columns");
-    if (savedColumns) {
-      try {
-        setVisibleColumns(JSON.parse(savedColumns));
-      } catch {
-        // ignore
-      }
-    }
-    const savedGroupBy = localStorage.getItem("products-group-by");
-    if (savedGroupBy) {
-      setGroupBy(savedGroupBy as GroupByField);
-    }
-  }, []);
 
   const toggleColumn = (key: ColumnKey) => {
     const column = ALL_COLUMNS.find((c) => c.key === key);

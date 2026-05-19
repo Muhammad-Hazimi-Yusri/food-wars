@@ -50,20 +50,25 @@ export function ScanToStockFlow({
 }: Props) {
   const router = useRouter();
   const [scannerOpen, setScannerOpen] = useState(false);
-  const [stockModalOpen, setStockModalOpen] = useState(false);
-  const [prefill, setPrefill] = useState<Prefill | null>(null);
+  // Auto-open stock modal when returning from product creation.
+  // Read URL params during lazy state init so the modal opens on first render
+  // without needing setState inside an effect.
+  const [initialAddStock] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return new URLSearchParams(window.location.search).get("addStock");
+  });
+  const [stockModalOpen, setStockModalOpen] = useState(initialAddStock !== null);
+  const [prefill, setPrefill] = useState<Prefill | null>(
+    initialAddStock ? { productId: initialAddStock } : null,
+  );
   const [resolving, setResolving] = useState(false);
 
-  // Auto-open stock modal when returning from product creation
+  // Clean the `addStock` query param from the URL after we've consumed it.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const addStockProductId = params.get("addStock");
-    if (addStockProductId) {
-      setPrefill({ productId: addStockProductId });
-      setStockModalOpen(true);
+    if (initialAddStock) {
       window.history.replaceState({}, "", window.location.pathname);
     }
-  }, []);
+  }, [initialAddStock]);
 
   const handleScan = async (barcode: string) => {
     setScannerOpen(false);

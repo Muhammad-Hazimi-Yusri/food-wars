@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -128,8 +128,10 @@ export function EditStockEntryModal({
     return p / conversionFactor;
   };
 
-  // Reset form when entry changes
-  useEffect(() => {
+  // Reset form when entry changes (sync during render).
+  const [lastEntry, setLastEntry] = useState(entry);
+  if (entry !== lastEntry) {
+    setLastEntry(entry);
     if (entry) {
       setFormData({
         amount: entry.amount,
@@ -143,7 +145,7 @@ export function EditStockEntryModal({
       setPriceType("unit");
       setPriceUnitId(entry.product?.qu_id_stock ?? "");
     }
-  }, [entry]);
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

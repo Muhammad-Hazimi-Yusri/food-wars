@@ -1258,4 +1258,415 @@ export function registerTools(server: McpServer): void {
       return jsonResult({ success: true, nestingId });
     },
   );
+
+  // ===== Meal plan =====
+
+  server.registerTool(
+    "get_meal_plan",
+    {
+      title: "Get meal plan entries for a date range",
+      description:
+        "List all meal_plan rows for this household between weekStart and weekEnd (inclusive, ISO YYYY-MM-DD). Joins recipe name, product name, unit name, and section name for display. Use this before planning a week to see what's already there.",
+      inputSchema: {
+        weekStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        weekEnd: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      },
+    },
+    async ({ weekStart, weekEnd }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      const { data, error } = await supabase
+        .from("meal_plan")
+        .select(
+          "id, day, type, recipe_id, recipe_servings, product_id, product_amount, product_qu_id, note, section_id, sort_order, recipe:recipes(name), product:products(name), qu:quantity_units(name, name_plural), section:meal_plan_sections(name, time)",
+        )
+        .eq("household_id", householdId)
+        .gte("day", weekStart)
+        .lte("day", weekEnd)
+        .order("day")
+        .order("sort_order");
+      if (error) return errorResult(error.message);
+      return jsonResult({ entries: data ?? [] });
+    },
+  );
+
+  server.registerTool(
+    "plan_meal",
+    {
+      title: "Add a meal plan entry",
+      description:
+        "Schedule a recipe / product / free-text note onto a specific day. Exactly one of recipeId, productId, or note must be set; the matching type-specific fields go alongside (recipeServings for recipes; productAmount/productQuId for products). Auto-assigns sort_order at the end of the day×section slot.",
+      inputSchema: {
+        day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        type: z.enum(["recipe", "product", "note"]),
+        sectionId: z.string().uuid().nullable().optional(),
+        recipeId: z.string().uuid().nullable().optional(),
+        recipeServings: z.number().positive().nullable().optional(),
+        productId: z.string().uuid().nullable().optional(),
+        productAmount: z.number().positive().nullable().optional(),
+        productQuId: z.string().uuid().nullable().optional(),
+        note: z.string().nullable().optional(),
+      },
+    },
+    async (
+      { day, type, sectionId, recipeId, recipeServings, productId, productAmount, productQuId, note },
+      extra,
+    ) => {
+      const { supabase, householdId } = getCtx(extra);
+
+      if (type === "recipe") {
+        if (!recipeId) return errorResult("recipeId is required when type='recipe'");
+        const { data: r } = await supabase
+          .from("recipes")
+          .select("id")
+          .eq("id", recipeId)
+          .eq("household_id", householdId)
+          .maybeSingle();
+        if (!r) return errorResult("recipeId not found in this household");
+      } else if (type === "product") {
+        if (!productId) return errorResult("productId is required when type='product'");
+        const { data: p } = await supabase
+          .from("products")
+          .select("id")
+          .eq("id", productId)
+          .eq("household_id", householdId)
+          .maybeSingle();
+        if (!p) return errorResult("productId not found in this household");
+      } else {
+        if (!note) return errorResult("note is required when type='note'");
+      }
+
+      if (sectionId) {
+        const { data: s } = await supabase
+          .from("meal_plan_sections")
+          .select("id")
+          .eq("id", sectionId)
+          .eq("household_id", householdId)
+          .maybeSingle();
+        if (!s) return errorResult("sectionId not found in this household");
+      }
+
+      const { data: maxRow } = await supabase
+        .from("meal_plan")
+        .select("sort_order")
+        .eq("household_id", householdId)
+        .eq("day", day)
+        .eq("section_id", sectionId ?? null)
+        .order("sort_order", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const sort = (maxRow?.sort_order ?? -1) + 1;
+
+      const { data, error } = await supabase
+        .from("meal_plan")
+        .insert({
+          household_id: householdId,
+          day,
+          type,
+          recipe_id: type === "recipe" ? recipeId : null,
+          recipe_servings: type === "recipe" ? recipeServings ?? null : null,
+          product_id: type === "product" ? productId : null,
+          product_amount: type === "product" ? productAmount ?? null : null,
+          product_qu_id: type === "product" ? productQuId ?? null : null,
+          note: type === "note" ? note : null,
+          section_id: sectionId ?? null,
+          sort_order: sort,
+        })
+        .select("id")
+        .single();
+      if (error) return errorResult(error.message);
+      return jsonResult({ success: true, entryId: data.id });
+    },
+  );
+
+  server.registerTool(
+    "update_planned_meal",
+    {
+      title: "Update a meal plan entry",
+      description:
+        "Partial update of a single meal_plan row. Use to move an entry to a different day/section, change servings, or rewrite a note. The entry's `type` is immutable — to switch from recipe→product etc., delete and re-create.",
+      inputSchema: {
+        entryId: z.string().uuid(),
+        day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+        sectionId: z.string().uuid().nullable().optional(),
+        recipeServings: z.number().positive().nullable().optional(),
+        productAmount: z.number().positive().nullable().optional(),
+        productQuId: z.string().uuid().nullable().optional(),
+        note: z.string().nullable().optional(),
+        sortOrder: z.number().int().min(0).optional(),
+      },
+    },
+    async (
+      { entryId, day, sectionId, recipeServings, productAmount, productQuId, note, sortOrder },
+      extra,
+    ) => {
+      const { supabase, householdId } = getCtx(extra);
+
+      const { data: existing } = await supabase
+        .from("meal_plan")
+        .select("id, type")
+        .eq("id", entryId)
+        .eq("household_id", householdId)
+        .maybeSingle();
+      if (!existing) return errorResult("Meal plan entry not found in this household");
+
+      if (sectionId !== undefined && sectionId !== null) {
+        const { data: s } = await supabase
+          .from("meal_plan_sections")
+          .select("id")
+          .eq("id", sectionId)
+          .eq("household_id", householdId)
+          .maybeSingle();
+        if (!s) return errorResult("sectionId not found in this household");
+      }
+
+      const patch: Record<string, unknown> = {};
+      if (day !== undefined) patch.day = day;
+      if (sectionId !== undefined) patch.section_id = sectionId;
+      if (sortOrder !== undefined) patch.sort_order = sortOrder;
+      if (recipeServings !== undefined && existing.type === "recipe") patch.recipe_servings = recipeServings;
+      if (productAmount !== undefined && existing.type === "product") patch.product_amount = productAmount;
+      if (productQuId !== undefined && existing.type === "product") patch.product_qu_id = productQuId;
+      if (note !== undefined && existing.type === "note") patch.note = note;
+      if (Object.keys(patch).length === 0) return errorResult("No fields to update (note: type-specific fields are ignored if they don't match the entry type)");
+
+      const { error } = await supabase
+        .from("meal_plan")
+        .update(patch)
+        .eq("id", entryId);
+      if (error) return errorResult(error.message);
+      return jsonResult({ success: true, entryId, updated: Object.keys(patch) });
+    },
+  );
+
+  server.registerTool(
+    "unplan_meal",
+    {
+      title: "Remove a meal plan entry",
+      description: "Delete a single meal_plan row.",
+      inputSchema: { entryId: z.string().uuid() },
+    },
+    async ({ entryId }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+
+      const { data: existing } = await supabase
+        .from("meal_plan")
+        .select("id")
+        .eq("id", entryId)
+        .eq("household_id", householdId)
+        .maybeSingle();
+      if (!existing) return errorResult("Meal plan entry not found in this household");
+
+      const { error } = await supabase
+        .from("meal_plan")
+        .delete()
+        .eq("id", entryId);
+      if (error) return errorResult(error.message);
+      return jsonResult({ success: true, entryId });
+    },
+  );
+
+  server.registerTool(
+    "get_meal_plan_sections",
+    {
+      title: "List meal plan sections",
+      description:
+        "Return this household's meal plan sections (e.g. Breakfast / Lunch / Dinner). New households are seeded with these three at 08:00, 12:00, 18:00.",
+      inputSchema: {},
+    },
+    async (_args, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      const { data, error } = await supabase
+        .from("meal_plan_sections")
+        .select("id, name, time, sort_order")
+        .eq("household_id", householdId)
+        .order("sort_order");
+      if (error) return errorResult(error.message);
+      return jsonResult({ sections: data ?? [] });
+    },
+  );
+
+  server.registerTool(
+    "add_meal_plan_section",
+    {
+      title: "Add a meal plan section",
+      description:
+        "Create a new section (e.g. 'Snack', 'Supper'). Auto-assigns sort_order at the end unless explicitly provided.",
+      inputSchema: {
+        name: z.string().min(1),
+        time: z
+          .string()
+          .regex(/^\d{2}:\d{2}(:\d{2})?$/)
+          .nullable()
+          .optional(),
+        sortOrder: z.number().int().min(0).optional(),
+      },
+    },
+    async ({ name, time, sortOrder }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+
+      let sort = sortOrder;
+      if (sort === undefined) {
+        const { data: maxRow } = await supabase
+          .from("meal_plan_sections")
+          .select("sort_order")
+          .eq("household_id", householdId)
+          .order("sort_order", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        sort = (maxRow?.sort_order ?? -1) + 1;
+      }
+
+      const { data, error } = await supabase
+        .from("meal_plan_sections")
+        .insert({
+          household_id: householdId,
+          name,
+          time: time ?? null,
+          sort_order: sort,
+        })
+        .select("id")
+        .single();
+      if (error) return errorResult(error.message);
+      return jsonResult({ success: true, sectionId: data.id });
+    },
+  );
+
+  server.registerTool(
+    "update_meal_plan_section",
+    {
+      title: "Update a meal plan section",
+      description: "Partial update of a section's name, time, or sort_order.",
+      inputSchema: {
+        sectionId: z.string().uuid(),
+        name: z.string().min(1).optional(),
+        time: z
+          .string()
+          .regex(/^\d{2}:\d{2}(:\d{2})?$/)
+          .nullable()
+          .optional(),
+        sortOrder: z.number().int().min(0).optional(),
+      },
+    },
+    async ({ sectionId, name, time, sortOrder }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+
+      const { data: existing } = await supabase
+        .from("meal_plan_sections")
+        .select("id")
+        .eq("id", sectionId)
+        .eq("household_id", householdId)
+        .maybeSingle();
+      if (!existing) return errorResult("Section not found in this household");
+
+      const patch: Record<string, unknown> = {};
+      if (name !== undefined) patch.name = name;
+      if (time !== undefined) patch.time = time;
+      if (sortOrder !== undefined) patch.sort_order = sortOrder;
+      if (Object.keys(patch).length === 0) return errorResult("No fields to update");
+
+      const { error } = await supabase
+        .from("meal_plan_sections")
+        .update(patch)
+        .eq("id", sectionId);
+      if (error) return errorResult(error.message);
+      return jsonResult({ success: true, sectionId, updated: Object.keys(patch) });
+    },
+  );
+
+  server.registerTool(
+    "remove_meal_plan_section",
+    {
+      title: "Delete a meal plan section",
+      description:
+        "Delete a section. Existing meal_plan entries that point to it have their section_id set to NULL (kept, just sectionless).",
+      inputSchema: {
+        sectionId: z.string().uuid(),
+        confirm: z.literal(true),
+      },
+    },
+    async ({ sectionId }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+
+      const { data: existing } = await supabase
+        .from("meal_plan_sections")
+        .select("id")
+        .eq("id", sectionId)
+        .eq("household_id", householdId)
+        .maybeSingle();
+      if (!existing) return errorResult("Section not found in this household");
+
+      const { error } = await supabase
+        .from("meal_plan_sections")
+        .delete()
+        .eq("id", sectionId);
+      if (error) return errorResult(error.message);
+      return jsonResult({ success: true, sectionId });
+    },
+  );
+
+  server.registerTool(
+    "copy_meal_plan_week",
+    {
+      title: "Copy meal plan week",
+      description:
+        "Copy every meal_plan entry from a 7-day window starting on fromWeekStart to the 7-day window starting on toWeekStart. Day-of-week offsets within the week are preserved. Sections, sort_order, recipe servings, product amounts, and notes are all copied. Returns the number of entries copied.",
+      inputSchema: {
+        fromWeekStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        toWeekStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      },
+    },
+    async ({ fromWeekStart, toWeekStart }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+
+      const fromStart = new Date(`${fromWeekStart}T00:00:00Z`);
+      const toStart = new Date(`${toWeekStart}T00:00:00Z`);
+      if (isNaN(fromStart.getTime()) || isNaN(toStart.getTime())) return errorResult("Invalid date");
+      const fromEnd = new Date(fromStart);
+      fromEnd.setUTCDate(fromEnd.getUTCDate() + 6);
+      const fromEndStr = fromEnd.toISOString().split("T")[0];
+
+      const { data: rows, error: readErr } = await supabase
+        .from("meal_plan")
+        .select("day, type, recipe_id, recipe_servings, product_id, product_amount, product_qu_id, note, section_id, sort_order")
+        .eq("household_id", householdId)
+        .gte("day", fromWeekStart)
+        .lte("day", fromEndStr);
+      if (readErr) return errorResult(readErr.message);
+      if (!rows || rows.length === 0) return jsonResult({ success: true, count: 0 });
+
+      const diffDays = Math.round((toStart.getTime() - fromStart.getTime()) / 86400000);
+      const inserts = (rows as Array<{
+        day: string;
+        type: string;
+        recipe_id: string | null;
+        recipe_servings: number | null;
+        product_id: string | null;
+        product_amount: number | null;
+        product_qu_id: string | null;
+        note: string | null;
+        section_id: string | null;
+        sort_order: number;
+      }>).map((r) => {
+        const srcDay = new Date(`${r.day}T00:00:00Z`);
+        srcDay.setUTCDate(srcDay.getUTCDate() + diffDays);
+        return {
+          household_id: householdId,
+          day: srcDay.toISOString().split("T")[0],
+          type: r.type,
+          recipe_id: r.recipe_id,
+          recipe_servings: r.recipe_servings,
+          product_id: r.product_id,
+          product_amount: r.product_amount,
+          product_qu_id: r.product_qu_id,
+          note: r.note,
+          section_id: r.section_id,
+          sort_order: r.sort_order,
+        };
+      });
+
+      const { error: insErr } = await supabase.from("meal_plan").insert(inserts);
+      if (insErr) return errorResult(insErr.message);
+      return jsonResult({ success: true, count: inserts.length });
+    },
+  );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   DndContext,
@@ -95,10 +95,12 @@ export function MasterDataList<T extends BaseItem>({
   const [localItems, setLocalItems] = useState<T[]>(items);
   const [saving, setSaving] = useState(false);
 
-  // Sync local items when props change
-  useEffect(() => {
+  // Sync local items when the `items` prop changes (sync during render).
+  const [lastItems, setLastItems] = useState(items);
+  if (items !== lastItems) {
+    setLastItems(items);
     setLocalItems(items);
-  }, [items]);
+  }
 
   // Sensors: pointer (mouse), touch with delay, keyboard
   const sensors = useSensors(

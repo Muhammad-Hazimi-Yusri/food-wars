@@ -27,17 +27,15 @@ type Props = {
 
 export function ApiTokenSection({ isGuest }: Props) {
   const [status, setStatus] = useState<TokenStatus | null>(null);
-  const [loading, setLoading] = useState(true);
+  // For guests we never fetch, so start as not loading.
+  const [loading, setLoading] = useState(!isGuest);
   const [generating, setGenerating] = useState(false);
   const [revoking, setRevoking] = useState(false);
   const [visibleToken, setVisibleToken] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    if (isGuest) {
-      setLoading(false);
-      return;
-    }
+    if (isGuest) return;
     fetch("/api/ai/api-token")
       .then((r) => r.json())
       .then((data) => {

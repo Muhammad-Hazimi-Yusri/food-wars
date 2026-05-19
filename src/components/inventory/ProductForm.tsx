@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -191,6 +191,54 @@ export function ProductForm({
     salt: "",
   });
 
+  // Form state (declared early so resolveBarcode and effects can reference it)
+  const [formData, setFormData] = useState(() => ({
+    // Basic
+    name: product?.name ?? "",
+    brand: product?.brand ?? "",
+    is_store_brand: product?.is_store_brand ?? false,
+    description: product?.description ?? "",
+    active: product?.active ?? true,
+    picture_file_name: product?.picture_file_name ?? null,
+    product_group_id: product?.product_group_id ?? "",
+    parent_product_id: product?.parent_product_id ?? "",
+    // Locations
+    location_id: product?.location_id ?? "",
+    default_consume_location_id: product?.default_consume_location_id ?? "",
+    shopping_location_id: product?.shopping_location_id ?? "",
+    move_on_open: product?.move_on_open ?? false,
+    // Stock
+    min_stock_amount: product?.min_stock_amount ?? 0,
+    cumulate_min_stock_amount_of_sub_products: product?.cumulate_min_stock_amount_of_sub_products ?? false,
+    treat_opened_as_out_of_stock: product?.treat_opened_as_out_of_stock ?? true,
+    // Due dates
+    due_type: product?.due_type ?? 1,
+    default_due_days: product?.default_due_days ?? 0,
+    default_due_days_after_open: product?.default_due_days_after_open ?? 0,
+    default_due_days_after_freezing: product?.default_due_days_after_freezing ?? 0,
+    default_due_days_after_thawing: product?.default_due_days_after_thawing ?? 0,
+    should_not_be_frozen: product?.should_not_be_frozen ?? false,
+    // Units
+    qu_id_stock: product?.qu_id_stock ?? "",
+    qu_id_purchase: product?.qu_id_purchase ?? "",
+    enable_tare_weight_handling: product?.enable_tare_weight_handling ?? false,
+    tare_weight: product?.tare_weight ?? 0,
+    // Misc
+    calories: product?.calories?.toString() ?? "",
+    quick_consume_amount: product?.quick_consume_amount ?? 1,
+    quick_consume_as_percentage: product?.quick_consume_as_percentage ?? false,
+    quick_open_amount: product?.quick_open_amount ?? 1,
+    default_stock_label_type: product?.default_stock_label_type ?? 0,
+    auto_reprint_stock_label: product?.auto_reprint_stock_label ?? false,
+    not_check_stock_fulfillment_for_recipes: product?.not_check_stock_fulfillment_for_recipes ?? false,
+    hide_on_stock_overview: product?.hide_on_stock_overview ?? false,
+    no_own_stock: product?.no_own_stock ?? false,
+  }));
+
+  const updateField = (field: string, value: unknown) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
   // Load existing product picture on mount (edit mode)
   useEffect(() => {
     if (product?.picture_file_name && !imageFile) {
@@ -315,64 +363,19 @@ export function ProductForm({
     }
   };
 
-  // Auto-resolve initialBarcode on mount (from ?barcode= query param)
+  // Auto-resolve initialBarcode on mount (from ?barcode= query param).
+  // Wrap the call in a microtask so the synchronous setState inside
+  // resolveBarcode happens outside the effect body, satisfying the
+  // react-hooks/set-state-in-effect rule.
   useEffect(() => {
     if (initialBarcode && mode === "create") {
-      resolveBarcode(initialBarcode);
+      queueMicrotask(() => resolveBarcode(initialBarcode));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialBarcode]);
 
   const handleBarcodeScan = (barcode: string) => {
     resolveBarcode(barcode);
-  };
-
-  // Form state
-  const [formData, setFormData] = useState(() => ({
-    // Basic
-    name: product?.name ?? "",
-    brand: product?.brand ?? "",
-    is_store_brand: product?.is_store_brand ?? false,
-    description: product?.description ?? "",
-    active: product?.active ?? true,
-    picture_file_name: product?.picture_file_name ?? null,
-    product_group_id: product?.product_group_id ?? "",
-    parent_product_id: product?.parent_product_id ?? "",
-    // Locations
-    location_id: product?.location_id ?? "",
-    default_consume_location_id: product?.default_consume_location_id ?? "",
-    shopping_location_id: product?.shopping_location_id ?? "",
-    move_on_open: product?.move_on_open ?? false,
-    // Stock
-    min_stock_amount: product?.min_stock_amount ?? 0,
-    cumulate_min_stock_amount_of_sub_products: product?.cumulate_min_stock_amount_of_sub_products ?? false,
-    treat_opened_as_out_of_stock: product?.treat_opened_as_out_of_stock ?? true,
-    // Due dates
-    due_type: product?.due_type ?? 1,
-    default_due_days: product?.default_due_days ?? 0,
-    default_due_days_after_open: product?.default_due_days_after_open ?? 0,
-    default_due_days_after_freezing: product?.default_due_days_after_freezing ?? 0,
-    default_due_days_after_thawing: product?.default_due_days_after_thawing ?? 0,
-    should_not_be_frozen: product?.should_not_be_frozen ?? false,
-    // Units
-    qu_id_stock: product?.qu_id_stock ?? "",
-    qu_id_purchase: product?.qu_id_purchase ?? "",
-    enable_tare_weight_handling: product?.enable_tare_weight_handling ?? false,
-    tare_weight: product?.tare_weight ?? 0,
-    // Misc
-    calories: product?.calories?.toString() ?? "",
-    quick_consume_amount: product?.quick_consume_amount ?? 1,
-    quick_consume_as_percentage: product?.quick_consume_as_percentage ?? false,
-    quick_open_amount: product?.quick_open_amount ?? 1,
-    default_stock_label_type: product?.default_stock_label_type ?? 0,
-    auto_reprint_stock_label: product?.auto_reprint_stock_label ?? false,
-    not_check_stock_fulfillment_for_recipes: product?.not_check_stock_fulfillment_for_recipes ?? false,
-    hide_on_stock_overview: product?.hide_on_stock_overview ?? false,
-    no_own_stock: product?.no_own_stock ?? false,
-  }));
-
-  const updateField = (field: string, value: unknown) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent, returnToList = false) => {

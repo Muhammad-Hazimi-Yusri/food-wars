@@ -111,21 +111,33 @@ export function ProductDetailModal({
 
   const product = propProduct ?? entries[0]?.product;
 
-  useEffect(() => {
-    if (product?.picture_file_name) {
-      getProductPictureSignedUrl(product.picture_file_name).then(setImageUrl);
-    } else {
-      setImageUrl(null);
-    }
-  }, [product?.picture_file_name]);
+  // Clear image / analytics state during render when inputs change, instead of
+  // calling setState synchronously inside useEffect.
+  const pictureFile = product?.picture_file_name ?? null;
+  const [lastPictureFile, setLastPictureFile] = useState(pictureFile);
+  if (pictureFile !== lastPictureFile) {
+    setLastPictureFile(pictureFile);
+    if (!pictureFile) setImageUrl(null);
+  }
 
-  useEffect(() => {
+  const [lastOpenForReset, setLastOpenForReset] = useState(open);
+  if (open !== lastOpenForReset) {
+    setLastOpenForReset(open);
     if (!open) {
       setPurchaseHistory(null);
       setConsumptionStats(null);
       setPriceView("purchase");
-      return;
     }
+  }
+
+  useEffect(() => {
+    if (pictureFile) {
+      getProductPictureSignedUrl(pictureFile).then(setImageUrl);
+    }
+  }, [pictureFile]);
+
+  useEffect(() => {
+    if (!open) return;
     const supabase = createClient();
 
     supabase.from("locations").select("*").eq("active", true).order("name")

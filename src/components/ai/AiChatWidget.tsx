@@ -76,30 +76,6 @@ export function AiChatWidget() {
       .finally(() => setConfigChecked(true));
   }, []);
 
-  // Reactively detect receiptReturn=1 (works across client-side navigations
-  // even though AiChatWidget is in the root layout and never unmounts)
-  useEffect(() => {
-    if (receiptReturnParam !== "1") return;
-    const savedState = loadReceiptState();
-    if (savedState) {
-      setRestoredReceiptState(savedState);
-    }
-    // Clean up URL
-    window.history.replaceState({}, "", window.location.pathname);
-  }, [receiptReturnParam]);
-
-  // When restored state is ready and AI is configured, open the receipt dialog
-  useEffect(() => {
-    if (restoredReceiptState && configChecked && aiConfigured) {
-      setIsOpen(true);
-      setReceiptDialogOpen(true);
-      // Refresh household data to pick up newly created products
-      dataLoadedRef.current = false;
-      loadHouseholdData();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [restoredReceiptState, configChecked, aiConfigured]);
-
   // Load household data when chat first opens
   const loadHouseholdData = useCallback(async () => {
     if (dataLoadedRef.current) return;
@@ -145,7 +121,34 @@ export function AiChatWidget() {
     }
   }, []);
 
+  // Reactively detect receiptReturn=1 (works across client-side navigations
+  // even though AiChatWidget is in the root layout and never unmounts)
   useEffect(() => {
+    if (receiptReturnParam !== "1") return;
+    const savedState = loadReceiptState();
+    if (savedState) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing external (sessionStorage) state into React on URL param change
+      setRestoredReceiptState(savedState);
+    }
+    // Clean up URL
+    window.history.replaceState({}, "", window.location.pathname);
+  }, [receiptReturnParam]);
+
+  // When restored state is ready and AI is configured, open the receipt dialog
+  useEffect(() => {
+    if (restoredReceiptState && configChecked && aiConfigured) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- coordinating dialog open with restored external state after AI config check
+      setIsOpen(true);
+      setReceiptDialogOpen(true);
+      // Refresh household data to pick up newly created products
+      dataLoadedRef.current = false;
+      loadHouseholdData();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restoredReceiptState, configChecked, aiConfigured]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- triggers async fetch that updates state from external (Supabase) source
     if (isOpen) loadHouseholdData();
   }, [isOpen, loadHouseholdData]);
 

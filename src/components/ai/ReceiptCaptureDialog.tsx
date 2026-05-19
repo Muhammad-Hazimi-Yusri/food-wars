@@ -130,6 +130,7 @@ export function ReceiptCaptureDialog({
       });
     }
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing wizard state with external (sessionStorage) restored items
     setItems(rematched);
 
     // When returning from product creation wizard

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   DndContext,
@@ -188,10 +188,12 @@ export function MealPlanSectionsManager({ open, onOpenChange, sections }: Props)
   const [newTime, setNewTime] = useState("");
   const [adding, setAdding] = useState(false);
 
-  // Sync when server re-renders
-  useEffect(() => {
+  // Sync when server re-renders (render-time sync).
+  const [lastSections, setLastSections] = useState(sections);
+  if (sections !== lastSections) {
+    setLastSections(sections);
     setLocalSections(sections);
-  }, [sections]);
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),

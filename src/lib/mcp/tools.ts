@@ -738,4 +738,524 @@ export function registerTools(server: McpServer): void {
       return jsonResult(result);
     },
   );
+
+  // ===== Recipe authoring (CRUD) =====
+
+  server.registerTool(
+    "create_recipe",
+    {
+      title: "Create a recipe",
+      description:
+        "Create a new recipe. Returns the new recipeId. Add ingredients with add_recipe_ingredient afterwards. Note: base_servings cannot be changed after creation since it defines the scaling baseline for ingredients.",
+      inputSchema: {
+        name: z.string().min(1),
+        description: z.string().nullable().optional(),
+        instructions: z.string().nullable().optional(),
+        baseServings: z.number().positive().optional(),
+        productId: z.string().uuid().nullable().optional(),
+        notCheckShoppinglist: z.boolean().optional(),
+      },
+    },
+    async ({ name, description, instructions, baseServings, productId, notCheckShoppinglist }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+
+      if (productId) {
+        const { data: prod } = await supabase
+          .from("products")
+          .select("id")
+          .eq("id", productId)
+          .eq("household_id", householdId)
+          .maybeSingle();
+        if (!prod) return errorResult("productId not found in this household");
+      }
+
+      const base = baseServings ?? 1;
+      const { data, error } = await supabase
+        .from("recipes")
+        .insert({
+          household_id: householdId,
+          name,
+          description: description ?? null,
+          instructions: instructions ?? null,
+          base_servings: base,
+          desired_servings: base,
+          product_id: productId ?? null,
+          not_check_shoppinglist: notCheckShoppinglist ?? false,
+        })
+        .select("id")
+        .single();
+      if (error) return errorResult(error.message);
+      return jsonResult({ success: true, recipeId: data.id });
+    },
+  );
+
+  server.registerTool(
+    "update_recipe",
+    {
+      title: "Update a recipe",
+      description:
+        "Partial update of a recipe's metadata. base_servings is deliberately not patchable here — changing it would invalidate the scaling of existing ingredients. To change it, recreate the recipe.",
+      inputSchema: {
+        recipeId: z.string().uuid(),
+        name: z.string().min(1).optional(),
+        description: z.string().nullable().optional(),
+        instructions: z.string().nullable().optional(),
+        desiredServings: z.number().positive().optional(),
+        productId: z.string().uuid().nullable().optional(),
+        notCheckShoppinglist: z.boolean().optional(),
+      },
+    },
+    async ({ recipeId, name, description, instructions, desiredServings, productId, notCheckShoppinglist }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+
+      const { data: existing } = await supabase
+        .from("recipes")
+        .select("id")
+        .eq("id", recipeId)
+        .eq("household_id", householdId)
+        .maybeSingle();
+      if (!existing) return errorResult("Recipe not found in this household");
+
+      if (productId !== undefined && productId !== null) {
+        const { data: prod } = await supabase
+          .from("products")
+          .select("id")
+          .eq("id", productId)
+          .eq("household_id", householdId)
+          .maybeSingle();
+        if (!prod) return errorResult("productId not found in this household");
+      }
+
+      const patch: Record<string, unknown> = {};
+      if (name !== undefined) patch.name = name;
+      if (description !== undefined) patch.description = description;
+      if (instructions !== undefined) patch.instructions = instructions;
+      if (desiredServings !== undefined) patch.desired_servings = desiredServings;
+      if (productId !== undefined) patch.product_id = productId;
+      if (notCheckShoppinglist !== undefined) patch.not_check_shoppinglist = notCheckShoppinglist;
+      if (Object.keys(patch).length === 0) return errorResult("No fields to update");
+
+      const { error } = await supabase
+        .from("recipes")
+        .update(patch)
+        .eq("id", recipeId);
+      if (error) return errorResult(error.message);
+      return jsonResult({ success: true, recipeId, updated: Object.keys(patch) });
+    },
+  );
+
+  server.registerTool(
+    "delete_recipe",
+    {
+      title: "Delete a recipe",
+      description:
+        "Permanently delete a recipe and cascade-delete its ingredients and nestings. Requires confirm: true.",
+      inputSchema: {
+        recipeId: z.string().uuid(),
+        confirm: z.literal(true),
+      },
+    },
+    async ({ recipeId }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+
+      const { data: existing } = await supabase
+        .from("recipes")
+        .select("id")
+        .eq("id", recipeId)
+        .eq("household_id", householdId)
+        .maybeSingle();
+      if (!existing) return errorResult("Recipe not found in this household");
+
+      const { error } = await supabase
+        .from("recipes")
+        .delete()
+        .eq("id", recipeId);
+      if (error) return errorResult(error.message);
+      return jsonResult({ success: true, recipeId });
+    },
+  );
+
+  server.registerTool(
+    "set_recipe_instructions",
+    {
+      title: "Set recipe instructions",
+      description:
+        "Convenience tool for replacing a recipe's instructions field (markdown text). Equivalent to update_recipe with only instructions set.",
+      inputSchema: {
+        recipeId: z.string().uuid(),
+        instructions: z.string(),
+      },
+    },
+    async ({ recipeId, instructions }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+
+      const { data: existing } = await supabase
+        .from("recipes")
+        .select("id")
+        .eq("id", recipeId)
+        .eq("household_id", householdId)
+        .maybeSingle();
+      if (!existing) return errorResult("Recipe not found in this household");
+
+      const { error } = await supabase
+        .from("recipes")
+        .update({ instructions })
+        .eq("id", recipeId);
+      if (error) return errorResult(error.message);
+      return jsonResult({ success: true, recipeId });
+    },
+  );
+
+  server.registerTool(
+    "add_recipe_ingredient",
+    {
+      title: "Add an ingredient to a recipe",
+      description:
+        "Append an ingredient to a recipe. At least one of `amount` or `variableAmount` must be set. Auto-assigns sort_order to place it at the end. If productId is set, it is validated to belong to this household.",
+      inputSchema: {
+        recipeId: z.string().uuid(),
+        productId: z.string().uuid().nullable().optional(),
+        amount: z.number().positive().nullable().optional(),
+        quId: z.string().uuid().nullable().optional(),
+        note: z.string().nullable().optional(),
+        ingredientGroup: z.string().nullable().optional(),
+        variableAmount: z.string().nullable().optional(),
+        onlyCheckSingleUnitInStock: z.boolean().optional(),
+        notCheckStockFulfillment: z.boolean().optional(),
+        priceFactor: z.number().positive().optional(),
+      },
+    },
+    async (
+      {
+        recipeId,
+        productId,
+        amount,
+        quId,
+        note,
+        ingredientGroup,
+        variableAmount,
+        onlyCheckSingleUnitInStock,
+        notCheckStockFulfillment,
+        priceFactor,
+      },
+      extra,
+    ) => {
+      const { supabase, householdId } = getCtx(extra);
+
+      if (amount == null && (variableAmount == null || variableAmount === "")) {
+        return errorResult("At least one of amount or variableAmount must be set");
+      }
+
+      const { data: recipe } = await supabase
+        .from("recipes")
+        .select("id")
+        .eq("id", recipeId)
+        .eq("household_id", householdId)
+        .maybeSingle();
+      if (!recipe) return errorResult("Recipe not found in this household");
+
+      if (productId) {
+        const { data: prod } = await supabase
+          .from("products")
+          .select("id")
+          .eq("id", productId)
+          .eq("household_id", householdId)
+          .maybeSingle();
+        if (!prod) return errorResult("productId not found in this household");
+      }
+
+      const { data: maxRow } = await supabase
+        .from("recipe_ingredients")
+        .select("sort_order")
+        .eq("household_id", householdId)
+        .eq("recipe_id", recipeId)
+        .order("sort_order", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const sort = (maxRow?.sort_order ?? -1) + 1;
+
+      const { data, error } = await supabase
+        .from("recipe_ingredients")
+        .insert({
+          household_id: householdId,
+          recipe_id: recipeId,
+          product_id: productId ?? null,
+          amount: amount ?? null,
+          qu_id: quId ?? null,
+          note: note ?? null,
+          ingredient_group: ingredientGroup ?? null,
+          variable_amount: variableAmount ?? null,
+          only_check_single_unit_in_stock: onlyCheckSingleUnitInStock ?? false,
+          not_check_stock_fulfillment: notCheckStockFulfillment ?? false,
+          price_factor: priceFactor ?? 1,
+          sort_order: sort,
+        })
+        .select("id")
+        .single();
+      if (error) return errorResult(error.message);
+      return jsonResult({ success: true, ingredientId: data.id });
+    },
+  );
+
+  server.registerTool(
+    "update_recipe_ingredient",
+    {
+      title: "Update a recipe ingredient",
+      description:
+        "Partial update of one ingredient. Pass null for amount or variableAmount to clear it, but at least one of the two must remain set on the row.",
+      inputSchema: {
+        ingredientId: z.string().uuid(),
+        productId: z.string().uuid().nullable().optional(),
+        amount: z.number().positive().nullable().optional(),
+        quId: z.string().uuid().nullable().optional(),
+        note: z.string().nullable().optional(),
+        ingredientGroup: z.string().nullable().optional(),
+        variableAmount: z.string().nullable().optional(),
+        onlyCheckSingleUnitInStock: z.boolean().optional(),
+        notCheckStockFulfillment: z.boolean().optional(),
+        priceFactor: z.number().positive().optional(),
+      },
+    },
+    async (
+      {
+        ingredientId,
+        productId,
+        amount,
+        quId,
+        note,
+        ingredientGroup,
+        variableAmount,
+        onlyCheckSingleUnitInStock,
+        notCheckStockFulfillment,
+        priceFactor,
+      },
+      extra,
+    ) => {
+      const { supabase, householdId } = getCtx(extra);
+
+      const { data: existing } = await supabase
+        .from("recipe_ingredients")
+        .select("id, amount, variable_amount")
+        .eq("id", ingredientId)
+        .eq("household_id", householdId)
+        .maybeSingle();
+      if (!existing) return errorResult("Ingredient not found in this household");
+
+      if (productId !== undefined && productId !== null) {
+        const { data: prod } = await supabase
+          .from("products")
+          .select("id")
+          .eq("id", productId)
+          .eq("household_id", householdId)
+          .maybeSingle();
+        if (!prod) return errorResult("productId not found in this household");
+      }
+
+      const patch: Record<string, unknown> = {};
+      if (productId !== undefined) patch.product_id = productId;
+      if (amount !== undefined) patch.amount = amount;
+      if (quId !== undefined) patch.qu_id = quId;
+      if (note !== undefined) patch.note = note;
+      if (ingredientGroup !== undefined) patch.ingredient_group = ingredientGroup;
+      if (variableAmount !== undefined) patch.variable_amount = variableAmount;
+      if (onlyCheckSingleUnitInStock !== undefined) patch.only_check_single_unit_in_stock = onlyCheckSingleUnitInStock;
+      if (notCheckStockFulfillment !== undefined) patch.not_check_stock_fulfillment = notCheckStockFulfillment;
+      if (priceFactor !== undefined) patch.price_factor = priceFactor;
+      if (Object.keys(patch).length === 0) return errorResult("No fields to update");
+
+      const finalAmount = "amount" in patch ? (patch.amount as number | null) : existing.amount;
+      const finalVariable = "variable_amount" in patch ? (patch.variable_amount as string | null) : existing.variable_amount;
+      if (finalAmount == null && (finalVariable == null || finalVariable === "")) {
+        return errorResult("Cannot clear both amount and variableAmount — at least one must remain set");
+      }
+
+      const { error } = await supabase
+        .from("recipe_ingredients")
+        .update(patch)
+        .eq("id", ingredientId);
+      if (error) return errorResult(error.message);
+      return jsonResult({ success: true, ingredientId, updated: Object.keys(patch) });
+    },
+  );
+
+  server.registerTool(
+    "remove_recipe_ingredient",
+    {
+      title: "Remove an ingredient from a recipe",
+      description: "Delete a single ingredient row.",
+      inputSchema: { ingredientId: z.string().uuid() },
+    },
+    async ({ ingredientId }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+
+      const { data: existing } = await supabase
+        .from("recipe_ingredients")
+        .select("id")
+        .eq("id", ingredientId)
+        .eq("household_id", householdId)
+        .maybeSingle();
+      if (!existing) return errorResult("Ingredient not found in this household");
+
+      const { error } = await supabase
+        .from("recipe_ingredients")
+        .delete()
+        .eq("id", ingredientId);
+      if (error) return errorResult(error.message);
+      return jsonResult({ success: true, ingredientId });
+    },
+  );
+
+  server.registerTool(
+    "reorder_recipe_ingredients",
+    {
+      title: "Reorder ingredients within a recipe",
+      description:
+        "Reassign sort_order to match the supplied id list (sort_order = array index). All ids must belong to the given recipe.",
+      inputSchema: {
+        recipeId: z.string().uuid(),
+        ingredientIds: z.array(z.string().uuid()).min(1),
+      },
+    },
+    async ({ recipeId, ingredientIds }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+
+      const { data: rows } = await supabase
+        .from("recipe_ingredients")
+        .select("id")
+        .eq("household_id", householdId)
+        .eq("recipe_id", recipeId);
+      const owned = new Set((rows ?? []).map((r: { id: string }) => r.id));
+      for (const id of ingredientIds) {
+        if (!owned.has(id)) return errorResult(`Ingredient ${id} does not belong to recipe ${recipeId}`);
+      }
+
+      for (let i = 0; i < ingredientIds.length; i++) {
+        const { error } = await supabase
+          .from("recipe_ingredients")
+          .update({ sort_order: i })
+          .eq("id", ingredientIds[i]);
+        if (error) return errorResult(error.message);
+      }
+      return jsonResult({ success: true, count: ingredientIds.length });
+    },
+  );
+
+  server.registerTool(
+    "add_recipe_nesting",
+    {
+      title: "Nest a recipe as an ingredient of another recipe",
+      description:
+        "Link `includesRecipeId` as a sub-recipe of `recipeId` at the given servings. Cycles are rejected (if includesRecipeId already transitively includes recipeId, the call fails).",
+      inputSchema: {
+        recipeId: z.string().uuid(),
+        includesRecipeId: z.string().uuid(),
+        servings: z.number().positive(),
+      },
+    },
+    async ({ recipeId, includesRecipeId, servings }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+
+      if (recipeId === includesRecipeId) return errorResult("A recipe cannot nest itself");
+
+      const { data: rows } = await supabase
+        .from("recipes")
+        .select("id")
+        .eq("household_id", householdId)
+        .in("id", [recipeId, includesRecipeId]);
+      const ids = new Set((rows ?? []).map((r: { id: string }) => r.id));
+      if (!ids.has(recipeId)) return errorResult("recipeId not found in this household");
+      if (!ids.has(includesRecipeId)) return errorResult("includesRecipeId not found in this household");
+
+      // Cycle detection: ensure recipeId is NOT reachable from includesRecipeId via existing nestings.
+      const { data: allNestings } = await supabase
+        .from("recipe_nestings")
+        .select("recipe_id, includes_recipe_id")
+        .eq("household_id", householdId);
+      const adj = new Map<string, string[]>();
+      for (const n of (allNestings ?? []) as Array<{ recipe_id: string; includes_recipe_id: string }>) {
+        const list = adj.get(n.recipe_id) ?? [];
+        list.push(n.includes_recipe_id);
+        adj.set(n.recipe_id, list);
+      }
+      const visited = new Set<string>();
+      const stack = [includesRecipeId];
+      while (stack.length > 0) {
+        const cur = stack.pop() as string;
+        if (cur === recipeId) return errorResult("Cycle detected: includesRecipeId already transitively contains recipeId");
+        if (visited.has(cur)) continue;
+        visited.add(cur);
+        for (const next of adj.get(cur) ?? []) stack.push(next);
+      }
+
+      const { data, error } = await supabase
+        .from("recipe_nestings")
+        .insert({
+          household_id: householdId,
+          recipe_id: recipeId,
+          includes_recipe_id: includesRecipeId,
+          servings,
+        })
+        .select("id")
+        .single();
+      if (error) return errorResult(error.message);
+      return jsonResult({ success: true, nestingId: data.id });
+    },
+  );
+
+  server.registerTool(
+    "update_recipe_nesting",
+    {
+      title: "Update a recipe nesting",
+      description: "Change the servings for a sub-recipe nesting.",
+      inputSchema: {
+        nestingId: z.string().uuid(),
+        servings: z.number().positive(),
+      },
+    },
+    async ({ nestingId, servings }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+
+      const { data: existing } = await supabase
+        .from("recipe_nestings")
+        .select("id")
+        .eq("id", nestingId)
+        .eq("household_id", householdId)
+        .maybeSingle();
+      if (!existing) return errorResult("Nesting not found in this household");
+
+      const { error } = await supabase
+        .from("recipe_nestings")
+        .update({ servings })
+        .eq("id", nestingId);
+      if (error) return errorResult(error.message);
+      return jsonResult({ success: true, nestingId });
+    },
+  );
+
+  server.registerTool(
+    "remove_recipe_nesting",
+    {
+      title: "Remove a recipe nesting",
+      description: "Unlink a sub-recipe from its parent.",
+      inputSchema: { nestingId: z.string().uuid() },
+    },
+    async ({ nestingId }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+
+      const { data: existing } = await supabase
+        .from("recipe_nestings")
+        .select("id")
+        .eq("id", nestingId)
+        .eq("household_id", householdId)
+        .maybeSingle();
+      if (!existing) return errorResult("Nesting not found in this household");
+
+      const { error } = await supabase
+        .from("recipe_nestings")
+        .delete()
+        .eq("id", nestingId);
+      if (error) return errorResult(error.message);
+      return jsonResult({ success: true, nestingId });
+    },
+  );
 }

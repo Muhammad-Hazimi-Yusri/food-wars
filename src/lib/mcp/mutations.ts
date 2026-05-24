@@ -574,3 +574,212 @@ export async function consumeRecipeMcp(
     return { success: false, error: err instanceof Error ? err.message : "recipe consume failed" };
   }
 }
+
+// ===========================================================================
+// Undo (service-role mirror of the browser undoTransaction dispatcher in
+// src/lib/stock-actions.ts). The browser handlers rely on auth.getUser() + RLS
+// and take no householdId; these take an explicit householdId and filter every
+// query by it, per this module's safety invariant. Keep behaviour in sync with
+// the originals if those change.
+// ===========================================================================
+
+type UndoResult = { success: true } | { success: false; error: string };
+
+type StockLogRow = {
+  household_id: string;
+  product_id: string;
+  amount: number;
+  transaction_type: string;
+  best_before_date: string | null;
+  purchased_date: string | null;
+  price: number | null;
+  location_id: string | null;
+  shopping_location_id: string | null;
+  stock_id: string | null;
+  stock_entry_id: string | null;
+  opened_date: string | null;
+  note: string | null;
+};
+
+async function fetchUndoLogRows(
+  supabase: Supa,
+  householdId: string,
+  correlationId: string,
+): Promise<StockLogRow[]> {
+  const { data, error } = await supabase
+    .from("stock_log")
+    .select("*")
+    .eq("household_id", householdId)
+    .eq("correlation_id", correlationId)
+    .eq("undone", false);
+  if (error) throw error;
+  return (data ?? []) as StockLogRow[];
+}
+
+async function markUndone(
+  supabase: Supa,
+  householdId: string,
+  correlationId: string,
+  transactionType?: string,
+): Promise<void> {
+  let q = supabase
+    .from("stock_log")
+    .update({ undone: true, undone_timestamp: new Date().toISOString() })
+    .eq("household_id", householdId)
+    .eq("correlation_id", correlationId);
+  if (transactionType) q = q.eq("transaction_type", transactionType);
+  const { error } = await q;
+  if (error) throw error;
+}
+
+async function restoreConsumedRows(
+  supabase: Supa,
+  householdId: string,
+  rows: StockLogRow[],
+): Promise<void> {
+  for (const row of rows) {
+    if (row.stock_entry_id) {
+      const { data: existing, error: getError } = await supabase
+        .from("stock_entries")
+        .select("amount")
+        .eq("id", row.stock_entry_id)
+        .eq("household_id", householdId)
+        .single();
+      if (getError) throw getError;
+      const { error: updateError } = await supabase
+        .from("stock_entries")
+        .update({ amount: existing.amount + row.amount })
+        .eq("id", row.stock_entry_id)
+        .eq("household_id", householdId);
+      if (updateError) throw updateError;
+    } else {
+      const { error: insertError } = await supabase.from("stock_entries").insert({
+        household_id: householdId,
+        product_id: row.product_id,
+        amount: row.amount,
+        best_before_date: row.best_before_date,
+        purchased_date: row.purchased_date,
+        price: row.price,
+        location_id: row.location_id,
+        shopping_location_id: row.shopping_location_id,
+        stock_id: row.stock_id,
+        open: row.opened_date !== null,
+        opened_date: row.opened_date,
+        note: row.note,
+      });
+      if (insertError) throw insertError;
+    }
+  }
+}
+
+export async function undoTransactionMcp(
+  supabase: Supa,
+  householdId: string,
+  correlationId: string,
+  transactionType: string,
+): Promise<UndoResult> {
+  try {
+    const rows = await fetchUndoLogRows(supabase, householdId, correlationId);
+    if (rows.length === 0) return { success: false, error: "Nothing to undo (already undone or not found in this household)" };
+
+    switch (transactionType) {
+      case "consume":
+      case "spoiled": {
+        await restoreConsumedRows(supabase, householdId, rows);
+        await markUndone(supabase, householdId, correlationId);
+        return { success: true };
+      }
+      case "product-opened": {
+        for (const row of rows) {
+          if (!row.stock_entry_id) continue;
+          const { error } = await supabase
+            .from("stock_entries")
+            .update({
+              open: false,
+              opened_date: null,
+              best_before_date: row.best_before_date,
+              location_id: row.location_id,
+            })
+            .eq("id", row.stock_entry_id)
+            .eq("household_id", householdId);
+          if (error) throw error;
+        }
+        await markUndone(supabase, householdId, correlationId);
+        return { success: true };
+      }
+      case "transfer-from": {
+        const fromRow = rows.find((r) => r.transaction_type === "transfer-from");
+        if (!fromRow || !fromRow.stock_entry_id) return { success: false, error: "Transfer-from log not found" };
+        const { error } = await supabase
+          .from("stock_entries")
+          .update({ location_id: fromRow.location_id, best_before_date: fromRow.best_before_date })
+          .eq("id", fromRow.stock_entry_id)
+          .eq("household_id", householdId);
+        if (error) throw error;
+        await markUndone(supabase, householdId, correlationId);
+        return { success: true };
+      }
+      case "inventory-correction": {
+        let direction: string;
+        try {
+          direction = JSON.parse(rows[0].note ?? "{}").direction;
+        } catch {
+          return { success: false, error: "Invalid correction log data" };
+        }
+        if (direction === "decrease") {
+          await restoreConsumedRows(supabase, householdId, rows);
+        } else if (direction === "increase") {
+          const row = rows[0];
+          if (!row.stock_entry_id) return { success: false, error: "Correction entry not found" };
+          const { data: existing, error: getError } = await supabase
+            .from("stock_entries")
+            .select("amount")
+            .eq("id", row.stock_entry_id)
+            .eq("household_id", householdId)
+            .single();
+          if (getError) throw getError;
+          const restoredAmount = existing.amount - row.amount;
+          if (restoredAmount <= 0) {
+            const { error: deleteError } = await supabase
+              .from("stock_entries")
+              .delete()
+              .eq("id", row.stock_entry_id)
+              .eq("household_id", householdId);
+            if (deleteError) throw deleteError;
+          } else {
+            const { error: updateError } = await supabase
+              .from("stock_entries")
+              .update({ amount: restoredAmount })
+              .eq("id", row.stock_entry_id)
+              .eq("household_id", householdId);
+            if (updateError) throw updateError;
+          }
+        } else {
+          return { success: false, error: "Unknown correction direction" };
+        }
+        await markUndone(supabase, householdId, correlationId);
+        return { success: true };
+      }
+      case "purchase": {
+        // Mark undone first (mirrors browser ordering), then delete entries.
+        await markUndone(supabase, householdId, correlationId, "purchase");
+        for (const row of rows) {
+          if (row.transaction_type !== "purchase") continue;
+          if (row.stock_entry_id) {
+            const { error: deleteError } = await supabase
+              .from("stock_entries")
+              .delete()
+              .eq("id", row.stock_entry_id)
+              .eq("household_id", householdId);
+            if (deleteError) throw deleteError;
+          }
+        }
+        return { success: true };
+      }
+      default:
+        return { success: false, error: `Cannot undo transaction type '${transactionType}'` };
+    }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "undo failed" };
+  }
+}

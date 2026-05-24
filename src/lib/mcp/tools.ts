@@ -151,6 +151,18 @@ async function mdDelete(
   return jsonResult({ success: true, deleted: true });
 }
 
+// ISO week label (e.g. "2026-W21"), matching the waste report's grouping in
+// src/lib/analytics-actions.ts.
+function isoWeekLabel(dateStr: string): string {
+  const d = new Date(dateStr);
+  d.setHours(0, 0, 0, 0);
+  const thursday = new Date(d);
+  thursday.setDate(d.getDate() + 4 - (d.getDay() || 7));
+  const yearStart = new Date(thursday.getFullYear(), 0, 1);
+  const week = Math.ceil(((thursday.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  return `${thursday.getFullYear()}-W${String(week).padStart(2, "0")}`;
+}
+
 async function fetchAiSettings(
   supabase: ReturnType<typeof createServiceClient>,
   householdId: string,
@@ -2557,6 +2569,206 @@ export function registerTools(server: McpServer): void {
     async ({ productGroupId }, extra) => {
       const { supabase, householdId } = getCtx(extra);
       return mdDelete(supabase, householdId, "product_groups", "Product group", productGroupId);
+    },
+  );
+
+  // ===== Reports (read-only summaries) =====
+  // Service-role mirrors of src/lib/analytics-actions.ts (which are session +
+  // RLS based). Every query filters by householdId explicitly.
+
+  server.registerTool(
+    "get_waste_report",
+    {
+      title: "Waste report",
+      description:
+        "Summary of stock thrown away (stock_log rows flagged spoiled). Returns total item count, total value wasted, a per-ISO-week breakdown, and a per-product-group breakdown. Optional windowDays limits to the last N days.",
+      inputSchema: { windowDays: z.number().int().positive().optional() },
+    },
+    async ({ windowDays }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      let q = supabase
+        .from("stock_log")
+        .select("created_at, amount, price, product:products(name, product_group:product_groups(name))")
+        .eq("household_id", householdId)
+        .eq("spoiled", true)
+        .eq("undone", false)
+        .order("created_at", { ascending: false })
+        .limit(2000);
+      if (windowDays) {
+        const since = new Date();
+        since.setDate(since.getDate() - windowDays);
+        q = q.gte("created_at", since.toISOString());
+      }
+      const { data, error } = await q;
+      if (error) return errorResult(error.message);
+      const rows = (data ?? []) as unknown as Array<{
+        created_at: string;
+        amount: number;
+        price: number | null;
+        product: { name: string; product_group: { name: string } | null } | { name: string; product_group: { name: string } | null }[] | null;
+      }>;
+
+      const totalItems = rows.length;
+      let totalValueWasted = 0;
+      const weekMap: Record<string, { count: number; value: number }> = {};
+      const groupMap: Record<string, { count: number; value: number }> = {};
+      for (const r of rows) {
+        const val = r.price != null ? r.price * r.amount : 0;
+        totalValueWasted += val;
+        const week = isoWeekLabel(r.created_at);
+        (weekMap[week] ??= { count: 0, value: 0 });
+        weekMap[week].count++;
+        weekMap[week].value += val;
+        const prod = Array.isArray(r.product) ? r.product[0] : r.product;
+        const groupName = prod?.product_group?.name ?? "Uncategorised";
+        (groupMap[groupName] ??= { count: 0, value: 0 });
+        groupMap[groupName].count++;
+        groupMap[groupName].value += val;
+      }
+      const byWeek = Object.entries(weekMap).map(([week, v]) => ({ week, ...v })).sort((a, b) => a.week.localeCompare(b.week));
+      const byGroup = Object.entries(groupMap).map(([groupName, v]) => ({ groupName, ...v })).sort((a, b) => b.count - a.count);
+      return jsonResult({ totalItems, totalValueWasted, byWeek, byGroup });
+    },
+  );
+
+  server.registerTool(
+    "get_spending_report",
+    {
+      title: "Spending report",
+      description:
+        "Purchase spend, merging stock_log purchase rows (v0.13.1+) with older stock_entries not represented in the log (deduped by stock_entry_id). Returns total spend plus breakdowns by product group and by store. Optional windowDays limits the window.",
+      inputSchema: { windowDays: z.number().int().positive().optional() },
+    },
+    async ({ windowDays }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      const since = windowDays ? new Date(Date.now() - windowDays * 86400000) : null;
+
+      let logQuery = supabase
+        .from("stock_log")
+        .select("amount, price, stock_entry_id, shopping_location:shopping_locations(name), product:products(product_group:product_groups(name))")
+        .eq("household_id", householdId)
+        .eq("transaction_type", "purchase")
+        .eq("undone", false)
+        .limit(5000);
+      if (since) logQuery = logQuery.gte("created_at", since.toISOString());
+      const { data: logData, error: logErr } = await logQuery;
+      if (logErr) return errorResult(logErr.message);
+      const logRows = (logData ?? []) as unknown as Array<{ amount: number; price: number | null; stock_entry_id: string | null; shopping_location: { name: string } | { name: string }[] | null; product: { product_group: { name: string } | null } | { product_group: { name: string } | null }[] | null }>;
+      const loggedEntryIds = new Set(logRows.map((r) => r.stock_entry_id).filter(Boolean));
+
+      let entryQuery = supabase
+        .from("stock_entries")
+        .select("id, amount, price, purchased_date, shopping_location:shopping_locations(name), product:products(product_group:product_groups(name))")
+        .eq("household_id", householdId)
+        .limit(5000);
+      if (since) entryQuery = entryQuery.gte("purchased_date", since.toISOString().slice(0, 10));
+      const { data: entryData, error: entryErr } = await entryQuery;
+      if (entryErr) return errorResult(entryErr.message);
+      const unlogged = ((entryData ?? []) as unknown as Array<{ id: string; amount: number; price: number | null; shopping_location: { name: string } | { name: string }[] | null; product: { product_group: { name: string } | null } | { product_group: { name: string } | null }[] | null }>).filter((e) => !loggedEntryIds.has(e.id));
+
+      let totalSpend = 0;
+      const groupMap: Record<string, number> = {};
+      const storeMap: Record<string, number> = {};
+      const tally = (
+        price: number | null,
+        amount: number,
+        product: { product_group: { name: string } | null } | { product_group: { name: string } | null }[] | null,
+        store: { name: string } | { name: string }[] | null,
+      ) => {
+        if (price == null) return;
+        const spend = price * amount;
+        totalSpend += spend;
+        const prod = Array.isArray(product) ? product[0] : product;
+        const groupName = prod?.product_group?.name ?? "Uncategorised";
+        groupMap[groupName] = (groupMap[groupName] ?? 0) + spend;
+        const st = Array.isArray(store) ? store[0] : store;
+        const storeName = st?.name ?? "Unknown store";
+        storeMap[storeName] = (storeMap[storeName] ?? 0) + spend;
+      };
+      for (const r of logRows) tally(r.price, r.amount, r.product, r.shopping_location);
+      for (const e of unlogged) tally(e.price, e.amount, e.product, e.shopping_location);
+
+      const byGroup = Object.entries(groupMap).map(([groupName, total]) => ({ groupName, total })).sort((a, b) => b.total - a.total);
+      const byStore = Object.entries(storeMap).map(([storeName, total]) => ({ storeName, total })).sort((a, b) => b.total - a.total);
+      return jsonResult({ totalSpend, byGroup, byStore });
+    },
+  );
+
+  server.registerTool(
+    "get_stock_value_summary",
+    {
+      title: "Stock value summary",
+      description:
+        "Current on-hand stock value (amount × unit price) for entries with amount > 0, grouped by product group. Returns total value and per-group value + item count.",
+      inputSchema: {},
+    },
+    async (_args, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      const { data, error } = await supabase
+        .from("stock_entries")
+        .select("amount, price, product:products(product_group:product_groups(name))")
+        .eq("household_id", householdId)
+        .gt("amount", 0)
+        .limit(5000);
+      if (error) return errorResult(error.message);
+      const rows = (data ?? []) as unknown as Array<{ amount: number; price: number | null; product: { product_group: { name: string } | null } | { product_group: { name: string } | null }[] | null }>;
+      let totalValue = 0;
+      const groupMap: Record<string, { value: number; itemCount: number }> = {};
+      for (const r of rows) {
+        if (r.price == null) continue;
+        const value = r.price * r.amount;
+        totalValue += value;
+        const prod = Array.isArray(r.product) ? r.product[0] : r.product;
+        const groupName = prod?.product_group?.name ?? "Uncategorised";
+        (groupMap[groupName] ??= { value: 0, itemCount: 0 });
+        groupMap[groupName].value += value;
+        groupMap[groupName].itemCount += 1;
+      }
+      const byGroup = Object.entries(groupMap).map(([groupName, v]) => ({ groupName, ...v })).sort((a, b) => b.value - a.value);
+      return jsonResult({ totalValue, byGroup });
+    },
+  );
+
+  server.registerTool(
+    "get_expiring_summary",
+    {
+      title: "Expiring summary (counts)",
+      description:
+        "Headline counts and value of stock past or near its best-before date — lighter than list_expiring (which returns the full item lists). Buckets: expired (already past), dueSoon (within daysAhead, default 7). Ignores the 2999-12-31 never-expires sentinel. Note: best-before and use-by are treated the same here, so shelf-stable items past their best-before still count.",
+      inputSchema: { daysAhead: z.number().int().min(0).optional() },
+    },
+    async ({ daysAhead }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      const ahead = daysAhead ?? 7;
+      const today = new Date();
+      const todayStr = today.toISOString().slice(0, 10);
+      const cutoff = new Date(today);
+      cutoff.setDate(cutoff.getDate() + ahead);
+      const cutoffStr = cutoff.toISOString().slice(0, 10);
+
+      const { data, error } = await supabase
+        .from("stock_entries")
+        .select("amount, price, best_before_date")
+        .eq("household_id", householdId)
+        .gt("amount", 0)
+        .not("best_before_date", "is", null)
+        .lte("best_before_date", cutoffStr)
+        .neq("best_before_date", "2999-12-31");
+      if (error) return errorResult(error.message);
+      const rows = (data ?? []) as Array<{ amount: number; price: number | null; best_before_date: string }>;
+
+      let expiredCount = 0, dueSoonCount = 0, expiredValue = 0, dueSoonValue = 0;
+      for (const r of rows) {
+        const val = r.price != null ? r.price * r.amount : 0;
+        if (r.best_before_date < todayStr) { expiredCount++; expiredValue += val; }
+        else { dueSoonCount++; dueSoonValue += val; }
+      }
+      return jsonResult({
+        today: todayStr,
+        daysAhead: ahead,
+        expired: { count: expiredCount, value: expiredValue },
+        dueSoon: { count: dueSoonCount, value: dueSoonValue },
+      });
     },
   );
 }

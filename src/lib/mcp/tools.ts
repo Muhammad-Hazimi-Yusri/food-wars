@@ -52,6 +52,30 @@ function errorResult(message: string) {
   };
 }
 
+/**
+ * Validate that each non-null FK id exists within this household. Service-role
+ * bypasses RLS, and the DB FK constraints don't enforce household scoping, so
+ * an id from another household would otherwise satisfy the constraint and leak
+ * a cross-household reference. Returns an error message, or null if all OK.
+ */
+async function assertOwned(
+  supabase: ReturnType<typeof createServiceClient>,
+  householdId: string,
+  checks: Array<{ table: string; id: string | null | undefined; label: string }>,
+): Promise<string | null> {
+  for (const c of checks) {
+    if (!c.id) continue;
+    const { data } = await supabase
+      .from(c.table)
+      .select("id")
+      .eq("id", c.id)
+      .eq("household_id", householdId)
+      .maybeSingle();
+    if (!data) return `${c.label} not found in this household`;
+  }
+  return null;
+}
+
 async function fetchAiSettings(
   supabase: ReturnType<typeof createServiceClient>,
   householdId: string,
@@ -1839,6 +1863,415 @@ export function registerTools(server: McpServer): void {
       const result = await undoTransactionMcp(supabase, householdId, correlationId, transactionType);
       if (!result.success) return errorResult(result.error);
       return jsonResult({ success: true, correlationId, transactionType });
+    },
+  );
+
+  // ===== Products (CRUD + barcodes + unit conversions) =====
+
+  const productWritableFields = {
+    name: z.string().min(1).optional(),
+    description: z.string().nullable().optional(),
+    active: z.boolean().optional(),
+    brand: z.string().nullable().optional(),
+    isStoreBrand: z.boolean().optional(),
+    locationId: z.string().uuid().nullable().optional(),
+    defaultConsumeLocationId: z.string().uuid().nullable().optional(),
+    shoppingLocationId: z.string().uuid().nullable().optional(),
+    moveOnOpen: z.boolean().optional(),
+    productGroupId: z.string().uuid().nullable().optional(),
+    quIdStock: z.string().uuid().nullable().optional(),
+    quIdPurchase: z.string().uuid().nullable().optional(),
+    minStockAmount: z.number().min(0).optional(),
+    quickConsumeAmount: z.number().positive().optional(),
+    quickOpenAmount: z.number().positive().optional(),
+    treatOpenedAsOutOfStock: z.boolean().optional(),
+    dueType: z.union([z.literal(1), z.literal(2)]).optional(),
+    defaultDueDays: z.number().int().optional(),
+    defaultDueDaysAfterOpen: z.number().int().optional(),
+    defaultDueDaysAfterFreezing: z.number().int().optional(),
+    defaultDueDaysAfterThawing: z.number().int().optional(),
+    shouldNotBeFrozen: z.boolean().optional(),
+    calories: z.number().int().nullable().optional(),
+    parentProductId: z.string().uuid().nullable().optional(),
+    noOwnStock: z.boolean().optional(),
+    hideOnStockOverview: z.boolean().optional(),
+  };
+
+  // Maps camelCase tool inputs → snake_case columns. Only defined keys are copied.
+  type ProductInput = {
+    name?: string;
+    description?: string | null;
+    active?: boolean;
+    brand?: string | null;
+    isStoreBrand?: boolean;
+    locationId?: string | null;
+    defaultConsumeLocationId?: string | null;
+    shoppingLocationId?: string | null;
+    moveOnOpen?: boolean;
+    productGroupId?: string | null;
+    quIdStock?: string | null;
+    quIdPurchase?: string | null;
+    minStockAmount?: number;
+    quickConsumeAmount?: number;
+    quickOpenAmount?: number;
+    treatOpenedAsOutOfStock?: boolean;
+    dueType?: 1 | 2;
+    defaultDueDays?: number;
+    defaultDueDaysAfterOpen?: number;
+    defaultDueDaysAfterFreezing?: number;
+    defaultDueDaysAfterThawing?: number;
+    shouldNotBeFrozen?: boolean;
+    calories?: number | null;
+    parentProductId?: string | null;
+    noOwnStock?: boolean;
+    hideOnStockOverview?: boolean;
+  };
+
+  function buildProductPatch(input: ProductInput): Record<string, unknown> {
+    const map: Array<[keyof ProductInput, string]> = [
+      ["name", "name"],
+      ["description", "description"],
+      ["active", "active"],
+      ["brand", "brand"],
+      ["isStoreBrand", "is_store_brand"],
+      ["locationId", "location_id"],
+      ["defaultConsumeLocationId", "default_consume_location_id"],
+      ["shoppingLocationId", "shopping_location_id"],
+      ["moveOnOpen", "move_on_open"],
+      ["productGroupId", "product_group_id"],
+      ["quIdStock", "qu_id_stock"],
+      ["quIdPurchase", "qu_id_purchase"],
+      ["minStockAmount", "min_stock_amount"],
+      ["quickConsumeAmount", "quick_consume_amount"],
+      ["quickOpenAmount", "quick_open_amount"],
+      ["treatOpenedAsOutOfStock", "treat_opened_as_out_of_stock"],
+      ["dueType", "due_type"],
+      ["defaultDueDays", "default_due_days"],
+      ["defaultDueDaysAfterOpen", "default_due_days_after_open"],
+      ["defaultDueDaysAfterFreezing", "default_due_days_after_freezing"],
+      ["defaultDueDaysAfterThawing", "default_due_days_after_thawing"],
+      ["shouldNotBeFrozen", "should_not_be_frozen"],
+      ["calories", "calories"],
+      ["parentProductId", "parent_product_id"],
+      ["noOwnStock", "no_own_stock"],
+      ["hideOnStockOverview", "hide_on_stock_overview"],
+    ];
+    const patch: Record<string, unknown> = {};
+    for (const [inKey, col] of map) {
+      if (input[inKey] !== undefined) patch[col] = input[inKey];
+    }
+    return patch;
+  }
+
+  async function checkProductFks(
+    supabase: ReturnType<typeof createServiceClient>,
+    householdId: string,
+    input: ProductInput,
+  ): Promise<string | null> {
+    return assertOwned(supabase, householdId, [
+      { table: "locations", id: input.locationId, label: "locationId" },
+      { table: "locations", id: input.defaultConsumeLocationId, label: "defaultConsumeLocationId" },
+      { table: "shopping_locations", id: input.shoppingLocationId, label: "shoppingLocationId" },
+      { table: "product_groups", id: input.productGroupId, label: "productGroupId" },
+      { table: "quantity_units", id: input.quIdStock, label: "quIdStock" },
+      { table: "quantity_units", id: input.quIdPurchase, label: "quIdPurchase" },
+      { table: "products", id: input.parentProductId, label: "parentProductId" },
+    ]);
+  }
+
+  server.registerTool(
+    "create_product",
+    {
+      title: "Create a product",
+      description:
+        "Create a new product (master data). Only name is required; everything else falls back to schema defaults. FK fields (locations, units, group, parent) are validated to belong to this household. Returns the new productId.",
+      inputSchema: { ...productWritableFields, name: z.string().min(1) },
+    },
+    async (input, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      const fkErr = await checkProductFks(supabase, householdId, input as ProductInput);
+      if (fkErr) return errorResult(fkErr);
+
+      const patch = buildProductPatch(input as ProductInput);
+      const { data, error } = await supabase
+        .from("products")
+        .insert({ household_id: householdId, ...patch })
+        .select("id")
+        .single();
+      if (error) return errorResult(error.message);
+      return jsonResult({ success: true, productId: data.id });
+    },
+  );
+
+  server.registerTool(
+    "update_product",
+    {
+      title: "Update a product",
+      description:
+        "Partial update of a product's master-data fields. Use deactivate_product to soft-delete; this tool can also set active:true/false directly. FK fields are validated to belong to this household.",
+      inputSchema: { productId: z.string().uuid(), ...productWritableFields },
+    },
+    async (input, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      const { productId, ...rest } = input as ProductInput & { productId: string };
+
+      const { data: existing } = await supabase
+        .from("products")
+        .select("id")
+        .eq("id", productId)
+        .eq("household_id", householdId)
+        .maybeSingle();
+      if (!existing) return errorResult("Product not found in this household");
+
+      const fkErr = await checkProductFks(supabase, householdId, rest);
+      if (fkErr) return errorResult(fkErr);
+
+      const patch = buildProductPatch(rest);
+      if (Object.keys(patch).length === 0) return errorResult("No fields to update");
+
+      const { error } = await supabase.from("products").update(patch).eq("id", productId);
+      if (error) return errorResult(error.message);
+      return jsonResult({ success: true, productId, updated: Object.keys(patch) });
+    },
+  );
+
+  server.registerTool(
+    "deactivate_product",
+    {
+      title: "Deactivate a product (soft delete)",
+      description:
+        "Set active=false. The product disappears from active product lists but its stock entries and history are preserved. Reversible via update_product(active:true). Prefer this over delete_product.",
+      inputSchema: { productId: z.string().uuid() },
+    },
+    async ({ productId }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      const { data: existing } = await supabase
+        .from("products")
+        .select("id")
+        .eq("id", productId)
+        .eq("household_id", householdId)
+        .maybeSingle();
+      if (!existing) return errorResult("Product not found in this household");
+
+      const { error } = await supabase.from("products").update({ active: false }).eq("id", productId);
+      if (error) return errorResult(error.message);
+      return jsonResult({ success: true, productId, active: false });
+    },
+  );
+
+  server.registerTool(
+    "delete_product",
+    {
+      title: "Delete a product (hard delete)",
+      description:
+        "Permanently delete a product. Stock entries' product_id is set to NULL (they become orphans, surfaced by find_data_issues), and barcodes / conversions / recipe-ingredient links cascade or null per their FKs. Prefer deactivate_product unless you really mean to erase it. Requires confirm: true.",
+      inputSchema: { productId: z.string().uuid(), confirm: z.literal(true) },
+    },
+    async ({ productId }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      const { data: existing } = await supabase
+        .from("products")
+        .select("id")
+        .eq("id", productId)
+        .eq("household_id", householdId)
+        .maybeSingle();
+      if (!existing) return errorResult("Product not found in this household");
+
+      const { error } = await supabase.from("products").delete().eq("id", productId);
+      if (error) return errorResult(error.message);
+      return jsonResult({ success: true, productId, deleted: true });
+    },
+  );
+
+  server.registerTool(
+    "get_product",
+    {
+      title: "Get a product with related data",
+      description:
+        "Full product record plus its barcodes, product-specific unit conversions, and nutrition row (if any).",
+      inputSchema: { productId: z.string().uuid() },
+    },
+    async ({ productId }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      const { data: product } = await supabase
+        .from("products")
+        .select("*")
+        .eq("id", productId)
+        .eq("household_id", householdId)
+        .maybeSingle();
+      if (!product) return errorResult("Product not found in this household");
+
+      const [barcodes, conversions, nutrition] = await Promise.all([
+        supabase.from("product_barcodes").select("*").eq("household_id", householdId).eq("product_id", productId),
+        supabase.from("quantity_unit_conversions").select("*").eq("household_id", householdId).eq("product_id", productId),
+        supabase.from("product_nutrition").select("*").eq("household_id", householdId).eq("product_id", productId).maybeSingle(),
+      ]);
+      return jsonResult({
+        product,
+        barcodes: barcodes.data ?? [],
+        conversions: conversions.data ?? [],
+        nutrition: nutrition.data ?? null,
+      });
+    },
+  );
+
+  server.registerTool(
+    "list_products",
+    {
+      title: "List products",
+      description:
+        "List master-data products with optional filters. Returns id, name, brand, active, group/location ids, and stock unit. For current stock levels use list_inventory instead.",
+      inputSchema: {
+        search: z.string().optional(),
+        activeOnly: z.boolean().optional(),
+        productGroupId: z.string().uuid().optional(),
+        locationId: z.string().uuid().optional(),
+        limit: z.number().int().positive().max(200).optional(),
+      },
+    },
+    async ({ search, activeOnly, productGroupId, locationId, limit }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      let q = supabase
+        .from("products")
+        .select("id, name, brand, active, product_group_id, location_id, qu_id_stock")
+        .eq("household_id", householdId);
+      if (activeOnly !== false) q = q.eq("active", true);
+      if (productGroupId) q = q.eq("product_group_id", productGroupId);
+      if (locationId) q = q.eq("location_id", locationId);
+      if (search) q = q.ilike("name", `%${search}%`);
+
+      const { data, error } = await q.order("name").limit(limit ?? 100);
+      if (error) return errorResult(error.message);
+      return jsonResult({ products: data ?? [] });
+    },
+  );
+
+  server.registerTool(
+    "add_barcode",
+    {
+      title: "Add a barcode to a product",
+      description:
+        "Attach a barcode to a product, optionally with the purchase unit, pack amount, store, and last price. FK fields are validated to belong to this household.",
+      inputSchema: {
+        productId: z.string().uuid(),
+        barcode: z.string().min(1),
+        quId: z.string().uuid().nullable().optional(),
+        amount: z.number().positive().nullable().optional(),
+        shoppingLocationId: z.string().uuid().nullable().optional(),
+        lastPrice: z.number().min(0).nullable().optional(),
+        note: z.string().nullable().optional(),
+      },
+    },
+    async ({ productId, barcode, quId, amount, shoppingLocationId, lastPrice, note }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      const fkErr = await assertOwned(supabase, householdId, [
+        { table: "products", id: productId, label: "productId" },
+        { table: "quantity_units", id: quId, label: "quId" },
+        { table: "shopping_locations", id: shoppingLocationId, label: "shoppingLocationId" },
+      ]);
+      if (fkErr) return errorResult(fkErr);
+
+      const { data, error } = await supabase
+        .from("product_barcodes")
+        .insert({
+          household_id: householdId,
+          product_id: productId,
+          barcode,
+          qu_id: quId ?? null,
+          amount: amount ?? null,
+          shopping_location_id: shoppingLocationId ?? null,
+          last_price: lastPrice ?? null,
+          note: note ?? null,
+        })
+        .select("id")
+        .single();
+      if (error) return errorResult(error.message);
+      return jsonResult({ success: true, barcodeId: data.id });
+    },
+  );
+
+  server.registerTool(
+    "remove_barcode",
+    {
+      title: "Remove a barcode",
+      description: "Delete a product_barcodes row by id.",
+      inputSchema: { barcodeId: z.string().uuid() },
+    },
+    async ({ barcodeId }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      const { data: existing } = await supabase
+        .from("product_barcodes")
+        .select("id")
+        .eq("id", barcodeId)
+        .eq("household_id", householdId)
+        .maybeSingle();
+      if (!existing) return errorResult("Barcode not found in this household");
+
+      const { error } = await supabase.from("product_barcodes").delete().eq("id", barcodeId);
+      if (error) return errorResult(error.message);
+      return jsonResult({ success: true, barcodeId });
+    },
+  );
+
+  server.registerTool(
+    "add_unit_conversion",
+    {
+      title: "Add a quantity-unit conversion",
+      description:
+        "Define a conversion factor from one unit to another: 1 fromQu = factor × toQu. Set productId for a product-specific conversion, or omit/null for a household-global one. FK fields are validated to belong to this household.",
+      inputSchema: {
+        fromQuId: z.string().uuid(),
+        toQuId: z.string().uuid(),
+        factor: z.number().positive(),
+        productId: z.string().uuid().nullable().optional(),
+      },
+    },
+    async ({ fromQuId, toQuId, factor, productId }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      if (fromQuId === toQuId) return errorResult("fromQuId and toQuId must differ");
+      const fkErr = await assertOwned(supabase, householdId, [
+        { table: "quantity_units", id: fromQuId, label: "fromQuId" },
+        { table: "quantity_units", id: toQuId, label: "toQuId" },
+        { table: "products", id: productId, label: "productId" },
+      ]);
+      if (fkErr) return errorResult(fkErr);
+
+      const { data, error } = await supabase
+        .from("quantity_unit_conversions")
+        .insert({
+          household_id: householdId,
+          from_qu_id: fromQuId,
+          to_qu_id: toQuId,
+          factor,
+          product_id: productId ?? null,
+        })
+        .select("id")
+        .single();
+      if (error) return errorResult(error.message);
+      return jsonResult({ success: true, conversionId: data.id });
+    },
+  );
+
+  server.registerTool(
+    "remove_unit_conversion",
+    {
+      title: "Remove a quantity-unit conversion",
+      description: "Delete a quantity_unit_conversions row by id.",
+      inputSchema: { conversionId: z.string().uuid() },
+    },
+    async ({ conversionId }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      const { data: existing } = await supabase
+        .from("quantity_unit_conversions")
+        .select("id")
+        .eq("id", conversionId)
+        .eq("household_id", householdId)
+        .maybeSingle();
+      if (!existing) return errorResult("Conversion not found in this household");
+
+      const { error } = await supabase.from("quantity_unit_conversions").delete().eq("id", conversionId);
+      if (error) return errorResult(error.message);
+      return jsonResult({ success: true, conversionId });
     },
   );
 }

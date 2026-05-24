@@ -76,6 +76,81 @@ async function assertOwned(
   return null;
 }
 
+// ---------------------------------------------------------------------------
+// Master-data CRUD helpers (locations / shopping_locations / quantity_units /
+// product_groups all share name / description / active / sort_order). The 12
+// public tools are thin wrappers so each entity surfaces explicitly, but the
+// shared logic lives here.
+// ---------------------------------------------------------------------------
+
+async function mdCreate(
+  supabase: ReturnType<typeof createServiceClient>,
+  householdId: string,
+  table: string,
+  idLabel: string,
+  fields: Record<string, unknown>,
+  sortOrder: number | undefined,
+) {
+  let sort = sortOrder;
+  if (sort === undefined) {
+    const { data: maxRow } = await supabase
+      .from(table)
+      .select("sort_order")
+      .eq("household_id", householdId)
+      .order("sort_order", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    sort = ((maxRow?.sort_order as number | undefined) ?? -1) + 1;
+  }
+  const { data, error } = await supabase
+    .from(table)
+    .insert({ household_id: householdId, ...fields, sort_order: sort })
+    .select("id")
+    .single();
+  if (error) return errorResult(error.message);
+  return jsonResult({ success: true, [idLabel]: data.id });
+}
+
+async function mdUpdate(
+  supabase: ReturnType<typeof createServiceClient>,
+  householdId: string,
+  table: string,
+  label: string,
+  id: string,
+  patch: Record<string, unknown>,
+) {
+  const { data: existing } = await supabase
+    .from(table)
+    .select("id")
+    .eq("id", id)
+    .eq("household_id", householdId)
+    .maybeSingle();
+  if (!existing) return errorResult(`${label} not found in this household`);
+  if (Object.keys(patch).length === 0) return errorResult("No fields to update");
+  const { error } = await supabase.from(table).update(patch).eq("id", id);
+  if (error) return errorResult(error.message);
+  return jsonResult({ success: true, updated: Object.keys(patch) });
+}
+
+async function mdDelete(
+  supabase: ReturnType<typeof createServiceClient>,
+  householdId: string,
+  table: string,
+  label: string,
+  id: string,
+) {
+  const { data: existing } = await supabase
+    .from(table)
+    .select("id")
+    .eq("id", id)
+    .eq("household_id", householdId)
+    .maybeSingle();
+  if (!existing) return errorResult(`${label} not found in this household`);
+  const { error } = await supabase.from(table).delete().eq("id", id);
+  if (error) return errorResult(error.message);
+  return jsonResult({ success: true, deleted: true });
+}
+
 async function fetchAiSettings(
   supabase: ReturnType<typeof createServiceClient>,
   householdId: string,
@@ -2272,6 +2347,216 @@ export function registerTools(server: McpServer): void {
       const { error } = await supabase.from("quantity_unit_conversions").delete().eq("id", conversionId);
       if (error) return errorResult(error.message);
       return jsonResult({ success: true, conversionId });
+    },
+  );
+
+  // ===== Master data writes (locations / stores / units / groups) =====
+  // Deletes are gated by confirm:true — FK references from products/stock are
+  // ON DELETE SET NULL, so deleting an in-use entity silently clears those
+  // references rather than erroring.
+
+  const mdBase = {
+    name: z.string().min(1),
+    description: z.string().nullable().optional(),
+    active: z.boolean().optional(),
+    sortOrder: z.number().int().min(0).optional(),
+  };
+  const mdPatchBase = {
+    name: z.string().min(1).optional(),
+    description: z.string().nullable().optional(),
+    active: z.boolean().optional(),
+    sortOrder: z.number().int().min(0).optional(),
+  };
+
+  // Locations -----------------------------------------------------------
+  server.registerTool(
+    "create_location",
+    {
+      title: "Create a storage location",
+      description: "Add a storage location (e.g. a shelf or cupboard). is_freezer affects freeze/thaw due-date recalculation when stock moves in or out.",
+      inputSchema: { ...mdBase, isFreezer: z.boolean().optional() },
+    },
+    async ({ name, description, active, sortOrder, isFreezer }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      return mdCreate(supabase, householdId, "locations", "locationId", {
+        name,
+        description: description ?? null,
+        active: active ?? true,
+        is_freezer: isFreezer ?? false,
+      }, sortOrder);
+    },
+  );
+  server.registerTool(
+    "update_location",
+    {
+      title: "Update a storage location",
+      description: "Partial update of a location's name, description, active, sort_order, or is_freezer.",
+      inputSchema: { locationId: z.string().uuid(), ...mdPatchBase, isFreezer: z.boolean().optional() },
+    },
+    async ({ locationId, name, description, active, sortOrder, isFreezer }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      const patch: Record<string, unknown> = {};
+      if (name !== undefined) patch.name = name;
+      if (description !== undefined) patch.description = description;
+      if (active !== undefined) patch.active = active;
+      if (sortOrder !== undefined) patch.sort_order = sortOrder;
+      if (isFreezer !== undefined) patch.is_freezer = isFreezer;
+      return mdUpdate(supabase, householdId, "locations", "Location", locationId, patch);
+    },
+  );
+  server.registerTool(
+    "delete_location",
+    {
+      title: "Delete a storage location",
+      description: "Permanently delete a location. Products/stock referencing it have their location set to NULL (ON DELETE SET NULL). Requires confirm: true.",
+      inputSchema: { locationId: z.string().uuid(), confirm: z.literal(true) },
+    },
+    async ({ locationId }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      return mdDelete(supabase, householdId, "locations", "Location", locationId);
+    },
+  );
+
+  // Shopping locations --------------------------------------------------
+  server.registerTool(
+    "create_shopping_location",
+    {
+      title: "Create a store",
+      description: "Add a shopping location / store (e.g. Tesco, Aldi).",
+      inputSchema: { ...mdBase },
+    },
+    async ({ name, description, active, sortOrder }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      return mdCreate(supabase, householdId, "shopping_locations", "shoppingLocationId", {
+        name,
+        description: description ?? null,
+        active: active ?? true,
+      }, sortOrder);
+    },
+  );
+  server.registerTool(
+    "update_shopping_location",
+    {
+      title: "Update a store",
+      description: "Partial update of a store's name, description, active, or sort_order.",
+      inputSchema: { shoppingLocationId: z.string().uuid(), ...mdPatchBase },
+    },
+    async ({ shoppingLocationId, name, description, active, sortOrder }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      const patch: Record<string, unknown> = {};
+      if (name !== undefined) patch.name = name;
+      if (description !== undefined) patch.description = description;
+      if (active !== undefined) patch.active = active;
+      if (sortOrder !== undefined) patch.sort_order = sortOrder;
+      return mdUpdate(supabase, householdId, "shopping_locations", "Store", shoppingLocationId, patch);
+    },
+  );
+  server.registerTool(
+    "delete_shopping_location",
+    {
+      title: "Delete a store",
+      description: "Permanently delete a store. References on products/stock/barcodes are set to NULL. Requires confirm: true.",
+      inputSchema: { shoppingLocationId: z.string().uuid(), confirm: z.literal(true) },
+    },
+    async ({ shoppingLocationId }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      return mdDelete(supabase, householdId, "shopping_locations", "Store", shoppingLocationId);
+    },
+  );
+
+  // Quantity units ------------------------------------------------------
+  server.registerTool(
+    "create_quantity_unit",
+    {
+      title: "Create a quantity unit",
+      description: "Add a unit of measure (e.g. 'jar', 'slice'). name_plural is used when displaying amounts > 1.",
+      inputSchema: { ...mdBase, namePlural: z.string().nullable().optional() },
+    },
+    async ({ name, description, active, sortOrder, namePlural }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      return mdCreate(supabase, householdId, "quantity_units", "quantityUnitId", {
+        name,
+        name_plural: namePlural ?? null,
+        description: description ?? null,
+        active: active ?? true,
+      }, sortOrder);
+    },
+  );
+  server.registerTool(
+    "update_quantity_unit",
+    {
+      title: "Update a quantity unit",
+      description: "Partial update of a unit's name, name_plural, description, active, or sort_order.",
+      inputSchema: { quantityUnitId: z.string().uuid(), ...mdPatchBase, namePlural: z.string().nullable().optional() },
+    },
+    async ({ quantityUnitId, name, description, active, sortOrder, namePlural }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      const patch: Record<string, unknown> = {};
+      if (name !== undefined) patch.name = name;
+      if (namePlural !== undefined) patch.name_plural = namePlural;
+      if (description !== undefined) patch.description = description;
+      if (active !== undefined) patch.active = active;
+      if (sortOrder !== undefined) patch.sort_order = sortOrder;
+      return mdUpdate(supabase, householdId, "quantity_units", "Quantity unit", quantityUnitId, patch);
+    },
+  );
+  server.registerTool(
+    "delete_quantity_unit",
+    {
+      title: "Delete a quantity unit",
+      description: "Permanently delete a unit. Product/stock references are set to NULL; conversions using it cascade-delete. Requires confirm: true.",
+      inputSchema: { quantityUnitId: z.string().uuid(), confirm: z.literal(true) },
+    },
+    async ({ quantityUnitId }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      return mdDelete(supabase, householdId, "quantity_units", "Quantity unit", quantityUnitId);
+    },
+  );
+
+  // Product groups ------------------------------------------------------
+  server.registerTool(
+    "create_product_group",
+    {
+      title: "Create a product group",
+      description: "Add a product category (e.g. 'Dairy', 'Spices').",
+      inputSchema: { ...mdBase },
+    },
+    async ({ name, description, active, sortOrder }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      return mdCreate(supabase, householdId, "product_groups", "productGroupId", {
+        name,
+        description: description ?? null,
+        active: active ?? true,
+      }, sortOrder);
+    },
+  );
+  server.registerTool(
+    "update_product_group",
+    {
+      title: "Update a product group",
+      description: "Partial update of a group's name, description, active, or sort_order.",
+      inputSchema: { productGroupId: z.string().uuid(), ...mdPatchBase },
+    },
+    async ({ productGroupId, name, description, active, sortOrder }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      const patch: Record<string, unknown> = {};
+      if (name !== undefined) patch.name = name;
+      if (description !== undefined) patch.description = description;
+      if (active !== undefined) patch.active = active;
+      if (sortOrder !== undefined) patch.sort_order = sortOrder;
+      return mdUpdate(supabase, householdId, "product_groups", "Product group", productGroupId, patch);
+    },
+  );
+  server.registerTool(
+    "delete_product_group",
+    {
+      title: "Delete a product group",
+      description: "Permanently delete a group. Products referencing it have their group set to NULL. Requires confirm: true.",
+      inputSchema: { productGroupId: z.string().uuid(), confirm: z.literal(true) },
+    },
+    async ({ productGroupId }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      return mdDelete(supabase, householdId, "product_groups", "Product group", productGroupId);
     },
   );
 }

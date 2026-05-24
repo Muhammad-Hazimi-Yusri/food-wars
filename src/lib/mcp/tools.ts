@@ -15,6 +15,7 @@ import {
   correctStockMcp,
   addStockMcp,
   consumeRecipeMcp,
+  undoTransactionMcp,
   type SimpleStockAddItem,
 } from "@/lib/mcp/mutations";
 import { detectIssues, repairIssue } from "@/lib/mcp/data-issues";
@@ -1667,6 +1668,177 @@ export function registerTools(server: McpServer): void {
       const { error: insErr } = await supabase.from("meal_plan").insert(inserts);
       if (insErr) return errorResult(insErr.message);
       return jsonResult({ success: true, count: inserts.length });
+    },
+  );
+
+  // ===== Stock journal (transaction history + undo) =====
+
+  server.registerTool(
+    "list_journal",
+    {
+      title: "List stock journal entries",
+      description:
+        "Browse the stock transaction history (stock_log). Supports filtering by product, transaction type, and date range, with pagination. By default excludes the internal 'transfer-to' / 'stock-edit-old' / 'stock-edit-new' bookkeeping rows (matching the app's Journal view) and hides already-undone rows. Joins product and location names.",
+      inputSchema: {
+        productId: z.string().uuid().optional(),
+        transactionType: z
+          .enum([
+            "purchase",
+            "consume",
+            "spoiled",
+            "inventory-correction",
+            "product-opened",
+            "transfer-from",
+            "transfer-to",
+            "stock-edit-old",
+            "stock-edit-new",
+          ])
+          .optional(),
+        dateFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+        dateTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+        includeUndone: z.boolean().optional(),
+        includeBookkeeping: z.boolean().optional(),
+        limit: z.number().int().positive().max(200).optional(),
+        offset: z.number().int().min(0).optional(),
+      },
+    },
+    async (
+      { productId, transactionType, dateFrom, dateTo, includeUndone, includeBookkeeping, limit, offset },
+      extra,
+    ) => {
+      const { supabase, householdId } = getCtx(extra);
+      const lim = limit ?? 25;
+      const off = offset ?? 0;
+
+      let q = supabase
+        .from("stock_log")
+        .select(
+          "id, created_at, transaction_type, amount, price, best_before_date, used_date, opened_date, location_id, undone, correlation_id, transaction_id, product_id, note, product:products(name), location:locations(name)",
+          { count: "exact" },
+        )
+        .eq("household_id", householdId);
+
+      if (productId) q = q.eq("product_id", productId);
+      if (transactionType) q = q.eq("transaction_type", transactionType);
+      else if (!includeBookkeeping) q = q.not("transaction_type", "in", "(transfer-to,stock-edit-old,stock-edit-new)");
+      if (!includeUndone) q = q.eq("undone", false);
+      if (dateFrom) q = q.gte("created_at", `${dateFrom}T00:00:00Z`);
+      if (dateTo) q = q.lte("created_at", `${dateTo}T23:59:59Z`);
+
+      const { data, error, count } = await q
+        .order("created_at", { ascending: false })
+        .range(off, off + lim - 1);
+      if (error) return errorResult(error.message);
+      return jsonResult({ entries: data ?? [], total: count ?? null, limit: lim, offset: off });
+    },
+  );
+
+  server.registerTool(
+    "get_journal_entry",
+    {
+      title: "Get a single journal entry",
+      description: "Fetch one stock_log row by id with product and location names.",
+      inputSchema: { id: z.string().uuid() },
+    },
+    async ({ id }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      const { data, error } = await supabase
+        .from("stock_log")
+        .select("*, product:products(name), location:locations(name)")
+        .eq("id", id)
+        .eq("household_id", householdId)
+        .maybeSingle();
+      if (error) return errorResult(error.message);
+      if (!data) return errorResult("Journal entry not found in this household");
+      return jsonResult({ entry: data });
+    },
+  );
+
+  server.registerTool(
+    "list_journal_for_product",
+    {
+      title: "List journal entries for a product",
+      description:
+        "All stock transactions for a single product, newest first. Useful for 'what's the history of X'. Hides undone rows by default.",
+      inputSchema: {
+        productId: z.string().uuid(),
+        includeUndone: z.boolean().optional(),
+        limit: z.number().int().positive().max(200).optional(),
+      },
+    },
+    async ({ productId, includeUndone, limit }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+
+      const { data: prod } = await supabase
+        .from("products")
+        .select("id, name")
+        .eq("id", productId)
+        .eq("household_id", householdId)
+        .maybeSingle();
+      if (!prod) return errorResult("productId not found in this household");
+
+      let q = supabase
+        .from("stock_log")
+        .select("id, created_at, transaction_type, amount, price, best_before_date, location_id, undone, correlation_id, note")
+        .eq("household_id", householdId)
+        .eq("product_id", productId);
+      if (!includeUndone) q = q.eq("undone", false);
+
+      const { data, error } = await q
+        .order("created_at", { ascending: false })
+        .limit(limit ?? 50);
+      if (error) return errorResult(error.message);
+      return jsonResult({ product: prod, entries: data ?? [] });
+    },
+  );
+
+  server.registerTool(
+    "get_transaction_summary",
+    {
+      title: "Get all rows in a transaction group",
+      description:
+        "Fetch every stock_log row sharing a correlation_id — i.e. the full multi-row transaction (e.g. a recipe cook touching several ingredients, or a transfer's from+to pair). Use before undo_journal_entry to see exactly what will be reversed.",
+      inputSchema: { correlationId: z.string().uuid() },
+    },
+    async ({ correlationId }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      const { data, error } = await supabase
+        .from("stock_log")
+        .select("id, created_at, transaction_type, amount, undone, product_id, product:products(name)")
+        .eq("household_id", householdId)
+        .eq("correlation_id", correlationId)
+        .order("created_at");
+      if (error) return errorResult(error.message);
+      if (!data || data.length === 0) return errorResult("No transactions found for that correlationId in this household");
+      const anyUndone = data.some((r: { undone: boolean }) => r.undone);
+      return jsonResult({ rows: data, count: data.length, undone: anyUndone });
+    },
+  );
+
+  server.registerTool(
+    "undo_journal_entry",
+    {
+      title: "Undo a journal transaction",
+      description:
+        "Reverse a transaction by correlation_id, mirroring the in-app undo. Undoable types: consume, spoiled, product-opened, transfer-from, inventory-correction, purchase. Pass the transactionType from the journal row. Requires confirm: true. Re-running on an already-undone transaction is a no-op error.",
+      inputSchema: {
+        correlationId: z.string().uuid(),
+        transactionType: z.enum([
+          "consume",
+          "spoiled",
+          "product-opened",
+          "transfer-from",
+          "inventory-correction",
+          "purchase",
+        ]),
+        confirm: z.literal(true),
+      },
+    },
+    async ({ correlationId, transactionType }, extra) => {
+      const { supabase, householdId } = getCtx(extra);
+      const result = await undoTransactionMcp(supabase, householdId, correlationId, transactionType);
+      if (!result.success) return errorResult(result.error);
+      return jsonResult({ success: true, correlationId, transactionType });
     },
   );
 }

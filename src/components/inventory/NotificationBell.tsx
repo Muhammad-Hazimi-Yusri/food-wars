@@ -61,7 +61,9 @@ export function NotificationBell() {
   }
 
   const badge = Math.min(data.total, 99);
-  const urgent = data.expired.length + data.overdue.length;
+  // Only use-by items past their date are urgent (red). Best-before "overdue"
+  // is quality-only and informational, so it never reddens the badge.
+  const urgent = data.expired.length;
 
   return (
     <DropdownMenu>
@@ -101,7 +103,7 @@ export function NotificationBell() {
         )}
         {data.overdue.length > 0 && (
           <Section
-            title="Overdue"
+            title="Past best before (still fine)"
             icon={<AlertCircle className="h-3.5 w-3.5 text-gray-500" />}
             items={data.overdue}
             tone="text-gray-700"

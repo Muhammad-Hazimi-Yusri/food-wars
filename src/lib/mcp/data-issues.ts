@@ -59,22 +59,26 @@ export async function detectIssues(supabase: Supa, householdId: string): Promise
     }
   }
 
-  // 2. Stock with best_before_date more than 30 days past today.
+  // 2. Use-by stock more than 30 days past its date. Best-before (due_type=1)
+  //    is a quality date, not a safety one, so those are intentionally NOT
+  //    flagged — shelf-stable items legitimately outlive their best-before.
   {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 30);
     const cutoffStr = cutoff.toISOString().split("T")[0];
     const { data } = await supabase
       .from("stock_entries")
-      .select("id, best_before_date, amount, product:products(name)")
+      .select("id, best_before_date, amount, product:products(name, due_type)")
       .eq("household_id", householdId)
       .gt("amount", 0)
       .not("best_before_date", "is", null)
       .lt("best_before_date", cutoffStr);
-    for (const row of (data ?? []) as Array<{ id: string; best_before_date: string; amount: number; product: { name: string } | { name: string }[] | null }>) {
+    for (const row of (data ?? []) as Array<{ id: string; best_before_date: string; amount: number; product: { name: string; due_type: number } | { name: string; due_type: number }[] | null }>) {
       // Skip the never-expires sentinel
       if (row.best_before_date === "2999-12-31") continue;
       const prod = Array.isArray(row.product) ? row.product[0] : row.product;
+      // Only use-by (due_type=2) items are flagged; best-before is quality-only.
+      if ((prod?.due_type ?? 1) !== 2) continue;
       const base = {
         issue_type: "expired_past_grace" as const,
         entity_table: "stock_entries",

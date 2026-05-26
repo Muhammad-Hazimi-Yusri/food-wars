@@ -2734,7 +2734,7 @@ export function registerTools(server: McpServer): void {
     {
       title: "Expiring summary (counts)",
       description:
-        "Headline counts and value of stock past or near its best-before date — lighter than list_expiring (which returns the full item lists). Buckets: expired (already past), dueSoon (within daysAhead, default 7). Ignores the 2999-12-31 never-expires sentinel. Note: best-before and use-by are treated the same here, so shelf-stable items past their best-before still count.",
+        "Headline counts and value of stock past or near its date — lighter than list_expiring (which returns full item lists). Alerting buckets cover use-by items only (due_type=2): expired (past) and dueSoon (within daysAhead, default 7). Best-before items (due_type=1) are quality-only and reported separately in bestBeforePast (informational, not an alert). Ignores the 2999-12-31 never-expires sentinel.",
       inputSchema: { daysAhead: z.number().int().min(0).optional() },
     },
     async ({ daysAhead }, extra) => {
@@ -2748,19 +2748,28 @@ export function registerTools(server: McpServer): void {
 
       const { data, error } = await supabase
         .from("stock_entries")
-        .select("amount, price, best_before_date")
+        .select("amount, price, best_before_date, product:products(due_type)")
         .eq("household_id", householdId)
         .gt("amount", 0)
         .not("best_before_date", "is", null)
         .lte("best_before_date", cutoffStr)
         .neq("best_before_date", "2999-12-31");
       if (error) return errorResult(error.message);
-      const rows = (data ?? []) as Array<{ amount: number; price: number | null; best_before_date: string }>;
+      const rows = (data ?? []) as unknown as Array<{ amount: number; price: number | null; best_before_date: string; product: { due_type: number } | { due_type: number }[] | null }>;
 
       let expiredCount = 0, dueSoonCount = 0, expiredValue = 0, dueSoonValue = 0;
+      let bbPastCount = 0, bbPastValue = 0;
       for (const r of rows) {
         const val = r.price != null ? r.price * r.amount : 0;
-        if (r.best_before_date < todayStr) { expiredCount++; expiredValue += val; }
+        const prod = Array.isArray(r.product) ? r.product[0] : r.product;
+        const isUseBy = (prod?.due_type ?? 1) === 2;
+        const isPast = r.best_before_date < todayStr;
+        if (!isUseBy) {
+          // Best-before: only report the past ones, informationally.
+          if (isPast) { bbPastCount++; bbPastValue += val; }
+          continue;
+        }
+        if (isPast) { expiredCount++; expiredValue += val; }
         else { dueSoonCount++; dueSoonValue += val; }
       }
       return jsonResult({
@@ -2768,6 +2777,7 @@ export function registerTools(server: McpServer): void {
         daysAhead: ahead,
         expired: { count: expiredCount, value: expiredValue },
         dueSoon: { count: dueSoonCount, value: dueSoonValue },
+        bestBeforePast: { count: bbPastCount, value: bbPastValue },
       });
     },
   );

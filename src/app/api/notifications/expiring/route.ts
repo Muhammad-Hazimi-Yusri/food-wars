@@ -90,6 +90,12 @@ export async function GET() {
       const status = getExpiryStatus(bbd, dueType, notifyDaysBefore);
       if (status === "fresh" || status === "none") continue;
 
+      // Best-before (due_type=1) is a quality date, not safety — it never
+      // drives alerts. A best-before item approaching its date (due_soon) is
+      // skipped entirely; once past, it goes to the informational `overdue`
+      // bucket (shown in the dropdown but excluded from the badge `total`).
+      if (dueType !== 2 && status === "due_soon") continue;
+
       const expiryDate = new Date(bbd);
       expiryDate.setHours(0, 0, 0, 0);
       const daysUntil = Math.ceil(
@@ -108,6 +114,8 @@ export async function GET() {
       else if (status === "due_soon") dueSoon.push(item);
     }
 
+    // `total` (the bell badge count) counts only use-by alerts. `overdue`
+    // (best-before past) is informational and deliberately excluded.
     const payload: ExpiringPayload = {
       enabled: true,
       notifyBrowser,
@@ -115,7 +123,7 @@ export async function GET() {
       expired,
       overdue,
       dueSoon,
-      total: expired.length + overdue.length + dueSoon.length,
+      total: expired.length + dueSoon.length,
     };
 
     return NextResponse.json(payload);

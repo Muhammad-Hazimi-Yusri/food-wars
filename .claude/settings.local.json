@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "mcp__cab5c2f7-7b9f-4da8-8071-dbde13b62889__remove_from_shopping_list"
     ]
   }
 }
